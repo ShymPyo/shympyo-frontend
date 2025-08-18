@@ -6,122 +6,57 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Switch,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 import { Colors } from '../constants/colors';
 
 const SettingsScreen: React.FC = () => {
-  const [notifications, setNotifications] = React.useState(true);
-  const [locationPermission, setLocationPermission] = React.useState(true);
+  const navigation = useNavigation();
+
+  const settingsOptions = [
+    { title: '언어', value: '한국어', icon: 'language-outline', screen: '' },
+    { title: '알림', icon: 'notifications-outline', screen: '' },
+    { title: '화면 테마 · 진동', icon: 'contrast-outline', screen: '' },
+    { title: '연락처 관리', icon: 'call-outline', screen: '' },
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
         <Text style={styles.title}>설정</Text>
+        <View style={{width: 24}} />
       </View>
 
       <ScrollView style={styles.scrollView}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>계정</Text>
-          
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="person-outline" size={24} color={Colors.text.secondary} />
-              <Text style={styles.settingText}>프로필 수정</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="key-outline" size={24} color={Colors.text.secondary} />
-              <Text style={styles.settingText}>비밀번호 변경</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>알림</Text>
-          
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="notifications-outline" size={24} color={Colors.text.secondary} />
-              <Text style={styles.settingText}>푸시 알림</Text>
-            </View>
-            <Switch
-              value={notifications}
-              onValueChange={setNotifications}
-              trackColor={{ false: '#E5E5E5', true: Colors.primary }}
+        <TouchableOpacity style={styles.profileSection} onPress={() => navigation.navigate('ProfileSetup')}>
+            <Image 
+                source={{ uri: 'https://via.placeholder.com/80/FFC107/000000?Text=P1' }} 
+                style={styles.profileImage}
             />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="location-outline" size={24} color={Colors.text.secondary} />
-              <Text style={styles.settingText}>위치 기반 알림</Text>
-            </View>
-            <Switch
-              value={locationPermission}
-              onValueChange={setLocationPermission}
-              trackColor={{ false: '#E5E5E5', true: Colors.primary }}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>지원</Text>
-          
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="help-circle-outline" size={24} color={Colors.text.secondary} />
-              <Text style={styles.settingText}>도움말</Text>
+            <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>김진</Text>
+                <Text style={styles.profileLink}>내 정보 · 주소 관리</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-          </TouchableOpacity>
+        </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="mail-outline" size={24} color={Colors.text.secondary} />
-              <Text style={styles.settingText}>문의하기</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="document-text-outline" size={24} color={Colors.text.secondary} />
-              <Text style={styles.settingText}>이용약관</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="shield-outline" size={24} color={Colors.text.secondary} />
-              <Text style={styles.settingText}>개인정보 처리방침</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <TouchableOpacity style={[styles.settingItem, styles.logoutItem]}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="log-out-outline" size={24} color={Colors.error} />
-              <Text style={[styles.settingText, styles.logoutText]}>로그아웃</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.versionInfo}>
-          <Text style={styles.versionText}>버전 1.0.0</Text>
-        </View>
+        {settingsOptions.map((item, index) => (
+            <TouchableOpacity key={index} style={styles.settingItem}>
+                <Ionicons name={item.icon} size={24} color={Colors.text.secondary} style={styles.itemIcon} />
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                {item.value && <Text style={styles.itemValue}>{item.value}</Text>}
+                <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
+            </TouchableOpacity>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -133,60 +68,67 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: Colors.text.primary,
   },
   scrollView: {
     flex: 1,
   },
-  section: {
-    marginBottom: 32,
+  profileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 8,
+    borderBottomColor: '#F0F0F0',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text.secondary,
-    marginBottom: 12,
-    marginHorizontal: 20,
+  profileImage: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      marginRight: 15,
+  },
+  profileInfo: {
+      flex: 1,
+  },
+  profileName: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: Colors.text.primary,
+      marginBottom: 5,
+  },
+  profileLink: {
+      fontSize: 14,
+      color: Colors.text.secondary,
   },
   settingItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: Colors.background,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  itemIcon: {
+      marginRight: 15,
   },
-  settingText: {
+  itemTitle: {
+    flex: 1,
     fontSize: 16,
     color: Colors.text.primary,
-    marginLeft: 16,
   },
-  logoutItem: {
-    borderBottomWidth: 0,
-  },
-  logoutText: {
-    color: Colors.error,
-  },
-  versionInfo: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  versionText: {
-    fontSize: 14,
-    color: Colors.text.light,
+  itemValue: {
+      fontSize: 16,
+      color: Colors.text.secondary,
+      marginRight: 10,
   },
 });
 

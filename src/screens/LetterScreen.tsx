@@ -1,91 +1,123 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../constants/colors';
 
-const letters = [
-  {
-    id: 1,
-    sender: '서울시청',
-    title: '폭염 대비 안전수칙 안내',
-    preview: '무더운 날씨가 계속되고 있습니다. 건강을 위해 다음 사항을 준수해 주세요...',
-    date: '2025-08-17',
-    isRead: false,
-  },
-  {
-    id: 2,
-    sender: '동작구청',
-    title: '신규 쉼터 개방 안내',
-    preview: '동작구에 새로운 무더위 쉼터가 개방되었습니다. 많은 이용 부탁드립니다...',
-    date: '2025-08-15',
-    isRead: true,
-  },
-  {
-    id: 3,
-    sender: '쉼표 운영팀',
-    title: '이용해 주셔서 감사합니다',
-    preview: '지난 주 쉼터 이용에 감사드립니다. 앞으로도 안전하고 시원한...',
-    date: '2025-08-10',
-    isRead: true,
-  },
+const visitedPlaces = [
+  { id: '1', name: '카페 빈스', date: '2025-07-15 10:30', sent: false },
+  { id: '2', name: '관동 카페', date: '2025-07-14 10:30', sent: false },
+  { id: '3', name: 'CU 인하대점', date: '2025-07-13 10:30', sent: false },
+  { id: '4', name: '탄포포', date: '2025-07-12 10:30', sent: true },
+  { id: '5', name: '알케미스타', date: '2025-07-11 10:30', sent: true },
 ];
 
 const LetterScreen: React.FC = () => {
+  const [places, setPlaces] = useState(visitedPlaces);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<{ id: string; name: string } | null>(null);
+  const [letterText, setLetterText] = useState('');
+
+  const handleWriteLetter = (place: { id: string; name: string }) => {
+    setSelectedPlace(place);
+    setModalVisible(true);
+  };
+
+  const handleSendLetter = () => {
+    if (!selectedPlace) return;
+
+    const updatedPlaces = places.map((p) =>
+      p.id === selectedPlace.id ? { ...p, sent: true } : p
+    );
+    setPlaces(updatedPlaces);
+
+    setLetterText('');
+    setModalVisible(false);
+    setSelectedPlace(null);
+  };
+
+  const renderItem = ({ item }: { item: typeof visitedPlaces[0] }) => (
+    <View style={styles.card}>
+      <View style={styles.cardContent}>
+        <Text style={styles.date}>{item.date}</Text>
+        <Text style={styles.placeName}>{item.name}</Text>
+      </View>
+      <TouchableOpacity
+        style={[styles.button, item.sent && styles.sentButton]}
+        onPress={() => !item.sent && handleWriteLetter(item)}
+        disabled={item.sent}
+      >
+        <Ionicons 
+          name={item.sent ? 'checkmark-done' : 'pencil'} 
+          size={20} 
+          color={item.sent ? Colors.text.secondary : Colors.text.white} 
+        />
+        <Text style={[styles.buttonText, item.sent && styles.sentButtonText]}>
+          {item.sent ? '전송 완료' : '감사 편지 작성'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
       <View style={styles.header}>
-        <Text style={styles.title}>편지함</Text>
-        <Text style={styles.subtitle}>받은 편지를 확인하세요</Text>
+        <Text style={styles.title}>방문한 민간 개방 시설 목록</Text>
+        <Text style={styles.subtitle}>감사 편지를 보내 마음을 전하세요.</Text>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        {letters.map((letter) => (
-          <TouchableOpacity key={letter.id} style={styles.letterCard}>
-            <View style={styles.letterHeader}>
-              <View style={styles.senderInfo}>
-                <Text style={styles.sender}>{letter.sender}</Text>
-                <Text style={styles.date}>{letter.date}</Text>
-              </View>
-              {!letter.isRead && <View style={styles.unreadDot} />}
-            </View>
-            
-            <Text style={[styles.letterTitle, !letter.isRead && styles.unreadTitle]}>
-              {letter.title}
-            </Text>
-            
-            <Text style={styles.letterPreview} numberOfLines={2}>
-              {letter.preview}
-            </Text>
-            
-            <View style={styles.letterFooter}>
-              <Ionicons name="mail-outline" size={16} color={Colors.text.light} />
-              <Text style={styles.readMore}>자세히 보기</Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.text.light} />
-            </View>
-          </TouchableOpacity>
-        ))}
+      <FlatList
+        data={places}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
+      />
 
-        {letters.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="mail-outline" size={64} color={Colors.text.light} />
-            <Text style={styles.emptyTitle}>받은 편지가 없습니다</Text>
-            <Text style={styles.emptyText}>
-              쉼터를 이용하시면 유용한 정보가 담긴 편지를 받으실 수 있습니다.
-            </Text>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>감사 편지 작성</Text>
+            <Text style={styles.modalRecipient}>To. {selectedPlace?.name} 사장님</Text>
+            <TextInput
+              style={styles.textInput}
+              value={letterText}
+              onChangeText={setLetterText}
+              placeholder="감사한 마음을 담아 편지를 작성해보세요..."
+              multiline
+            />
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.sendButton]} 
+                onPress={handleSendLetter}
+              >
+                <Text style={styles.sendButtonText}>전송</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
-      </ScrollView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -98,102 +130,130 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: Colors.text.primary,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.text.secondary,
   },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: 20,
+  list: {
+    padding: 20,
   },
-  letterCard: {
-    backgroundColor: Colors.background,
+  card: {
+    backgroundColor: Colors.surface,
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: 20,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 3,
-    elevation: 3,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
+    elevation: 2,
   },
-  letterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  senderInfo: {
-    flex: 1,
-  },
-  sender: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.primary,
+  cardContent: {
+    marginBottom: 15,
   },
   date: {
     fontSize: 12,
     color: Colors.text.light,
-    marginTop: 2,
+    marginBottom: 5,
   },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.error,
-  },
-  letterTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  unreadTitle: {
+  placeName: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: Colors.text.primary,
   },
-  letterPreview: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  letterFooter: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  readMore: {
-    flex: 1,
-    fontSize: 12,
-    color: Colors.text.light,
-  },
-  emptyState: {
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    paddingVertical: 12,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyText: {
+  buttonText: {
+    color: Colors.text.white,
     fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  sentButton: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  sentButtonText: {
+    color: Colors.text.secondary,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    alignItems: 'stretch',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalRecipient: {
+    fontSize: 16,
     color: Colors.text.secondary,
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  textInput: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    height: 150,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    borderRadius: 8,
+    padding: 15,
+    flex: 1,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: Colors.surface,
+    marginRight: 10,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
+  sendButton: {
+    backgroundColor: Colors.primary,
+  },
+  sendButtonText: {
+    color: Colors.text.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

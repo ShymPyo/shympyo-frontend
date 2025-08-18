@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
@@ -11,6 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
+import { FontAwesome } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
@@ -19,70 +19,58 @@ type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
 
-  const handleLogin = () => {
-    // 간단한 로그인 시뮬레이션
+  const handleSocialLogin = (provider: string) => {
+    // For now, any login attempt will navigate to the main screen
+    console.log(`${provider} login`);
     navigation.replace('Main');
-  };
-
-  const handleSignup = () => {
-    navigation.navigate('ProfileSetup');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../assets/shympyo_logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.title}>쉼표</Text>
-        <Text style={styles.subtitle}>무더위 쉼터 앱</Text>
+      <View style={styles.contentContainer}>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../../assets/shympyo_logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.subtitle}>더위 쉼표, 시원한 휴식처</Text>
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={[styles.socialButton, styles.kakaoButton]}
+            onPress={() => handleSocialLogin('Kakao')}
+          >
+            <FontAwesome name="comment" size={20} color="#3B1E1E" style={styles.icon} />
+            <Text style={[styles.socialButtonText, styles.kakaoButtonText]}>카카오로 쉬운시작</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.socialButton, styles.facebookButton]}
+            onPress={() => handleSocialLogin('Facebook')}
+          >
+            <FontAwesome name="facebook-square" size={24} color="white" style={styles.icon} />
+            <Text style={styles.socialButtonText}>페이스북으로 쉬운시작</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.socialButton, styles.naverButton]}
+            onPress={() => handleSocialLogin('Naver')}
+          >
+            <Text style={[styles.socialButtonText, styles.naverButtonText]}>네이버로 쉬운시작</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.formContainer}>
-        <Text style={styles.formTitle}>로그인</Text>
-        
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>휴대폰 번호</Text>
-          <TextInput
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="010-0000-0000"
-            keyboardType="phone-pad"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>인증 코드</Text>
-          <TextInput
-            style={styles.input}
-            value={code}
-            onChangeText={setCode}
-            placeholder="인증 코드를 입력하세요"
-            keyboardType="number-pad"
-          />
-        </View>
-
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>로그인</Text>
+      <View style={styles.footer}>
+        <TouchableOpacity>
+          <Text style={styles.footerText}>관리자 로그인 / 회원가입</Text>
         </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>또는</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
-          <Text style={styles.signupButtonText}>회원가입</Text>
-        </TouchableOpacity>
+        <Text style={styles.copyright}>© 2025. All rights reserved.</Text>
       </View>
     </SafeAreaView>
   );
@@ -93,91 +81,71 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 30,
+  },
   logoContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    marginBottom: 60,
   },
   logo: {
-    width: 100,
-    height: 60,
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 5,
+    width: 180,
+    height: 100,
+    marginBottom: 15,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: Colors.text.secondary,
   },
-  formContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
+  buttonContainer: {
+    width: '100%',
   },
-  formTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 30,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-  },
-  loginButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  loginButtonText: {
-    color: Colors.text.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
+  socialButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 30,
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingVertical: 15,
+    marginBottom: 15,
+    width: '100%',
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E5E5',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: Colors.text.light,
-    fontSize: 14,
-  },
-  signupButton: {
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  signupButtonText: {
-    color: Colors.primary,
+  socialButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+  },
+  icon: {
+    marginRight: 10,
+  },
+  kakaoButton: {
+    backgroundColor: '#FEE500',
+  },
+  kakaoButtonText: {
+    color: '#3B1E1E',
+  },
+  facebookButton: {
+    backgroundColor: '#1877F2',
+  },
+  naverButton: {
+    backgroundColor: '#03C75A',
+  },
+  naverButtonText: {
+    color: 'white',
+  },
+  footer: {
+    alignItems: 'center',
+    paddingBottom: 40,
+  },
+  footerText: {
+    fontSize: 14,
+    color: Colors.text.light,
+    textDecorationLine: 'underline',
+  },
+  copyright: {
+    fontSize: 12,
+    color: Colors.text.light,
+    marginTop: 15,
   },
 });
 

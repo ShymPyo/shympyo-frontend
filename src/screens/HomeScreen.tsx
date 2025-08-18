@@ -4,188 +4,181 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
   TouchableOpacity,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 
 import { Colors } from '../constants/colors';
 
 const HomeScreen: React.FC = () => {
+  const mapHtml = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Kakao Maps</title>
+      <style>
+          html, body {
+              width: 100%;
+              height: 100%;
+              margin: 0;
+              padding: 0;
+          }
+          #map {
+              width: 100%;
+              height: 100%;
+          }
+      </style>
+  </head>
+  <body>
+      <div id="map"></div>
+      <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c546bc102a260e0c4af2d87a117f92f3"></script>
+      <script>
+          var container = document.getElementById('map');
+          var options = {
+              center: new kakao.maps.LatLng(37.4485, 126.6584),
+              level: 4
+          };
+  
+          var map = new kakao.maps.Map(container, options);
+  
+          var positions = [
+              {
+                  title: '카페 빈스',
+                  latlng: new kakao.maps.LatLng(37.4485, 126.6584)
+              },
+              {
+                  title: '용현노인문화센터',
+                  latlng: new kakao.maps.LatLng(37.4505, 126.6564)
+              },
+              {
+                  title: '인하대역',
+                  latlng: new kakao.maps.LatLng(37.4495, 126.6554)
+              },
+              {
+                  title: '스마트쉼터',
+                  latlng: new kakao.maps.LatLng(37.4515, 126.6594)
+              },
+              {
+                  title: '공공시설',
+                  latlng: new kakao.maps.LatLng(37.4475, 126.6534)
+              }
+          ];
+  
+          for (var i = 0; i < positions.length; i ++) {
+              var marker = new kakao.maps.Marker({
+                  map: map,
+                  position: positions[i].latlng,
+                  title: positions[i].title
+              });
+          }
+          
+          map.setCenter(positions[0].latlng);
+  
+      </script>
+  </body>
+  </html>
+  `;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.welcomeText}>안녕하세요! 👋</Text>
-          <Text style={styles.headerTitle}>오늘도 시원한 하루 보내세요</Text>
+      <View style={styles.mapContainer}>
+        <WebView
+          originWhitelist={['*']}
+          source={{ html: mapHtml, baseUrl: '' }}
+          style={styles.map}
+        />
+        <View style={styles.overlayTop}>
+            <View style={styles.header}>
+                <Text style={styles.temperature}>35°C</Text>
+                <TouchableOpacity style={styles.listButton}>
+                    <Ionicons name="list" size={24} color={Colors.text.primary} />
+                </TouchableOpacity>
+            </View>
         </View>
-
-        <View style={styles.weatherCard}>
-          <View style={styles.weatherInfo}>
-            <Text style={styles.temperature}>32°C</Text>
-            <Text style={styles.weatherDesc}>매우 더움</Text>
-          </View>
-          <Ionicons name="sunny" size={60} color="#FFA500" />
+        <View style={styles.overlayBottom}>
+            <TouchableOpacity style={styles.bottomCard}>
+                <Text style={styles.bottomCardTitle}>가장 가까운 쉼터 !!</Text>
+                <Text style={styles.bottomCardSubtitle}>카페빈스 (민간개방시설)</Text>
+                <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
+            </TouchableOpacity>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>근처 쉼터 찾기</Text>
-          
-          <TouchableOpacity style={styles.actionCard}>
-            <View style={styles.actionIcon}>
-              <Ionicons name="location" size={24} color={Colors.primary} />
-            </View>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>내 주변 쉼터</Text>
-              <Text style={styles.actionDesc}>가까운 무더위 쉼터를 찾아보세요</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionCard}>
-            <View style={styles.actionIcon}>
-              <Ionicons name="qr-code" size={24} color={Colors.primary} />
-            </View>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>QR 스캔</Text>
-              <Text style={styles.actionDesc}>쉼터 QR 코드를 스캔하세요</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>나의 활동</Text>
-          
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>12</Text>
-              <Text style={styles.statLabel}>방문한 쉼터</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>3</Text>
-              <Text style={styles.statLabel}>받은 편지</Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    padding: 20,
-    paddingTop: 10,
-  },
-  welcomeText: {
-    fontSize: 18,
-    color: Colors.text.secondary,
-    marginBottom: 5,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-  },
-  weatherCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    margin: 20,
-    padding: 20,
-    borderRadius: 12,
-  },
-  weatherInfo: {
-    flex: 1,
-  },
-  temperature: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-  },
-  weatherDesc: {
-    fontSize: 16,
-    color: Colors.text.secondary,
-    marginTop: 5,
-  },
-  section: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 15,
-  },
-  actionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: `${Colors.primary}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  actionContent: {
-    flex: 1,
-  },
-  actionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 4,
-  },
-  actionDesc: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    padding: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 5,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: Colors.background,
+    },
+    mapContainer: {
+        flex: 1,
+    },
+    map: {
+        flex: 1,
+    },
+    overlayTop: {
+        position: 'absolute',
+        top: 50,
+        left: 20,
+        right: 20,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 5,
+    },
+    temperature: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: Colors.text.primary,
+    },
+    listButton: {
+        padding: 5,
+    },
+    overlayBottom: {
+        position: 'absolute',
+        bottom: 30,
+        left: 20,
+        right: 20,
+    },
+    bottomCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.primary,
+        padding: 16,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 5,
+    },
+    bottomCardTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: 'white',
+        flex: 1,
+    },
+    bottomCardSubtitle: {
+        fontSize: 14,
+        color: 'white',
+        marginRight: 10,
+    },
 });
 
 export default HomeScreen;

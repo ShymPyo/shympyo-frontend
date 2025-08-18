@@ -1,76 +1,118 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Alert,
+  Button,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+// import { BarCodeScanner } from 'expo-barcode-scanner';
+import { useNavigation } from '@react-navigation/native';
 
 import { Colors } from '../constants/colors';
 
-const QRScreen: React.FC = () => {
-  const [isScanning, setIsScanning] = useState(false);
 
-  const handleScanPress = () => {
-    setIsScanning(true);
-    // QR 스캔 시뮬레이션
-    setTimeout(() => {
-      setIsScanning(false);
-      Alert.alert('스캔 완료', '쉼터에 체크인되었습니다!');
-    }, 2000);
+type ScreenState = 'scanning' | 'timer' | 'finished';
+
+const QRScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [scanned, setScanned] = useState(false);
+  const [screenState, setScreenState] = useState<ScreenState>('scanning');
+  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
+
+  /*
+  useEffect(() => {
+    const getBarCodeScannerPermissions = async () => {
+      const { status } = await BarCodeScanner.requestPermissionsAsync();
+      setHasPermission(status === 'granted');
+    };
+
+    getBarCodeScannerPermissions();
+  }, []);
+  */
+
+  useEffect(() => {
+    if (screenState !== 'timer') return;
+
+    if (timeLeft === 0) {
+      setScreenState('finished');
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setTimeLeft(timeLeft - 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [screenState, timeLeft]);
+
+  /*
+  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+    setScanned(true);
+    alert(`QR 코드를 스캔했습니다!\n장소: ${data}`);
+    setScreenState('timer');
+  };
+  */
+
+  const formatTime = () => {
+    const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const seconds = (timeLeft % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  };
+
+  const renderContent = () => {
+    switch (screenState) {
+      case 'scanning':
+        if (hasPermission === null) {
+          return <Text style={styles.infoText}>카메라 권한을 요청하는 중입니다...</Text>;
+        }
+        if (hasPermission === false) {
+          return <Text style={styles.infoText}>카메라 접근 권한이 없습니다.</Text>;
+        }
+        return (
+          <View style={styles.scannerContainer}>
+            <Text style={styles.infoText}>QR Code Scanner is temporarily disabled.</Text>
+          </View>
+        );
+      case 'timer':
+        return (
+          <View style={styles.timerContainer}>
+            <Ionicons name="timer-outline" size={100} color={Colors.primary} />
+            <Text style={styles.timerText}>{formatTime()}</Text>
+            <Text style={styles.timerSubtitle}>카페 빈스</Text>
+          </View>
+        );
+      case 'finished':
+        return (
+          <View style={styles.finishedContainer}>
+            <Ionicons name="checkmark-circle-outline" size={100} color={Colors.success} />
+            <Text style={styles.finishedTitle}>시간이 다 되었습니다!</Text>
+            <Text style={styles.finishedSubtitle}>카페 빈스</Text>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('Home')}>
+                <Text style={styles.buttonText}>홈으로</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.letterButton} onPress={() => navigation.navigate('Letter')}>
+                <Text style={styles.buttonText}>감사 편지 적기</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
       <View style={styles.header}>
-        <Text style={styles.title}>QR 스캔</Text>
-        <Text style={styles.subtitle}>쉼터의 QR 코드를 스캔해보세요</Text>
+        <Text style={styles.title}>쉼표</Text>
+        <Text style={styles.subtitle}>더위 쉼표, 시원한 휴식처</Text>
       </View>
-
-      <View style={styles.scanContainer}>
-        <View style={styles.scanFrame}>
-          {isScanning ? (
-            <View style={styles.scanningIndicator}>
-              <Text style={styles.scanningText}>스캔 중...</Text>
-            </View>
-          ) : (
-            <View style={styles.scanPlaceholder}>
-              <Ionicons name="qr-code-outline" size={80} color={Colors.text.light} />
-              <Text style={styles.placeholderText}>QR 코드를 여기에 맞춰주세요</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.actions}>
-        <TouchableOpacity 
-          style={[styles.scanButton, isScanning && styles.scanButtonDisabled]} 
-          onPress={handleScanPress}
-          disabled={isScanning}
-        >
-          <Ionicons name="scan" size={24} color={Colors.text.white} />
-          <Text style={styles.scanButtonText}>
-            {isScanning ? '스캔 중...' : 'QR 스캔 시작'}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.infoContainer}>
-          <View style={styles.infoItem}>
-            <Ionicons name="information-circle" size={20} color={Colors.primary} />
-            <Text style={styles.infoText}>QR 코드 스캔으로 쉼터 이용이 가능합니다</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
-            <Text style={styles.infoText}>체크인 시 포인트가 적립됩니다</Text>
-          </View>
-        </View>
-      </View>
+      <View style={styles.content}>{renderContent()}</View>
     </SafeAreaView>
   );
 };
@@ -83,85 +125,104 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.text.secondary,
-    textAlign: 'center',
-  },
-  scanContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  scanFrame: {
-    width: 250,
-    height: 250,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: Colors.surface,
   },
-  scanPlaceholder: {
-    alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: Colors.text.light,
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  scanningIndicator: {
-    alignItems: 'center',
-  },
-  scanningText: {
-    fontSize: 16,
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
     color: Colors.primary,
-    fontWeight: '600',
   },
-  actions: {
-    padding: 20,
-  },
-  scanButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  scanButtonDisabled: {
-    opacity: 0.6,
-  },
-  scanButtonText: {
-    color: Colors.text.white,
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  infoContainer: {
-    gap: 12,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  infoText: {
-    flex: 1,
+  subtitle: {
     fontSize: 14,
     color: Colors.text.secondary,
+    marginTop: 4,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+  },
+  scannerContainer: {
+      flex: 1,
+      width: '100%',
+  },
+  scannerOverlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  overlayTitle: {
+      fontSize: 18,
+      color: 'white',
+      textAlign: 'center',
+      marginBottom: 20,
+  },
+  scannerBox: {
+      width: 250,
+      height: 250,
+      borderWidth: 2,
+      borderColor: 'white',
+      borderRadius: 10,
+  },
+  overlaySubtitle: {
+      fontSize: 14,
+      color: 'white',
+      textAlign: 'center',
+      marginTop: 20,
+      paddingHorizontal: 40,
+  },
+  timerContainer: {
+    alignItems: 'center',
+  },
+  timerText: {
+    fontSize: 72,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginVertical: 20,
+  },
+  timerSubtitle: {
+    fontSize: 24,
+    color: Colors.text.secondary,
+  },
+  finishedContainer: {
+    alignItems: 'center',
+  },
+  finishedTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginVertical: 20,
+  },
+  finishedSubtitle: {
+    fontSize: 20,
+    color: Colors.text.secondary,
+    marginBottom: 30,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  homeButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+  },
+  letterButton: {
+    backgroundColor: Colors.success,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
