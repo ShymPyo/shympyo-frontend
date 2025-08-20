@@ -34,7 +34,7 @@ const HomeScreen: React.FC = () => {
   </head>
   <body>
       <div id="map"></div>
-      <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c546bc102a260e0c4af2d87a117f92f3"></script>
+      <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985"></script>
       <script>
           var container = document.getElementById('map');
           var options = {

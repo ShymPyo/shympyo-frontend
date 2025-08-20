@@ -10,5 +10,4 @@ export type MainTabParamList = {
   QR: undefined;
   Letter: undefined;
   Settings: undefined;
-  Map: undefined;
 };

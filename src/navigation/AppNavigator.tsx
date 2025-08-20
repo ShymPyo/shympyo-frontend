@@ -14,7 +14,6 @@ import HomeScreen from '../screens/HomeScreen';
 import QRScreen from '../screens/QRScreen';
 import LetterScreen from '../screens/LetterScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import MapScreen from '../screens/MapScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -38,9 +37,6 @@ const MainTabNavigator = () => {
               break;
             case 'Settings':
               iconName = focused ? 'settings' : 'settings-outline';
-              break;
-            case 'Map':
-              iconName = focused ? 'map' : 'map-outline';
               break;
           }
 
@@ -80,11 +76,6 @@ const MainTabNavigator = () => {
         name="Settings" 
         component={SettingsScreen}
         options={{ tabBarLabel: '설정' }}
-      />
-      <Tab.Screen 
-        name="Map" 
-        component={MapScreen}
-        options={{ tabBarLabel: '지도' }}
       />
     </Tab.Navigator>
   );
