@@ -102,6 +102,7 @@ const LetterScreen: React.FC = () => {
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalContainer}
+            keyboardVerticalOffset={-50}
           >
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>감사 편지 작성</Text>
