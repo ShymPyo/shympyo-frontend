@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
@@ -246,19 +247,28 @@ const HomeScreen: React.FC = () => {
             style={styles.map}
           />
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
-          <View style={styles.overlayTop}>
-            <View style={styles.weatherCard}>
-              <View style={styles.weatherIcon}>
-                <Text style={styles.weatherEmoji}>☀️</Text>
-              </View>
-              <Text style={styles.weatherTemp}>26°</Text>
-              <Text style={styles.weatherStatus}>미세</Text>
+          {/* 온도계 - 우측 상단 */}
+          <View style={styles.thermometerContainer}>
+            <View style={styles.modernThermometer}>
+              <LinearGradient
+                colors={['#A8E6CF', '#88D8A3', '#68C378', '#41A85F']}
+                style={styles.thermometerBackground}
+              />
+              <LinearGradient
+                colors={['#FFD93D', '#6BCF7F', '#4D908E', '#277DA1']}
+                style={styles.thermometerFill}
+              />
             </View>
-            
-            <TouchableOpacity style={styles.locationButton}>
-              <Ionicons name="locate" size={20} color={Colors.text.primary} />
-            </TouchableOpacity>
+            <View style={styles.temperatureLabel}>
+              <Text style={styles.temperatureText}>26°</Text>
+              <View style={styles.trianglePointer} />
+            </View>
           </View>
+          
+          {/* 내 위치 버튼 - 우측 하단 */}
+          <TouchableOpacity style={styles.locationButton}>
+            <Ionicons name="locate" size={20} color={Colors.text.primary} />
+          </TouchableOpacity>
           
           <PanGestureHandler onGestureEvent={gestureHandler}>
             <Animated.View style={[styles.overlayBottom, bottomSheetStyle]}>
@@ -299,46 +309,75 @@ const styles = StyleSheet.create({
     map: {
         flex: 1,
     },
-    overlayTop: {
+    thermometerContainer: {
         position: 'absolute',
         top: 60,
-        left: 20,
         right: 20,
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-    },
-    weatherCard: {
-        backgroundColor: 'white',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 25,
         alignItems: 'center',
+    },
+    modernThermometer: {
+        width: 25,
+        height: 80,
+        borderRadius: 12.5,
+        marginRight: 10,
+        overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
-        minWidth: 80,
     },
-    weatherIcon: {
-        marginBottom: 4,
+    thermometerBackground: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        borderRadius: 12.5,
     },
-    weatherEmoji: {
-        fontSize: 20,
+    thermometerFill: {
+        position: 'absolute',
+        bottom: 0,
+        width: '100%',
+        height: '65%',
+        borderRadius: 12.5,
     },
-    weatherTemp: {
-        fontSize: 18,
+    temperatureLabel: {
+        backgroundColor: '#000',
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    temperatureText: {
+        fontSize: 16,
         fontWeight: 'bold',
-        color: Colors.text.primary,
-        marginBottom: 2,
+        color: 'white',
     },
-    weatherStatus: {
-        fontSize: 12,
-        color: Colors.primary,
-        fontWeight: '500',
+    trianglePointer: {
+        position: 'absolute',
+        left: -8,
+        width: 0,
+        height: 0,
+        backgroundColor: 'transparent',
+        borderStyle: 'solid',
+        borderTopWidth: 8,
+        borderRightWidth: 8,
+        borderBottomWidth: 8,
+        borderLeftWidth: 0,
+        borderTopColor: 'transparent',
+        borderRightColor: '#000',
+        borderBottomColor: 'transparent',
     },
     locationButton: {
+        position: 'absolute',
+        bottom: 120,
+        right: 20,
         backgroundColor: 'white',
         width: 44,
         height: 44,
