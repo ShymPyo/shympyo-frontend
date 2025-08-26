@@ -1,18 +1,171 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
+  FlatList,
+  Dimensions,
+  ScrollView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { Colors } from '../constants/colors';
 
+const { width, height } = Dimensions.get('window');
+
+// 대중교통 관련 인터페이스와 데이터 제거 - 쉼터 기능만 사용
+
+interface Shelter {
+  id: string;
+  name: string;
+  type: string;
+  distance: string;
+  category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설';
+  icon: string;
+  color: string;
+}
+
+const shelters: Shelter[] = [
+  {
+    id: '1',
+    name: '카페빈스',
+    type: '민간 개방 시설',
+    distance: '30M',
+    category: '민간 개방 시설',
+    icon: 'location-outline',
+    color: '#FFA500'
+  },
+  {
+    id: '2',
+    name: '미추홀구 스마트 쉼터',
+    type: '스마트 쉼터',
+    distance: '37M',
+    category: '스마트 쉼터',
+    icon: 'home-outline',
+    color: '#4A90E2'
+  },
+  {
+    id: '3',
+    name: '인하대역',
+    type: '교통 시설',
+    distance: '50M',
+    category: '교통 시설',
+    icon: 'train-outline',
+    color: '#27AE60'
+  },
+  {
+    id: '4',
+    name: '용현 노인 문화 센터',
+    type: '공공 시설',
+    distance: '83M',
+    category: '공공 시설',
+    icon: 'business-outline',
+    color: '#E74C3C'
+  }
+];
+
 const HomeScreen: React.FC = () => {
+  // 상태 관리: 선택된 쉼터 정보만 관리
+  const [selectedShelter, setSelectedShelter] = useState<Shelter>(shelters[0]);
+  
+  // 하단 슬라이드 애니메이션을 위한 값들
+  const bottomSheetHeight = height * 0.5; // 전체 높이의 50%
+  const peekHeight = 120; // 기본적으로 살짝 보이는 높이
+  const minHeight = peekHeight; // 최소 높이 - 제목과 첫 번째 카드 일부만 보임
+  const maxHeight = bottomSheetHeight; // 최대 높이 - 전체 목록 표시
+  
+  // CSS로 위치를 조정했으므로 translateY는 0에서 시작
+  const translateY = useSharedValue(0);
+
+  // 팬 제스처 핸들러 - 3단계 상태를 지원하는 스마트 슬라이드
+  const gestureHandler = useAnimatedGestureHandler({
+    onStart: (_, context: any) => {
+      // 드래그 시작 위치 저장
+      context.startY = translateY.value;
+    },
+    onActive: (event, context) => {
+      // 드래그 중 위치 업데이트 - 부드러운 따라감
+      const newTranslateY = context.startY + event.translationY;
+      // 범위 제한: 완전히 닫힌 상태(0)부터 완전히 열린 상태(-maxHeight)까지
+      translateY.value = Math.max(-maxHeight, Math.min(20, newTranslateY));
+    },
+    onEnd: (event) => {
+      // 3단계 상태 결정: 완전히 닫힘(0), 살짝 열림(-peekHeight), 완전히 열림(-maxHeight)
+      const currentPos = translateY.value;
+      const velocity = event.velocityY;
+      
+      let targetY = 0; // 기본값은 닫힌 상태
+      
+      // 위로 빠르게 드래그하면 완전히 열기
+      if (velocity < -500) {
+        targetY = -maxHeight + 85; // 완전히 열림 (하단 네비 고려)
+      }
+      // 아래로 빠르게 드래그하면 닫기
+      else if (velocity > 500) {
+        targetY = 0; // 닫힌 상태
+      }
+      // 속도가 느리면 현재 위치에 따라 결정
+      else {
+        if (currentPos > -50) {
+          targetY = 0; // 닫힌 상태
+        } else if (currentPos < -200) {
+          targetY = -maxHeight + 85; // 완전히 열림
+        } else {
+          targetY = -peekHeight; // 중간 상태 (살짝 열림)
+        }
+      }
+      
+      // 부드러운 스프링 애니메이션으로 목표 위치로 이동
+      translateY.value = withSpring(targetY, {
+        damping: 30,
+        stiffness: 300,
+      });
+    },
+  });
+
+  // 애니메이션 스타일 정의
+  const bottomSheetStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
+  // 대중교통 관련 함수 제거 - 쉼터 기능에만 집중
+
+  // 쉼터 정보 카드 렌더링 함수 - 선택 가능한 카드 리스트 형태
+  const renderShelterCard = ({ item }: { item: Shelter }) => (
+    <TouchableOpacity 
+      style={[
+        styles.shelterCard, 
+        selectedShelter.id === item.id && styles.selectedCard // 선택된 카드는 다른 스타일 적용
+      ]}
+      onPress={() => setSelectedShelter(item)} // 카드 선택 시 상태 업데이트
+    >
+      {/* 쉼터 타입별 색상 아이콘 */}
+      <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+        <Ionicons name={item.icon as any} size={20} color="white" />
+      </View>
+      {/* 쉼터 정보 텍스트 영역 */}
+      <View style={styles.shelterInfo}>
+        <Text style={styles.shelterCategory}>{item.category}</Text>
+        <Text style={styles.shelterName}>{item.name}</Text>
+      </View>
+      {/* 거리 정보 - 오른쪽에 큰 글씨로 표시 */}
+      <Text style={styles.shelterDistance}>{item.distance}</Text>
+    </TouchableOpacity>
+  );
+
   const mapHtml = `
   <!DOCTYPE html>
   <html>
@@ -83,31 +236,55 @@ const HomeScreen: React.FC = () => {
   `;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      <View style={styles.mapContainer}>
-        <WebView
-          originWhitelist={['*']}
-          source={{ html: mapHtml, baseUrl: '' }}
-          style={styles.map}
-        />
-        <View style={styles.overlayTop}>
-            <View style={styles.header}>
-                <Text style={styles.temperature}>35°C</Text>
-                <TouchableOpacity style={styles.listButton}>
-                    <Ionicons name="list" size={24} color={Colors.text.primary} />
-                </TouchableOpacity>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="dark" />
+        <View style={styles.mapContainer}>
+          <WebView
+            originWhitelist={['*']}
+            source={{ html: mapHtml, baseUrl: '' }}
+            style={styles.map}
+          />
+          {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
+          <View style={styles.overlayTop}>
+            <View style={styles.weatherCard}>
+              <View style={styles.weatherIcon}>
+                <Text style={styles.weatherEmoji}>☀️</Text>
+              </View>
+              <Text style={styles.weatherTemp}>26°</Text>
+              <Text style={styles.weatherStatus}>미세</Text>
             </View>
-        </View>
-        <View style={styles.overlayBottom}>
-            <TouchableOpacity style={styles.bottomCard}>
-                <Text style={styles.bottomCardTitle}>가장 가까운 쉼터 !!</Text>
-                <Text style={styles.bottomCardSubtitle}>카페빈스 (민간개방시설)</Text>
-                <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
+            
+            <TouchableOpacity style={styles.locationButton}>
+              <Ionicons name="locate" size={20} color={Colors.text.primary} />
             </TouchableOpacity>
+          </View>
+          
+          <PanGestureHandler onGestureEvent={gestureHandler}>
+            <Animated.View style={[styles.overlayBottom, bottomSheetStyle]}>
+              {/* 드래그 핸들 - 미니멀한 회색 바 */}
+              <View style={styles.dragHandle} />
+              
+              {/* 헤더 부분 - 간단한 제목 */}
+              <View style={styles.bottomHeader}>
+                <Text style={styles.headerTitle}>반경 100m 내 쉼터</Text>
+              </View>
+
+              {/* 쉼터 목록 - 스크롤 가능한 영역 */}
+              <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
+                <FlatList
+                  data={shelters}
+                  renderItem={renderShelterCard}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                />
+                <Text style={styles.bottomNote}>※ 실시간으로 업데이트 됩니다.</Text>
+              </ScrollView>
+            </Animated.View>
+          </PanGestureHandler>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -124,60 +301,153 @@ const styles = StyleSheet.create({
     },
     overlayTop: {
         position: 'absolute',
-        top: 50,
+        top: 60,
         left: 20,
         right: 20,
-    },
-    header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
+    },
+    weatherCard: {
         backgroundColor: 'white',
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 25,
+        alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        elevation: 5,
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        minWidth: 80,
     },
-    temperature: {
-        fontSize: 24,
+    weatherIcon: {
+        marginBottom: 4,
+    },
+    weatherEmoji: {
+        fontSize: 20,
+    },
+    weatherTemp: {
+        fontSize: 18,
         fontWeight: 'bold',
         color: Colors.text.primary,
+        marginBottom: 2,
     },
-    listButton: {
-        padding: 5,
+    weatherStatus: {
+        fontSize: 12,
+        color: Colors.primary,
+        fontWeight: '500',
+    },
+    locationButton: {
+        backgroundColor: 'white',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     overlayBottom: {
         position: 'absolute',
-        bottom: 30,
-        left: 20,
-        right: 20,
+        bottom: -height * 0.5 + 85, // 슬라이드를 아래로 숨기고 15px만 보이게
+        left: 0,
+        right: 0,
+        backgroundColor: 'white',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingTop: 12,
+        height: height * 0.5, // 슬라이드 전체 높이
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 8,
     },
-    bottomCard: {
+    dragHandle: {
+        width: 36,
+        height: 4,
+        backgroundColor: '#E0E0E0',
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 12,
+    },
+    contentContainer: {
+        flex: 1,
+        paddingHorizontal: 20,
+    },
+    bottomHeader: {
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.text.primary,
+        textAlign: 'center',
+    },
+    shelterCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.primary,
+        backgroundColor: 'white',
         padding: 16,
+        marginVertical: 6,
         borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
-    bottomCardTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: 'white',
+    selectedCard: {
+        backgroundColor: '#F8F9FF',
+        borderColor: Colors.primary,
+        borderWidth: 1.5,
+    },
+    iconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    shelterInfo: {
         flex: 1,
     },
-    bottomCardSubtitle: {
-        fontSize: 14,
-        color: 'white',
-        marginRight: 10,
+    shelterCategory: {
+        fontSize: 12,
+        color: Colors.text.light,
+        marginBottom: 2,
+        fontWeight: '500',
+    },
+    shelterName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.text.primary,
+        lineHeight: 20,
+    },
+    shelterDistance: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.primary,
+        minWidth: 50,
+        textAlign: 'right',
+    },
+    bottomNote: {
+        fontSize: 12,
+        color: Colors.text.light,
+        textAlign: 'center',
+        marginTop: 15,
+        marginBottom: 20,
     },
 });
 
