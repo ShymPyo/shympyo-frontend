@@ -98,8 +98,8 @@ const HomeScreen: React.FC = () => {
     onActive: (event, context) => {
       // 드래그 중 위치 업데이트 - 부드러운 따라감
       const newTranslateY = context.startY + event.translationY;
-      // 범위 제한: 완전히 닫힌 상태(0)부터 완전히 열린 상태(-maxHeight)까지
-      translateY.value = Math.max(-maxHeight, Math.min(20, newTranslateY));
+      // 범위 제한: 완전히 닫힌 상태(0)부터 완전히 열린 상태(-maxHeight + 85)까지, 과도한 탄성 방지
+      translateY.value = Math.max(-maxHeight + 85, Math.min(20, newTranslateY));
     },
     onEnd: (event) => {
       // 3단계 상태 결정: 완전히 닫힘(0), 살짝 열림(-peekHeight), 완전히 열림(-maxHeight)
@@ -238,8 +238,8 @@ const HomeScreen: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
+      <View style={styles.container}>
+        <StatusBar style="dark" translucent backgroundColor="rgba(255,255,255,0.8)" />
         <View style={styles.mapContainer}>
           <WebView
             originWhitelist={['*']}
@@ -281,7 +281,11 @@ const HomeScreen: React.FC = () => {
               </View>
 
               {/* 쉼터 목록 - 스크롤 가능한 영역 */}
-              <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
+              <ScrollView 
+                style={styles.contentContainer} 
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContentContainer}
+              >
                 <FlatList
                   data={shelters}
                   renderItem={renderShelterCard}
@@ -289,11 +293,12 @@ const HomeScreen: React.FC = () => {
                   scrollEnabled={false}
                 />
                 <Text style={styles.bottomNote}>※ 실시간으로 업데이트 됩니다.</Text>
+                <View style={styles.bottomFiller} />
               </ScrollView>
             </Animated.View>
           </PanGestureHandler>
         </View>
-      </SafeAreaView>
+      </View>
     </GestureHandlerRootView>
   );
 };
@@ -315,6 +320,7 @@ const styles = StyleSheet.create({
         right: 20,
         flexDirection: 'row',
         alignItems: 'center',
+        zIndex: 10,
     },
     modernThermometer: {
         width: 25,
@@ -389,6 +395,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        zIndex: 10,
     },
     overlayBottom: {
         position: 'absolute',
@@ -486,7 +493,14 @@ const styles = StyleSheet.create({
         color: Colors.text.light,
         textAlign: 'center',
         marginTop: 15,
-        marginBottom: 20,
+        marginBottom: 10,
+    },
+    scrollContentContainer: {
+        flexGrow: 1,
+    },
+    bottomFiller: {
+        height: 100, // 하단 네비게이션 바 높이만큼 여백 추가
+        backgroundColor: 'transparent',
     },
 });
 
