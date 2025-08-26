@@ -30,14 +30,20 @@ const SplashScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../assets/shympyo_logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+      <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../../assets/shympyo_logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+      </View>
+      
+      <View style={styles.footer}>
+        <Text style={styles.copyright}>© 2025. All rights reserved.</Text>
       </View>
     </View>
   );
@@ -46,7 +52,12 @@ const SplashScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  content: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -55,8 +66,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 200,
-    height: 120,
+    width: 180,
+    height: 108,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  footer: {
+    paddingBottom: 50,
+    alignItems: 'center',
+  },
+  copyright: {
+    fontSize: 12,
+    color: Colors.text.light,
+    textAlign: 'center',
   },
 });
 
