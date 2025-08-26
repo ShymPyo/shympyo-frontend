@@ -114,16 +114,18 @@ const ProfileSetupScreen: React.FC = () => {
           </ScrollView>
         </KeyboardAvoidingView>
 
+      {/* 프로필 이미지 선택 Modal - 완전 고정 위치, 키보드 영향 차단 */}
       <Modal
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
         onRequestClose={() => setModalVisible(false)}
+        presentationStyle="overFullScreen"
+        statusBarTranslucent={true}
       >
-        <View style={styles.modalContainer}>
+        <View style={styles.fixedModalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>프로필 이미지 선택</Text>
-            {/* 로컬 프로필 이미지들을 4x2 그리드로 표시 */}
             <FlatList
               data={profileImages}
               renderItem={({ item }) => (
@@ -134,6 +136,9 @@ const ProfileSetupScreen: React.FC = () => {
               keyExtractor={(item) => item.id}
               numColumns={4}
               contentContainerStyle={styles.imageList}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
             />
             <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
               <Text style={styles.closeButtonText}>취소</Text>
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  modalContainer: {
+  fixedModalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -237,6 +242,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 20,
     alignItems: 'center',
+    maxHeight: 350,
   },
   modalTitle: {
     fontSize: 18,
@@ -247,10 +253,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    margin: 10,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    margin: 8,
   },
   closeButton: {
     backgroundColor: Colors.surface,

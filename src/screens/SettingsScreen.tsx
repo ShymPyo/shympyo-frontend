@@ -29,11 +29,7 @@ const SettingsScreen: React.FC = () => {
       <StatusBar style="dark" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
         <Text style={styles.title}>설정</Text>
-        <View style={{width: 24}} />
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -69,9 +65,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
