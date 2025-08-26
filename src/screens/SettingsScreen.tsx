@@ -38,8 +38,9 @@ const SettingsScreen: React.FC = () => {
 
       <ScrollView style={styles.scrollView}>
         <TouchableOpacity style={styles.profileSection} onPress={() => navigation.navigate('ProfileSetup')}>
+            {/* 로컬 프로필 이미지 사용 - profile1.png가 기본값 */}
             <Image 
-                source={{ uri: 'https://via.placeholder.com/80/FFC107/000000?Text=P1' }} 
+                source={require('../../assets/profiles/profile1.png')} 
                 style={styles.profileImage}
             />
             <View style={styles.profileInfo}>

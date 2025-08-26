@@ -9,6 +9,8 @@ import {
   Image,
   Modal,
   FlatList,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,49 +22,60 @@ import { Colors } from '../constants/colors';
 
 type ProfileSetupNavigationProp = StackNavigationProp<RootStackParamList, 'ProfileSetup'>;
 
-const defaultImages = [
-  { id: '1', image: 'https://via.placeholder.com/80/FFC107/000000?Text=P1' },
-  { id: '2', image: 'https://via.placeholder.com/80/8BC34A/000000?Text=P2' },
-  { id: '3', image: 'https://via.placeholder.com/80/03A9F4/000000?Text=P3' },
-  { id: '4', image: 'https://via.placeholder.com/80/9C27B0/000000?Text=P4' },
-  { id: '5', image: 'https://via.placeholder.com/80/E91E63/000000?Text=P5' },
-  { id: '6', image: 'https://via.placeholder.com/80/795548/000000?Text=P6' },
+// 로컬 프로필 이미지들 - assets/profiles 폴더에서 가져옴
+const profileImages = [
+  { id: '1', image: require('../../assets/profiles/profile1.png') },
+  { id: '2', image: require('../../assets/profiles/profile2.png') },
+  { id: '3', image: require('../../assets/profiles/profile3.png') },
+  { id: '4', image: require('../../assets/profiles/profile4.png') },
+  { id: '5', image: require('../../assets/profiles/profile5.png') },
+  { id: '6', image: require('../../assets/profiles/profile6.png') },
+  { id: '7', image: require('../../assets/profiles/profile7.png') },
+  { id: '8', image: require('../../assets/profiles/profile8.png') },
 ];
 
 const ProfileSetupScreen: React.FC = () => {
   const navigation = useNavigation<ProfileSetupNavigationProp>();
   const [nickname, setNickname] = useState('');
   const [bio, setBio] = useState('');
-  const [profileImage, setProfileImage] = useState(defaultImages[0].image);
+  const [profileImage, setProfileImage] = useState(profileImages[0].image); // 첫 번째 로컬 이미지로 초기화
   const [isModalVisible, setModalVisible] = useState(false);
 
+  // 키보드 닫기 함수
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
   const handleSave = () => {
+    // 프로필 정보를 저장하는 로직 (실제로는 AsyncStorage나 서버에 저장)
     navigation.replace('Main');
   };
 
-  const handleSelectImage = (image: string) => {
+  const handleSelectImage = (image: any) => {
     setProfileImage(image);
     setModalVisible(false);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>프로필 편집</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="dark" />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.title}>프로필 편집</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      <View style={styles.content}>
-        <TouchableOpacity style={styles.profileImageContainer} onPress={() => setModalVisible(true)}>
-          <Image source={{ uri: profileImage }} style={styles.profileImage} />
-          <View style={styles.cameraIconContainer}>
-            <Ionicons name="camera" size={20} color="white" />
-          </View>
-        </TouchableOpacity>
+        <View style={styles.content}>
+          {/* 프로필 이미지 선택 영역 */}
+          <TouchableOpacity style={styles.profileImageContainer} onPress={() => setModalVisible(true)}>
+            <Image source={profileImage} style={styles.profileImage} />
+            <View style={styles.cameraIconContainer}>
+              <Ionicons name="camera" size={20} color="white" />
+            </View>
+          </TouchableOpacity>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>닉네임</Text>
@@ -99,11 +112,12 @@ const ProfileSetupScreen: React.FC = () => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>프로필 이미지 선택</Text>
+            {/* 로컬 프로필 이미지들을 4x2 그리드로 표시 */}
             <FlatList
-              data={defaultImages}
+              data={profileImages}
               renderItem={({ item }) => (
                 <TouchableOpacity onPress={() => handleSelectImage(item.image)}>
-                  <Image source={{ uri: item.image }} style={styles.modalImage} />
+                  <Image source={item.image} style={styles.modalImage} />
                 </TouchableOpacity>
               )}
               keyExtractor={(item) => item.id}
@@ -116,7 +130,8 @@ const ProfileSetupScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
