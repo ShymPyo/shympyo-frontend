@@ -37,7 +37,6 @@ const LoginScreen: React.FC = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.subtitle}>더위 쉼표, 시원한 휴식처</Text>
         </View>
 
         <View style={styles.buttonContainer}>
@@ -62,6 +61,14 @@ const LoginScreen: React.FC = () => {
             onPress={() => handleSocialLogin('Naver')}
           >
             <Text style={[styles.socialButtonText, styles.naverButtonText]}>네이버로 쉬운시작</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.socialButton, styles.generalButton]}
+            onPress={() => handleSocialLogin('General')}
+          >
+            <FontAwesome name="user" size={20} color={Colors.text.primary} style={styles.icon} />
+            <Text style={[styles.socialButtonText, styles.generalButtonText]}>일반 로그인</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -132,6 +139,14 @@ const styles = StyleSheet.create({
   },
   naverButtonText: {
     color: 'white',
+  },
+  generalButton: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.text.light,
+  },
+  generalButtonText: {
+    color: Colors.text.primary,
   },
   footer: {
     alignItems: 'center',
