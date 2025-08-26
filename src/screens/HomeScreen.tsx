@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,11 +19,106 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
+  withRepeat,
+  interpolate,
 } from 'react-native-reanimated';
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 
 import { Colors } from '../constants/colors';
 
 const { width, height } = Dimensions.get('window');
+
+// SVG Path로 자연스러운 물결 (안전한 버전)
+const AnimatedThermometer: React.FC<{ temperature: number }> = ({ temperature }) => {
+  const [waveOffset1, setWaveOffset1] = React.useState(0);
+  const [waveOffset2, setWaveOffset2] = React.useState(0);
+  
+  React.useEffect(() => {
+    // 자연스러운 속도로 더 빠르게
+    const interval1 = setInterval(() => {
+      setWaveOffset1(prev => (prev + 0.12) % (Math.PI * 2)); // 더 빠르게
+    }, 40); // 더 자주 업데이트
+    
+    const interval2 = setInterval(() => {
+      setWaveOffset2(prev => (prev + 0.10) % (Math.PI * 2)); // 더 빠르게  
+    }, 40); // 더 자주 업데이트
+    
+    return () => {
+      clearInterval(interval1);
+      clearInterval(interval2);
+    };
+  }, []);
+
+  // 물결 Path 생성 (간단하고 안전하게)
+  const createWavePath = (offset: number, amplitude: number) => {
+    const width = 20;
+    const height = 70;
+    const fillHeight = height * 0.65;
+    const waveTop = height - fillHeight;
+    
+    let path = `M 0,${waveTop}`;
+    
+    // 더 적은 점으로 간단하게
+    for (let x = 0; x <= width; x += 2) {
+      const y = waveTop + Math.sin((x / width) * Math.PI * 2 + offset) * amplitude;
+      path += ` L ${x},${y}`;
+    }
+    
+    path += ` L ${width},${height} L 0,${height} Z`;
+    return path;
+  };
+
+  return (
+    <View style={styles.modernThermometer}>
+      <View style={styles.thermometerBackground} />
+      
+      {/* 기본 빨간색 배경 */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '65%',
+          backgroundColor: '#C62828',
+          borderBottomLeftRadius: 10,
+          borderBottomRightRadius: 10,
+        }}
+      />
+      
+      {/* SVG 물결 효과 */}
+      <Svg 
+        height="70" 
+        width="20" 
+        style={{ position: 'absolute', bottom: 0 }}
+        viewBox="0 0 20 70"
+      >
+        <Defs>
+          <SvgLinearGradient id="redGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor="#FF6B6B" stopOpacity={0.8} />
+            <Stop offset="50%" stopColor="#E53935" stopOpacity={0.9} />
+            <Stop offset="100%" stopColor="#D32F2F" stopOpacity={1} />
+          </SvgLinearGradient>
+        </Defs>
+        
+        {/* 첫 번째 물결 레이어 */}
+        <Path 
+          d={createWavePath(waveOffset1, 1.5)} // 작은 진폭
+          fill="url(#redGradient)"
+          opacity={0.9}
+        />
+        
+        {/* 두 번째 물결 레이어 */}
+        <Path 
+          d={createWavePath(waveOffset2 + Math.PI/3, 1)} // 더 작은 진폭, 위상차
+          fill="#FF5722"
+          opacity={0.7}
+        />
+      </Svg>
+    </View>
+  );
+};
 
 // 대중교통 관련 인터페이스와 데이터 제거 - 쉼터 기능만 사용
 
@@ -134,6 +229,7 @@ const HomeScreen: React.FC = () => {
       });
     },
   });
+
 
   // 애니메이션 스타일 정의
   const bottomSheetStyle = useAnimatedStyle(() => {
@@ -247,18 +343,9 @@ const HomeScreen: React.FC = () => {
             style={styles.map}
           />
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
-          {/* 온도계 - 우측 상단 */}
+          {/* 온도계 - 좌측 상단 */}
           <View style={styles.thermometerContainer}>
-            <View style={styles.modernThermometer}>
-              <LinearGradient
-                colors={['#A8E6CF', '#88D8A3', '#68C378', '#41A85F']}
-                style={styles.thermometerBackground}
-              />
-              <LinearGradient
-                colors={['#FFD93D', '#6BCF7F', '#4D908E', '#277DA1']}
-                style={styles.thermometerFill}
-              />
-            </View>
+            <AnimatedThermometer temperature={65} />
             <View style={styles.temperatureLabel}>
               <Text style={styles.temperatureText}>26°</Text>
               <View style={styles.trianglePointer} />
@@ -317,28 +404,32 @@ const styles = StyleSheet.create({
     thermometerContainer: {
         position: 'absolute',
         top: 60,
-        right: 20,
+        left: 20,
         flexDirection: 'row',
         alignItems: 'center',
         zIndex: 10,
     },
     modernThermometer: {
-        width: 25,
-        height: 80,
-        borderRadius: 12.5,
-        marginRight: 10,
+        width: 20,
+        height: 70,
+        borderRadius: 10,
+        marginLeft: 10,
         overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+        position: 'relative',
+        borderWidth: 2,
+        borderColor: '#fff',
     },
     thermometerBackground: {
         position: 'absolute',
         width: '100%',
         height: '100%',
-        borderRadius: 12.5,
+        borderRadius: 10,
+        backgroundColor: '#E8E8E8',
     },
     thermometerFill: {
         position: 'absolute',
@@ -349,32 +440,36 @@ const styles = StyleSheet.create({
     },
     temperatureLabel: {
         backgroundColor: '#000',
+        width: 40,
+        height: 40,
         borderRadius: 20,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 10,
+        marginLeft: 8,
     },
     temperatureText: {
-        fontSize: 16,
+        fontSize: 12,
         fontWeight: 'bold',
         color: 'white',
+        textAlign: 'center',
     },
     trianglePointer: {
         position: 'absolute',
-        left: -8,
+        left: -6,
+        top: '50%',
+        marginTop: -5,
         width: 0,
         height: 0,
         backgroundColor: 'transparent',
         borderStyle: 'solid',
-        borderTopWidth: 8,
-        borderRightWidth: 8,
-        borderBottomWidth: 8,
+        borderTopWidth: 5,
+        borderRightWidth: 6,
+        borderBottomWidth: 5,
         borderLeftWidth: 0,
         borderTopColor: 'transparent',
         borderRightColor: '#000',

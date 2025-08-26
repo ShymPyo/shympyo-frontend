@@ -25,9 +25,13 @@ const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
   const handleSocialLogin = (provider: string) => {
-    // For now, any login attempt will navigate to the main screen
-    console.log(`${provider} login`);
-    navigation.replace('Main');
+    try {
+      // For now, any login attempt will navigate to the main screen
+      console.log(`${provider} login`);
+      navigation.replace('Main');
+    } catch (error) {
+      console.error('Login navigation error:', error);
+    }
   };
 
   // 키보드 닫기 함수 (향후 텍스트 입력이 추가될 때를 대비)
