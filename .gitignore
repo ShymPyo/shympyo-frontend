@@ -35,3 +35,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+babel.config.js
+개발일지.md
+.gitignore
+.gitignore

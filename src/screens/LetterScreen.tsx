@@ -8,6 +8,10 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +35,10 @@ const LetterScreen: React.FC = () => {
   const handleWriteLetter = (place: { id: string; name: string }) => {
     setSelectedPlace(place);
     setModalVisible(true);
+  };
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
   };
 
   const handleSendLetter = () => {
@@ -90,33 +98,38 @@ const LetterScreen: React.FC = () => {
         visible={isModalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>감사 편지 작성</Text>
-            <Text style={styles.modalRecipient}>To. {selectedPlace?.name} 사장님</Text>
-            <TextInput
-              style={styles.textInput}
-              value={letterText}
-              onChangeText={setLetterText}
-              placeholder="감사한 마음을 담아 편지를 작성해보세요..."
-              multiline
-            />
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.sendButton]} 
-                onPress={handleSendLetter}
-              >
-                <Text style={styles.sendButtonText}>전송</Text>
-              </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={dismissKeyboard}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContainer}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>감사 편지 작성</Text>
+              <Text style={styles.modalRecipient}>To. {selectedPlace?.name} 사장님</Text>
+              <TextInput
+                style={styles.textInput}
+                value={letterText}
+                onChangeText={setLetterText}
+                placeholder="감사한 마음을 담아 편지를 작성해보세요..."
+                multiline
+              />
+              <View style={styles.modalButtonContainer}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.cancelButton]} 
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.cancelButtonText}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.sendButton]} 
+                  onPress={handleSendLetter}
+                >
+                  <Text style={styles.sendButtonText}>전송</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );

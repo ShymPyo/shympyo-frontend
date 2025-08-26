@@ -11,6 +11,9 @@ import {
   FlatList,
   Keyboard,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -68,40 +71,48 @@ const ProfileSetupScreen: React.FC = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        <View style={styles.content}>
-          {/* 프로필 이미지 선택 영역 */}
-          <TouchableOpacity style={styles.profileImageContainer} onPress={() => setModalVisible(true)}>
-            <Image source={profileImage} style={styles.profileImage} />
-            <View style={styles.cameraIconContainer}>
-              <Ionicons name="camera" size={20} color="white" />
+        {/* 키보드가 올라올 때 콘텐츠가 위로 올라가도록 KeyboardAvoidingView 적용 */}
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* 프로필 이미지 선택 영역 */}
+            <TouchableOpacity style={styles.profileImageContainer} onPress={() => setModalVisible(true)}>
+              <Image source={profileImage} style={styles.profileImage} />
+              <View style={styles.cameraIconContainer}>
+                <Ionicons name="camera" size={20} color="white" />
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>닉네임</Text>
+              <TextInput
+                style={styles.input}
+                value={nickname}
+                onChangeText={setNickname}
+                placeholder="닉네임을 입력하세요"
+                returnKeyType="next"
+              />
             </View>
-          </TouchableOpacity>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>닉네임</Text>
-          <TextInput
-            style={styles.input}
-            value={nickname}
-            onChangeText={setNickname}
-            placeholder="닉네임을 입력하세요"
-          />
-        </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>자기소개</Text>
+              <TextInput
+                style={[styles.input, styles.bioInput]}
+                value={bio}
+                onChangeText={setBio}
+                placeholder="자기소개를 입력하세요"
+                multiline
+                returnKeyType="done"
+              />
+            </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>자기소개</Text>
-          <TextInput
-            style={[styles.input, styles.bioInput]}
-            value={bio}
-            onChangeText={setBio}
-            placeholder="자기소개를 입력하세요"
-            multiline
-          />
-        </View>
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>저장</Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveButtonText}>저장</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
       <Modal
         animationType="slide"
@@ -153,10 +164,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text.primary,
   },
-  content: {
+  keyboardAvoidingView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 20,
     alignItems: 'center',
+    paddingBottom: 40, // 키보드 여유 공간
   },
   profileImageContainer: {
     marginBottom: 30,
