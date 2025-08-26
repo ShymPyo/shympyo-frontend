@@ -47,9 +47,9 @@ const MainTabNavigator = () => {
         tabBarStyle: {
           backgroundColor: Colors.background,
           borderTopColor: '#E5E5E5',
-          paddingTop: 5,
-          paddingBottom: 5,
-          height: 60,
+          paddingTop: 10,
+          paddingBottom: 25,
+          height: 70,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -60,22 +60,22 @@ const MainTabNavigator = () => {
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
-        options={{ tabBarLabel: '홈' }}
+        options={{ tabBarLabel: '' }}
       />
       <Tab.Screen 
         name="QR" 
         component={QRScreen}
-        options={{ tabBarLabel: 'QR' }}
+        options={{ tabBarLabel: '' }}
       />
       <Tab.Screen 
         name="Letter" 
         component={LetterScreen}
-        options={{ tabBarLabel: '편지' }}
+        options={{ tabBarLabel: '' }}
       />
       <Tab.Screen 
         name="Settings" 
         component={SettingsScreen}
-        options={{ tabBarLabel: '설정' }}
+        options={{ tabBarLabel: '' }}
       />
     </Tab.Navigator>
   );
