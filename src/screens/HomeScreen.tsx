@@ -26,6 +26,7 @@ import Animated, {
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 
 import { Colors } from '../constants/colors';
+import ShelterDetailModal from '../components/ShelterDetailModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -167,6 +168,7 @@ const shelters: Shelter[] = [
 const HomeScreen: React.FC = () => {
   // 상태 관리: 선택된 쉼터 정보만 관리
   const [selectedShelter, setSelectedShelter] = useState<Shelter>(shelters[0]);
+  const [modalVisible, setModalVisible] = useState(false);
   
   // 하단 슬라이드 애니메이션을 위한 값들
   const bottomSheetHeight = height * 0.5; // 전체 높이의 50%
@@ -240,7 +242,10 @@ const HomeScreen: React.FC = () => {
         styles.shelterCard, 
         selectedShelter.id === item.id && styles.selectedCard // 선택된 카드는 다른 스타일 적용
       ]}
-      onPress={() => setSelectedShelter(item)} // 카드 선택 시 상태 업데이트
+      onPress={() => {
+        setSelectedShelter(item);
+        setModalVisible(true);
+      }} // 카드 선택 시 상태 업데이트하고 모달 열기
     >
       {/* 쉼터 타입별 색상 아이콘 */}
       <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
@@ -378,6 +383,13 @@ const HomeScreen: React.FC = () => {
             </Animated.View>
           </PanGestureHandler>
         </View>
+
+        {/* 쉼터 세부정보 모달 */}
+        <ShelterDetailModal
+          visible={modalVisible}
+          shelter={selectedShelter}
+          onClose={() => setModalVisible(false)}
+        />
       </View>
     </GestureHandlerRootView>
   );
