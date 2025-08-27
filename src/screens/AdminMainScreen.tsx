@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,8 +31,28 @@ const mockLetters = [
 
 const AdminMainScreen: React.FC = () => {
   const navigation = useNavigation<AdminMainScreenNavigationProp>();
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isUserModalVisible, setUserModalVisible] = useState(false);
 
   const unreadCount = mockLetters.filter(letter => !letter.isRead).length;
+
+  // 현재 사용자들 데이터
+  const currentUsers = [
+    { 
+      id: '1', 
+      name: '배민형', 
+      time: '19:59', 
+      profileEmoji: '😊',
+      introduction: '안녕하세요! 개발자로 일하고 있습니다.\n조용한 곳에서 집중하며 작업하는 것을 좋아해요.'
+    },
+    { 
+      id: '2', 
+      name: '아구팀', 
+      time: '1:04', 
+      profileEmoji: '😊',
+      introduction: '팀프로젝트를 진행하고 있습니다!\n토론하면서 아이디어를 나누는 시간을 갖고 있어요.'
+    }
+  ];
 
   const handleEditProfile = () => {
     navigation.navigate('AdminSpaceEdit');
@@ -39,6 +60,11 @@ const AdminMainScreen: React.FC = () => {
 
   const handleLogout = () => {
     navigation.replace('Login');
+  };
+
+  const handleUserPress = (user: any) => {
+    setSelectedUser(user);
+    setUserModalVisible(true);
   };
 
 
@@ -124,21 +150,31 @@ const AdminMainScreen: React.FC = () => {
         {/* 인원 현황 */}
         <View style={styles.statsSection}>
           <Text style={styles.statsTitle}>인원 현황 (2/5)</Text>
-          <View style={styles.statsContainer}>
-            <View style={styles.userStats}>
-              <View style={styles.userProfile}>
-                <Text style={styles.userProfileText}>😊</Text>
+          <View style={styles.statsGrid}>
+            {/* 현재 사용자들 */}
+            {currentUsers.map((user) => (
+              <TouchableOpacity 
+                key={user.id}
+                style={styles.userStats}
+                onPress={() => handleUserPress(user)}
+              >
+                <View style={styles.userProfile}>
+                  <Text style={styles.userProfileText}>{user.profileEmoji}</Text>
+                </View>
+                <Text style={styles.userName}>{user.name} 님</Text>
+                <Text style={styles.userTime}>{user.time}</Text>
+              </TouchableOpacity>
+            ))}
+            
+            {/* 빈 자리들 (총 5자리 중 사용자 수만큼 빼기) */}
+            {Array.from({ length: 5 - currentUsers.length }, (_, index) => (
+              <View key={`empty-${index}`} style={styles.emptySlot}>
+                <View style={styles.emptyProfile}>
+                  <Ionicons name="person-outline" size={24} color={Colors.text.light} />
+                </View>
+                <Text style={styles.emptyText}>빈 자리</Text>
               </View>
-              <Text style={styles.userName}>배민형 님</Text>
-              <Text style={styles.userTime}>19:59</Text>
-            </View>
-            <View style={styles.userStats}>
-              <View style={styles.userProfile}>
-                <Text style={styles.userProfileText}>😊</Text>
-              </View>
-              <Text style={styles.userName}>아구팀 님</Text>
-              <Text style={styles.userTime}>1:04</Text>
-            </View>
+            ))}
           </View>
         </View>
 
@@ -149,6 +185,46 @@ const AdminMainScreen: React.FC = () => {
           <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
         </TouchableOpacity>
       </ScrollView>
+
+      {/* 사용자 프로필 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isUserModalVisible}
+        onRequestClose={() => setUserModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setUserModalVisible(false)}
+        >
+          <TouchableOpacity 
+            style={styles.userModalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.userModalHeader}>
+              <TouchableOpacity onPress={() => setUserModalVisible(false)}>
+                <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+              <Text style={styles.userModalTitle}>{selectedUser?.name} 님의 프로필</Text>
+              <View style={{ width: 24 }} />
+            </View>
+            
+            <View style={styles.userModalProfile}>
+              <View style={styles.userModalProfileCircle}>
+                <Text style={styles.userModalProfileEmoji}>{selectedUser?.profileEmoji}</Text>
+              </View>
+              <Text style={styles.userModalName}>{selectedUser?.name}</Text>
+            </View>
+            
+            <View style={styles.userModalIntroSection}>
+              <Text style={styles.userModalLabel}>자기소개</Text>
+              <Text style={styles.userModalIntroText}>{selectedUser?.introduction}</Text>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -332,16 +408,34 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     marginBottom: 15,
   },
-  statsContainer: {
+  statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   userStats: {
     alignItems: 'center',
     backgroundColor: Colors.surface,
     padding: 15,
     borderRadius: 12,
-    width: '45%',
+    width: '48%',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  emptySlot: {
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    padding: 15,
+    borderRadius: 12,
+    width: '48%',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderStyle: 'dashed',
   },
   userProfile: {
     width: 50,
@@ -355,6 +449,18 @@ const styles = StyleSheet.create({
   userProfileText: {
     fontSize: 24,
   },
+  emptyProfile: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    borderStyle: 'dashed',
+  },
   userName: {
     fontSize: 14,
     fontWeight: '600',
@@ -365,6 +471,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.primary,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.text.light,
+    fontWeight: '500',
   },
   logoutButton: {
     flexDirection: 'row',
@@ -385,6 +496,69 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FF4444',
     fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userModalContent: {
+    width: '85%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    maxHeight: '70%',
+  },
+  userModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+  userModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    flex: 1,
+    textAlign: 'center',
+  },
+  userModalProfile: {
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+  userModalProfileCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FFE4B5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  userModalProfileEmoji: {
+    fontSize: 40,
+  },
+  userModalName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  userModalIntroSection: {
+    backgroundColor: Colors.surface,
+    padding: 20,
+    borderRadius: 15,
+  },
+  userModalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.light,
+    marginBottom: 10,
+  },
+  userModalIntroText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    lineHeight: 24,
   },
 });
 
