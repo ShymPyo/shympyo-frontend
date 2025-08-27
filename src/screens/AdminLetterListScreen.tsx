@@ -125,7 +125,7 @@ const AdminLetterListScreen: React.FC = () => {
           {unreadCount > 0 && (
             <View style={styles.unreadCount}>
               <Ionicons name="alert-circle" size={16} color={Colors.primary} />
-              <Text style={styles.unreadCountText}>새로운 편지가 {unreadCount}개입니다.</Text>
+              <Text style={styles.unreadCountText}>새로운 편지가 {unreadCount}개 도착했습니다.</Text>
             </View>
           )}
         </View>

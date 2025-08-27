@@ -87,7 +87,7 @@ const AdminMainScreen: React.FC = () => {
         {/* 환영 메시지 */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeTitle}>카페빈스 사장님 환영합니다 !</Text>
-          <Text style={styles.welcomeSubtitle}>공간 나눔의 건전으로 감사드립니다.</Text>
+          <Text style={styles.welcomeSubtitle}>쉼표를 제공해주셔서 진심으로 감사드립니다.</Text>
         </View>
 
         {/* 공간 프로필 카드 */}
@@ -122,8 +122,8 @@ const AdminMainScreen: React.FC = () => {
             </View>
           </View>
           
-          <Text style={styles.shopDescription}>다정한 카페로 우영한 카페 빈스입니다 !</Text>
-          <Text style={styles.shopSubDescription}>더텐디 편하게 쉬었다 가세요 ~ !</Text>
+          <Text style={styles.shopDescription}>다정한 카페로 유명한 카페 빈스입니다 !</Text>
+          <Text style={styles.shopSubDescription}>편하게 쉬었다 가세요 ~ !</Text>
         </View>
 
         {/* 편지함 섹션 */}
@@ -138,7 +138,7 @@ const AdminMainScreen: React.FC = () => {
           {unreadCount > 0 && (
             <View style={styles.letterCount}>
               <Ionicons name="alert-circle" size={16} color={Colors.primary} />
-              <Text style={styles.countText}>새로운 편지가 {unreadCount}개입니다.</Text>
+              <Text style={styles.countText}>새로운 편지가 {unreadCount}개 도착했습니다.</Text>
             </View>
           )}
           <View style={styles.notificationBanner}>
