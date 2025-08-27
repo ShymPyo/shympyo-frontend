@@ -71,7 +71,7 @@ const LetterScreen: React.FC = () => {
           color={item.sent ? Colors.text.secondary : Colors.text.white} 
         />
         <Text style={[styles.buttonText, item.sent && styles.sentButtonText]}>
-          {item.sent ? '전송 완료' : '감사 편지 작성'}
+          {item.sent ? '전송 완료' : '고마운 마음 전하기'}
         </Text>
       </TouchableOpacity>
     </View>

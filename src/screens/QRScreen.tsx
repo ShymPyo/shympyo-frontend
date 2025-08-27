@@ -56,8 +56,6 @@ const QRScreen: React.FC = () => {
     const intervalId = setInterval(() => {
       setTimeLeft(prev => {
         const newTime = prev - 1;
-        // 프로그레스 바 업데이트 (차오르는 효과)
-        progress.value = withTiming((totalTime - newTime) / totalTime, { duration: 800 });
         return newTime;
       });
     }, 1000);
@@ -92,7 +90,7 @@ const QRScreen: React.FC = () => {
     if (screenState === 'timer') {
       progress.value = 0; // 프로그레스 바 초기화
     }
-  }, [screenState]);
+  }, [screenState, progress]);
 
   const handleBarCodeScanned = ({ data: _data }: { data: string }) => {
     setScanned(true);
@@ -204,18 +202,13 @@ const QRScreen: React.FC = () => {
         );
       case 'timer':
         const elapsedTime = totalTime - timeLeft;
-        const timeFraction = elapsedTime / totalTime;
+        const timeFraction = Math.min(elapsedTime / totalTime, 1);
         const strokeLength = timeFraction * FULL_DASH_ARRAY;
         const dashArray = `${strokeLength.toFixed(1)} ${FULL_DASH_ARRAY}`;
         
         return (
           <View style={styles.timerScreenContainer}>
             <View style={styles.timerContainer}>
-              <Image 
-                source={require('../../assets/shympyo_logo.png')} 
-                style={styles.appLogo} 
-                resizeMode="contain"
-              />
               <Text style={styles.timerTopText}>따뜻한 배려로 열린 쉼표,{'\n'}최대 10초 이용 가능합니다.</Text>
               
               {/* 원형 프로그레스 바 */}
@@ -249,7 +242,7 @@ const QRScreen: React.FC = () => {
                   {timeLeft === 0 ? (
                     <>
                       <Ionicons name="checkmark-circle" size={70} color={Colors.success} />
-                      <Text style={styles.timerCompletedText}>쉼표 덕분에 충전 완료!</Text>
+                      <Text style={styles.timerCompletedText}>쉼표에서, 마침표로.</Text>
                     </>
                   ) : (
                     <Text style={styles.timerTextLarge}>{formatTime()}</Text>
@@ -375,19 +368,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  appLogo: {
-    width: 140,
-    height: 60,
-    position: 'absolute',
-    top: 60,
-    alignSelf: 'center',
-  },
   timerTopText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text.primary,
     marginBottom: 20,
-    marginTop: 30,
+    marginTop: 60,
     textAlign: 'center',
     paddingHorizontal: 20,
   },
