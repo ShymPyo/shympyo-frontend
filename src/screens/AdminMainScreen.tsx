@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,15 +30,8 @@ const mockLetters = [
 
 const AdminMainScreen: React.FC = () => {
   const navigation = useNavigation<AdminMainScreenNavigationProp>();
-  const [selectedLetter, setSelectedLetter] = useState<typeof mockLetters[0] | null>(null);
-  const [isModalVisible, setModalVisible] = useState(false);
 
   const unreadCount = mockLetters.filter(letter => !letter.isRead).length;
-
-  const handleLetterPress = (letter: typeof mockLetters[0]) => {
-    setSelectedLetter(letter);
-    setModalVisible(true);
-  };
 
   const handleEditProfile = () => {
     navigation.navigate('AdminSpaceEdit');
@@ -49,34 +41,6 @@ const AdminMainScreen: React.FC = () => {
     navigation.replace('Login');
   };
 
-  const renderLetter = (letter: typeof mockLetters[0]) => (
-    <TouchableOpacity
-      key={letter.id}
-      style={styles.letterCard}
-      onPress={() => handleLetterPress(letter)}
-    >
-      <View style={styles.letterContent}>
-        <View style={styles.letterHeader}>
-          <Text style={styles.letterDate}>{letter.date}</Text>
-          {!letter.isRead && <View style={styles.unreadIndicator} />}
-        </View>
-        <View style={styles.letterMain}>
-          <View style={styles.profileCircle}>
-            <Text style={styles.profileText}>😊</Text>
-          </View>
-          <View style={styles.letterTextContainer}>
-            <Text style={styles.customerName}>{letter.customerName}</Text>
-            <Text style={styles.letterPreview}>{letter.content}</Text>
-          </View>
-          <Ionicons 
-            name={letter.isRead ? "mail-open" : "mail"} 
-            size={24} 
-            color={letter.isRead ? Colors.text.light : Colors.primary} 
-          />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -137,24 +101,25 @@ const AdminMainScreen: React.FC = () => {
         </View>
 
         {/* 편지함 섹션 */}
-        <View style={styles.letterSection}>
-          <View style={styles.letterHeader}>
+        <TouchableOpacity 
+          style={styles.letterSection}
+          onPress={() => navigation.navigate('AdminLetterList')}
+        >
+          <View style={styles.letterSectionHeader}>
             <Text style={styles.sectionTitle}>편지함</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.primary} />
+          </View>
+          {unreadCount > 0 && (
             <View style={styles.letterCount}>
               <Ionicons name="alert-circle" size={16} color={Colors.primary} />
               <Text style={styles.countText}>새로운 편지가 {unreadCount}개입니다.</Text>
             </View>
-          </View>
+          )}
           <View style={styles.notificationBanner}>
             <Ionicons name="mail" size={20} color={Colors.text.primary} />
             <Text style={styles.notificationText}>지금까지 총 130개의{'\n'}감사 편지를 받았어요 !</Text>
           </View>
-        </View>
-
-        {/* 편지 리스트 */}
-        <View style={styles.letterList}>
-          {mockLetters.map(renderLetter)}
-        </View>
+        </TouchableOpacity>
 
         {/* 인원 현황 */}
         <View style={styles.statsSection}>
@@ -184,47 +149,6 @@ const AdminMainScreen: React.FC = () => {
           <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
         </TouchableOpacity>
       </ScrollView>
-
-      {/* 편지 상세 모달 */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>{selectedLetter?.customerName} 님의 감사 편지</Text>
-              <View style={{ width: 24 }} />
-            </View>
-            
-            <Text style={styles.modalDate}>{selectedLetter?.date} 발송</Text>
-            
-            <View style={styles.modalLetterContent}>
-              <View style={styles.modalProfile}>
-                <Text style={styles.modalProfileText}>😊</Text>
-              </View>
-              <View style={styles.modalTextSection}>
-                <Text style={styles.modalLabel}>자기소개</Text>
-                <Text style={styles.modalText}>대출 프로필에 설정한 자기 소개</Text>
-              </View>
-            </View>
-            
-            <View style={styles.modalLetterSection}>
-              <Text style={styles.modalLabel}>편지 내용</Text>
-              <Text style={styles.modalLetterText}>
-                대출 더한 좋았는데 쇼핑다른 말{'\n'}
-                삼겹련서 고맙다는 말{'\n'}
-                나중에 커피 마시러 가겠다.
-              </Text>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -352,20 +276,31 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
   },
   letterSection: {
+    backgroundColor: Colors.surface,
+    borderRadius: 15,
+    padding: 20,
     marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  letterHeader: {
+  letterSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text.primary,
-    marginBottom: 5,
   },
   letterCount: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 10,
   },
   countText: {
     fontSize: 14,
@@ -387,65 +322,6 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     marginLeft: 10,
     fontWeight: '500',
-  },
-  letterList: {
-    marginBottom: 20,
-  },
-  letterCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  letterContent: {
-    padding: 15,
-  },
-  letterMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profileCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFE4B5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  profileText: {
-    fontSize: 20,
-  },
-  letterTextContainer: {
-    flex: 1,
-  },
-  customerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 3,
-  },
-  letterPreview: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  letterDate: {
-    fontSize: 12,
-    color: Colors.text.light,
-    marginBottom: 8,
-  },
-  unreadIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   statsSection: {
     marginBottom: 20,
@@ -509,78 +385,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FF4444',
     fontWeight: '500',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    flex: 1,
-    textAlign: 'center',
-  },
-  modalDate: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalLetterContent: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  modalProfile: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FFE4B5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  modalProfileText: {
-    fontSize: 24,
-  },
-  modalTextSection: {
-    flex: 1,
-  },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text.light,
-    marginBottom: 5,
-  },
-  modalText: {
-    fontSize: 16,
-    color: Colors.text.primary,
-  },
-  modalLetterSection: {
-    marginTop: 20,
-  },
-  modalLetterText: {
-    fontSize: 16,
-    color: Colors.text.primary,
-    backgroundColor: Colors.surface,
-    padding: 15,
-    borderRadius: 8,
-    lineHeight: 24,
   },
 });
 

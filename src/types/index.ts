@@ -6,6 +6,7 @@ export type RootStackParamList = {
   AdminLogin: undefined;
   AdminMain: undefined;
   AdminSpaceEdit: undefined;
+  AdminLetterList: undefined;
   GeneralLogin: undefined;
 };
 
