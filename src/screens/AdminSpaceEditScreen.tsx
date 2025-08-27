@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
   Image,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,16 +39,37 @@ const AdminSpaceEditScreen: React.FC = () => {
   
   // 이용 시간 설정 상태
   const [maxUsageMinutes, setMaxUsageMinutes] = useState('60');
+  const [customTime, setCustomTime] = useState('');
   const [showTimeModal, setShowTimeModal] = useState(false);
+  
+  // 이용 인원 설정 상태
+  const [maxUsers, setMaxUsers] = useState('5');
+  const [showUserModal, setShowUserModal] = useState(false);
+  
+  const scrollViewRef = useRef<ScrollView>(null);
   
   // 시간 설정 옵션들 (분 단위)
   const timeOptions = [
+    { label: '5분', value: '5' },
     { label: '10분', value: '10' },
+    { label: '20분', value: '20' },
     { label: '30분', value: '30' },
-    { label: '60분', value: '60' },
-    { label: '90분', value: '90' },
-    { label: '120분', value: '120' },
+    { label: '40분', value: '40' },
     { label: '사용자 정의', value: 'custom' },
+  ];
+
+  // 인원 설정 옵션들
+  const userOptions = [
+    { label: '1명', value: '1' },
+    { label: '2명', value: '2' },
+    { label: '3명', value: '3' },
+    { label: '4명', value: '4' },
+    { label: '5명', value: '5' },
+    { label: '6명', value: '6' },
+    { label: '7명', value: '7' },
+    { label: '8명', value: '8' },
+    { label: '10명', value: '10' },
+    { label: '제한 없음', value: 'unlimited' },
   ];
 
   const handleSave = () => {
@@ -68,15 +92,24 @@ const AdminSpaceEditScreen: React.FC = () => {
 
   const handleTimeSelection = (value: string) => {
     if (value === 'custom') {
-      setShowTimeModal(false);
-      // 커스텀 시간 입력을 위해 모달을 닫고 직접 입력 가능하도록 함
-      return;
+      setMaxUsageMinutes('custom');
+      setCustomTime('');
+    } else {
+      setMaxUsageMinutes(value);
+      setCustomTime('');
     }
-    setMaxUsageMinutes(value);
     setShowTimeModal(false);
   };
 
+  const handleUserSelection = (value: string) => {
+    setMaxUsers(value);
+    setShowUserModal(false);
+  };
+
   const formatUsageTime = (minutes: string) => {
+    if (minutes === 'custom') {
+      return customTime ? `${customTime}분` : '사용자 정의';
+    }
     const num = parseInt(minutes);
     if (num >= 60) {
       const hours = Math.floor(num / 60);
@@ -86,29 +119,56 @@ const AdminSpaceEditScreen: React.FC = () => {
     return `${minutes}분`;
   };
 
+  const formatMaxUsers = (users: string) => {
+    if (users === 'unlimited') {
+      return '제한 없음';
+    }
+    return `최대 ${users}명`;
+  };
+
+  const handleTextInputFocus = (offsetY: number) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: offsetY - 100,
+        animated: true,
+      });
+    }, 300);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
-      {/* 헤더 */}
-      <View style={styles.header}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={0}
+      >
+        {/* 헤더 */}
+        <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton} 
           onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>공간 프로필 수정</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>공간 프로필 수정</Text>
+        </View>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>저장</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+      >
         {/* 공간 이미지 */}
         <View style={styles.imageSection}>
           <Image 
-            source={{ uri: 'https://via.placeholder.com/300x200' }} 
+            source={{ uri: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80' }} 
             style={styles.spaceImage}
           />
           <TouchableOpacity style={styles.imageEditButton}>
@@ -118,7 +178,7 @@ const AdminSpaceEditScreen: React.FC = () => {
         </View>
 
         {/* 기본 정보 */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.sectionCard]}>
           <Text style={styles.sectionTitle}>기본 정보</Text>
           
           <View style={styles.inputGroup}>
@@ -128,6 +188,7 @@ const AdminSpaceEditScreen: React.FC = () => {
               value={spaceName}
               onChangeText={setSpaceName}
               placeholder="공간 이름을 입력하세요"
+              onFocus={() => handleTextInputFocus(200)}
             />
           </View>
 
@@ -164,7 +225,7 @@ const AdminSpaceEditScreen: React.FC = () => {
         </View>
 
         {/* 위치 정보 */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.sectionCard]}>
           <Text style={styles.sectionTitle}>위치 정보</Text>
           
           <View style={styles.inputGroup}>
@@ -188,8 +249,29 @@ const AdminSpaceEditScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* 공간 소개 */}
+        <View style={[styles.section, styles.sectionCard]}>
+          <Text style={styles.sectionTitle}>공간 소개</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>소개글</Text>
+            <TextInput
+              style={styles.textArea}
+              value={`${description}\n${subDescription}`}
+              onChangeText={(text) => {
+                const lines = text.split('\n');
+                setDescription(lines[0] || '');
+                setSubDescription(lines.slice(1).join('\n'));
+              }}
+              placeholder="공간에 대한 소개와 안내사항을 입력하세요"
+              multiline
+              numberOfLines={5}
+            />
+          </View>
+        </View>
+
         {/* 이용 시간 설정 */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.sectionCard]}>
           <Text style={styles.sectionTitle}>이용 시간 설정</Text>
           
           <View style={styles.inputGroup}>
@@ -208,44 +290,39 @@ const AdminSpaceEditScreen: React.FC = () => {
             </Text>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>커스텀 시간 (분)</Text>
-            <TextInput
-              style={styles.input}
-              value={maxUsageMinutes}
-              onChangeText={setMaxUsageMinutes}
-              placeholder="분 단위로 입력하세요"
-              keyboardType="numeric"
-            />
-          </View>
+          {maxUsageMinutes === 'custom' && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>사용자 정의 시간 (분)</Text>
+              <TextInput
+                style={styles.input}
+                value={customTime}
+                onChangeText={setCustomTime}
+                placeholder="분 단위로 숫자를 입력하세요 (예: 15)"
+                keyboardType="numeric"
+                onFocus={() => handleTextInputFocus(800)}
+              />
+            </View>
+          )}
         </View>
 
-        {/* 공간 소개 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>공간 소개</Text>
+        {/* 이용 인원 설정 */}
+        <View style={[styles.section, styles.sectionCard]}>
+          <Text style={styles.sectionTitle}>이용 인원 설정</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>메인 소개</Text>
-            <TextInput
-              style={styles.textArea}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="공간에 대한 소개를 입력하세요"
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>추가 안내</Text>
-            <TextInput
-              style={styles.textArea}
-              value={subDescription}
-              onChangeText={setSubDescription}
-              placeholder="추가 안내사항을 입력하세요"
-              multiline
-              numberOfLines={2}
-            />
+            <Text style={styles.inputLabel}>최대 이용 인원 *</Text>
+            <TouchableOpacity 
+              style={styles.timeSelector}
+              onPress={() => setShowUserModal(true)}
+            >
+              <Text style={styles.timeSelectorText}>
+                {formatMaxUsers(maxUsers)}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
+            </TouchableOpacity>
+            <Text style={styles.helperText}>
+              동시에 이용할 수 있는 최대 인원을 설정하세요
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -291,6 +368,49 @@ const AdminSpaceEditScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* 인원 선택 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showUserModal}
+        onRequestClose={() => setShowUserModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>최대 이용 인원 선택</Text>
+              <TouchableOpacity onPress={() => setShowUserModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.timeOptions}>
+              {userOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.timeOption,
+                    maxUsers === option.value && styles.selectedTimeOption
+                  ]}
+                  onPress={() => handleUserSelection(option.value)}
+                >
+                  <Text style={[
+                    styles.timeOptionText,
+                    maxUsers === option.value && styles.selectedTimeOptionText
+                  ]}>
+                    {option.label}
+                  </Text>
+                  {maxUsers === option.value && (
+                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -299,6 +419,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -311,6 +434,15 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 5,
+  },
+  headerCenter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    zIndex: -1,
   },
   headerTitle: {
     fontSize: 18,
@@ -337,7 +469,7 @@ const styles = StyleSheet.create({
   },
   spaceImage: {
     width: '100%',
-    height: 200,
+    height: 300,
     backgroundColor: '#f0f0f0',
   },
   imageEditButton: {
@@ -359,12 +491,26 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 20,
-    marginBottom: 30,
+    marginBottom: 20,
+  },
+  sectionCard: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: Colors.primary,
     marginBottom: 20,
   },
   inputGroup: {

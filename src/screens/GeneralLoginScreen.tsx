@@ -21,10 +21,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
 
-type AdminLoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminLogin'>;
+type GeneralLoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'GeneralLogin'>;
 
-const AdminLoginScreen: React.FC = () => {
-  const navigation = useNavigation<AdminLoginScreenNavigationProp>();
+const GeneralLoginScreen: React.FC = () => {
+  const navigation = useNavigation<GeneralLoginScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,12 +34,17 @@ const AdminLoginScreen: React.FC = () => {
   };
 
   const handleLogin = () => {
+    if (!email || !password) {
+      Alert.alert('알림', '이메일과 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+
     // 테스트용으로 바로 로그인
-    navigation.replace('AdminMain');
+    navigation.replace('Main');
   };
 
   const handleSignUp = () => {
-    Alert.alert('안내', '관리자 회원가입은 별도 승인이 필요합니다.\n문의: admin@shympyo.com');
+    Alert.alert('안내', '일반 회원가입 기능은 준비 중입니다.\n소셜 로그인을 이용해주세요.');
   };
 
   return (
@@ -70,7 +75,7 @@ const AdminLoginScreen: React.FC = () => {
               />
             </View>
 
-            <Text style={styles.title}>관리자 로그인</Text>
+            <Text style={styles.title}>일반 로그인</Text>
             
             <View style={styles.inputContainer}>
               <TextInput
@@ -117,7 +122,7 @@ const AdminLoginScreen: React.FC = () => {
               style={styles.signUpButton} 
               onPress={handleSignUp}
             >
-              <Text style={styles.signUpButtonText}>관리자 회원가입</Text>
+              <Text style={styles.signUpButtonText}>일반 회원가입</Text>
             </TouchableOpacity>
           </View>
 
@@ -231,4 +236,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AdminLoginScreen;
+export default GeneralLoginScreen;

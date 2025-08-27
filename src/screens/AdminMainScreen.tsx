@@ -90,7 +90,6 @@ const AdminMainScreen: React.FC = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.subtitle}>더 쉼표, 사장님 우선지</Text>
         </View>
       </View>
 
@@ -115,7 +114,7 @@ const AdminMainScreen: React.FC = () => {
           
           <View style={styles.profileContent}>
             <Image 
-              source={{ uri: 'https://via.placeholder.com/80x60' }} 
+              source={{ uri: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80' }} 
               style={styles.shopImage}
             />
             <View style={styles.shopInfo}>
@@ -180,7 +179,9 @@ const AdminMainScreen: React.FC = () => {
 
         {/* 로그아웃 버튼 */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#FF4444" style={styles.logoutIcon} />
           <Text style={styles.logoutButtonText}>로그아웃</Text>
+          <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
         </TouchableOpacity>
       </ScrollView>
 
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 10,
     paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
@@ -244,13 +245,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 120,
-    height: 50,
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.text.secondary,
+    width: 140,
+    height: 60,
   },
   content: {
     flex: 1,
@@ -301,7 +297,7 @@ const styles = StyleSheet.create({
   },
   shopImage: {
     width: 80,
-    height: 60,
+    height: 80,
     borderRadius: 8,
     marginRight: 15,
   },
@@ -495,18 +491,24 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   logoutButton: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    borderRadius: 12,
-    paddingVertical: 15,
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderTopWidth: 8,
+    borderTopColor: '#F0F0F0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
     marginBottom: 30,
   },
+  logoutIcon: {
+    marginRight: 15,
+  },
   logoutButtonText: {
+    flex: 1,
     fontSize: 16,
-    color: Colors.text.secondary,
-    fontWeight: '600',
+    color: '#FF4444',
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,

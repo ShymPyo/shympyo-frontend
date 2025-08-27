@@ -17,6 +17,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import AdminLoginScreen from '../screens/AdminLoginScreen';
 import AdminMainScreen from '../screens/AdminMainScreen';
 import AdminSpaceEditScreen from '../screens/AdminSpaceEditScreen';
+import GeneralLoginScreen from '../screens/GeneralLoginScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -99,6 +100,7 @@ const AppNavigator = () => {
         <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
         <Stack.Screen name="AdminMain" component={AdminMainScreen} />
         <Stack.Screen name="AdminSpaceEdit" component={AdminSpaceEditScreen} />
+        <Stack.Screen name="GeneralLogin" component={GeneralLoginScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
