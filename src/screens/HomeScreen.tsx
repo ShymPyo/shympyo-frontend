@@ -23,7 +23,7 @@ import Animated, {
   withRepeat,
   interpolate,
 } from 'react-native-reanimated';
-import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 
 import { Colors } from '../constants/colors';
 
@@ -52,8 +52,8 @@ const AnimatedThermometer: React.FC<{ temperature: number }> = ({ temperature })
 
   // 물결 Path 생성 (간단하고 안전하게)
   const createWavePath = (offset: number, amplitude: number) => {
-    const width = 20;
-    const height = 70;
+    const width = 28;
+    const height = 90;
     const fillHeight = height * 0.65;
     const waveTop = height - fillHeight;
     
@@ -73,47 +73,40 @@ const AnimatedThermometer: React.FC<{ temperature: number }> = ({ temperature })
     <View style={styles.modernThermometer}>
       <View style={styles.thermometerBackground} />
       
-      {/* 기본 빨간색 배경 */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '65%',
-          backgroundColor: '#C62828',
-          borderBottomLeftRadius: 10,
-          borderBottomRightRadius: 10,
-        }}
-      />
-      
-      {/* SVG 물결 효과 */}
+      {/* 그라데이션 배경 */}
       <Svg 
-        height="70" 
-        width="20" 
+        height="90" 
+        width="28" 
         style={{ position: 'absolute', bottom: 0 }}
-        viewBox="0 0 20 70"
+        viewBox="0 0 28 90"
       >
         <Defs>
+          <SvgLinearGradient id="thermometerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor="#D50000" stopOpacity={1} />
+            <Stop offset="30%" stopColor="#FF1744" stopOpacity={0.95} />
+            <Stop offset="60%" stopColor="#FF5722" stopOpacity={0.9} />
+            <Stop offset="100%" stopColor="#FF8A65" stopOpacity={0.85} />
+          </SvgLinearGradient>
           <SvgLinearGradient id="redGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#FF6B6B" stopOpacity={0.8} />
+            <Stop offset="0%" stopColor="#B71C1C" stopOpacity={0.9} />
             <Stop offset="50%" stopColor="#E53935" stopOpacity={0.9} />
-            <Stop offset="100%" stopColor="#D32F2F" stopOpacity={1} />
+            <Stop offset="100%" stopColor="#FF6B6B" stopOpacity={0.8} />
           </SvgLinearGradient>
         </Defs>
         
+        
         {/* 첫 번째 물결 레이어 */}
         <Path 
-          d={createWavePath(waveOffset1, 1.5)} // 작은 진폭
+          d={createWavePath(waveOffset1, 1.8)} // 작은 진폭
           fill="url(#redGradient)"
-          opacity={0.9}
+          opacity={0.8}
         />
         
         {/* 두 번째 물결 레이어 */}
         <Path 
-          d={createWavePath(waveOffset2 + Math.PI/3, 1)} // 더 작은 진폭, 위상차
-          fill="#FF5722"
-          opacity={0.7}
+          d={createWavePath(waveOffset2 + Math.PI/3, 1.2)} // 더 작은 진폭, 위상차
+          fill="#FF3D00"
+          opacity={0.6}
         />
       </Svg>
     </View>
@@ -408,18 +401,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         zIndex: 10,
-    },
-    modernThermometer: {
-        width: 20,
-        height: 70,
-        borderRadius: 10,
-        marginLeft: 10,
-        overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 2, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 8,
+        elevation: 10,
+    },
+    modernThermometer: {
+        width: 28,
+        height: 90,
+        borderRadius: 14,
+        marginLeft: 10,
+        overflow: 'hidden',
+        backgroundColor: '#fff',
         position: 'relative',
         borderWidth: 2,
         borderColor: '#fff',
@@ -428,7 +422,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: '100%',
         height: '100%',
-        borderRadius: 10,
+        borderRadius: 14,
         backgroundColor: '#E8E8E8',
     },
     thermometerFill: {
