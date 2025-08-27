@@ -3,6 +3,9 @@ export type RootStackParamList = {
   Login: undefined;
   ProfileSetup: undefined;
   Main: undefined;
+  AdminLogin: undefined;
+  AdminMain: undefined;
+  AdminSpaceEdit: undefined;
 };
 
 export type MainTabParamList = {

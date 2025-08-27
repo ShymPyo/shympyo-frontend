@@ -14,6 +14,9 @@ import HomeScreen from '../screens/HomeScreen';
 import QRScreen from '../screens/QRScreen';
 import LetterScreen from '../screens/LetterScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import AdminLoginScreen from '../screens/AdminLoginScreen';
+import AdminMainScreen from '../screens/AdminMainScreen';
+import AdminSpaceEditScreen from '../screens/AdminSpaceEditScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -93,6 +96,9 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
         <Stack.Screen name="Main" component={MainTabNavigator} />
+        <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+        <Stack.Screen name="AdminMain" component={AdminMainScreen} />
+        <Stack.Screen name="AdminSpaceEdit" component={AdminSpaceEditScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

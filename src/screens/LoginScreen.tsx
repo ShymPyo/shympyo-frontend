@@ -34,6 +34,14 @@ const LoginScreen: React.FC = () => {
     }
   };
 
+  const handleAdminLogin = () => {
+    try {
+      navigation.navigate('AdminLogin');
+    } catch (error) {
+      console.error('Admin login navigation error:', error);
+    }
+  };
+
   // 키보드 닫기 함수 (향후 텍스트 입력이 추가될 때를 대비)
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -92,7 +100,7 @@ const LoginScreen: React.FC = () => {
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={handleAdminLogin}>
               <Text style={styles.footerText}>관리자 로그인 / 회원가입</Text>
             </TouchableOpacity>
             <Text style={styles.copyright}>© 2025. All rights reserved.</Text>
