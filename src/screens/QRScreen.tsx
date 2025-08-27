@@ -1,57 +1,133 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
-  Button,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import Svg, { Defs, Mask, Rect } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
+import Svg, { Defs, Mask, Rect, Circle } from 'react-native-svg';
+import * as Notifications from 'expo-notifications';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { Colors } from '../constants/colors';
 
 
 type ScreenState = 'scanning' | 'timer' | 'finished';
 
+// 알림 설정
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 const QRScreen: React.FC = () => {
   const navigation = useNavigation();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [screenState, setScreenState] = useState<ScreenState>('scanning');
-  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(10); // 10 seconds for testing
+  const [totalTime, setTotalTime] = useState(10); // 총 시간
+  
+  // 원형 프로그레스 바 애니메이션을 위한 값들
+  const progress = useSharedValue(0);
 
   useEffect(() => {
     if (screenState !== 'timer') return;
 
     if (timeLeft === 0) {
-      setScreenState('finished');
+      // 타이머 완료 시 알림 발송
+      sendNotification();
       return;
     }
 
     const intervalId = setInterval(() => {
-      setTimeLeft(timeLeft - 1);
+      setTimeLeft(prev => {
+        const newTime = prev - 1;
+        // 프로그레스 바 업데이트 (차오르는 효과)
+        progress.value = withTiming((totalTime - newTime) / totalTime, { duration: 800 });
+        return newTime;
+      });
     }, 1000);
 
     return () => clearInterval(intervalId);
   }, [screenState, timeLeft]);
 
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
+  // 알림 권한 요청 및 발송 함수
+  useEffect(() => {
+    const requestPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('알림 권한이 거부되었습니다.');
+      }
+    };
+    requestPermissions();
+  }, []);
+
+  const sendNotification = async () => {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '쉼터 이용 완료! 🌿',
+        body: '카페 빈스에서의 휴식이 끝났습니다.\n감사 편지를 작성해보세요! ✉️',
+        sound: 'default',
+      },
+      trigger: null, // 즉시 발송
+    });
+  };
+
+  // 타이머 시작 시 애니메이션 초기화
+  useEffect(() => {
+    if (screenState === 'timer') {
+      progress.value = 0; // 프로그레스 바 초기화
+    }
+  }, [screenState]);
+
+  const handleBarCodeScanned = ({ data: _data }: { data: string }) => {
     setScanned(true);
     // QR 코드 스캔 성공 시 타이머 화면으로 이동
     setScreenState('timer');
-    setTimeLeft(20 * 60); // 20분으로 초기화
+    setTimeLeft(10); // 10초로 초기화
+    setTotalTime(10); // 총 시간도 설정
   };
 
   const formatTime = () => {
-    const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-    const seconds = (timeLeft % 60).toString().padStart(2, '0');
+    const elapsedTime = totalTime - timeLeft;
+    const minutes = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
+    const seconds = (elapsedTime % 60).toString().padStart(2, '0');
     return `${minutes}:${seconds}`;
   };
+
+  // 화면 포커스 시 상태 초기화
+  useFocusEffect(
+    useCallback(() => {
+      setScreenState('scanning');
+      setScanned(false);
+      setTimeLeft(10);
+      setTotalTime(10);
+    }, [])
+  );
+
+  // 스크린 상태가 스캐닝으로 변경될 때 프로그레스 리셋
+  useEffect(() => {
+    if (screenState === 'scanning') {
+      progress.value = 0;
+    }
+  }, [screenState, progress]);
+
+  // 원형 프로그레스 바를 위한 값 계산
+  const FULL_DASH_ARRAY = 2 * Math.PI * 85; // 반지름 85인 원의 둘레
 
   const renderContent = () => {
     switch (screenState) {
@@ -127,11 +203,75 @@ const QRScreen: React.FC = () => {
           </View>
         );
       case 'timer':
+        const elapsedTime = totalTime - timeLeft;
+        const timeFraction = elapsedTime / totalTime;
+        const strokeLength = timeFraction * FULL_DASH_ARRAY;
+        const dashArray = `${strokeLength.toFixed(1)} ${FULL_DASH_ARRAY}`;
+        
         return (
-          <View style={styles.timerContainer}>
-            <Ionicons name="timer-outline" size={100} color={Colors.primary} />
-            <Text style={styles.timerText}>{formatTime()}</Text>
-            <Text style={styles.timerSubtitle}>카페 빈스</Text>
+          <View style={styles.timerScreenContainer}>
+            <View style={styles.timerContainer}>
+              <Image 
+                source={require('../../assets/shympyo_logo.png')} 
+                style={styles.appLogo} 
+                resizeMode="contain"
+              />
+              <Text style={styles.timerTopText}>따뜻한 배려로 열린 쉼표,{'\n'}최대 10초 이용 가능합니다.</Text>
+              
+              {/* 원형 프로그레스 바 */}
+              <View style={styles.circularProgressContainer}>
+                <Svg width="280" height="280" viewBox="0 0 200 200" style={styles.circularProgress}>
+                  {/* 배경 원 */}
+                  <Circle
+                    cx="100"
+                    cy="100"
+                    r="85"
+                    stroke="#E0E0E0"
+                    strokeWidth="15"
+                    fill="transparent"
+                  />
+                  {/* 프로그레스 원 */}
+                  <Circle
+                    cx="100"
+                    cy="100"
+                    r="85"
+                    stroke={timeLeft === 0 ? Colors.success : Colors.primary}
+                    strokeWidth="15"
+                    fill="transparent"
+                    strokeDasharray={dashArray}
+                    strokeLinecap="round"
+                    transform="rotate(-90 100 100)"
+                  />
+                </Svg>
+                
+                {/* 중앙 내용 */}
+                <View style={styles.timerCenter}>
+                  {timeLeft === 0 ? (
+                    <>
+                      <Ionicons name="checkmark-circle" size={70} color={Colors.success} />
+                      <Text style={styles.timerCompletedText}>쉼표 덕분에 충전 완료!</Text>
+                    </>
+                  ) : (
+                    <Text style={styles.timerTextLarge}>{formatTime()}</Text>
+                  )}
+                </View>
+              </View>
+              
+              <Text style={styles.timerSubtitle}>카페 빈스</Text>
+              <Text style={styles.timerDescription}>깨끗하고 조용한 공간에서 편히 쉬어가세요</Text>
+            </View>
+            
+            {/* 타이머 완료 후 버튼들 - 하단 고정 */}
+            {timeLeft === 0 && (
+              <View style={styles.fixedBottomButtons}>
+                <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('Home' as never)}>
+                  <Text style={styles.buttonText}>홈으로</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.letterButton} onPress={() => navigation.navigate('Letter' as never)}>
+                  <Text style={styles.buttonText}>감사 편지 적기</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         );
       case 'finished':
@@ -141,10 +281,10 @@ const QRScreen: React.FC = () => {
             <Text style={styles.finishedTitle}>시간이 다 되었습니다!</Text>
             <Text style={styles.finishedSubtitle}>카페 빈스</Text>
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('Home')}>
+              <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('Home' as never)}>
                 <Text style={styles.buttonText}>홈으로</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.letterButton} onPress={() => navigation.navigate('Letter')}>
+              <TouchableOpacity style={styles.letterButton} onPress={() => navigation.navigate('Letter' as never)}>
                 <Text style={styles.buttonText}>감사 편지 적기</Text>
               </TouchableOpacity>
             </View>
@@ -227,8 +367,43 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     width: '100%',
   },
+  timerScreenContainer: {
+    flex: 1,
+  },
   timerContainer: {
     alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  appLogo: {
+    width: 140,
+    height: 60,
+    position: 'absolute',
+    top: 60,
+    alignSelf: 'center',
+  },
+  timerTopText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: 20,
+    marginTop: 30,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  circularProgressContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  circularProgress: {
+    transform: [{ rotate: '-90deg' }],
+  },
+  timerCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   timerText: {
     fontSize: 72,
@@ -236,9 +411,49 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     marginVertical: 20,
   },
+  timerTextSmall: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginTop: 4,
+  },
+  timerTextLarge: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  timerCompletedText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.success,
+    marginTop: 10,
+  },
+  timerButtonContainer: {
+    flexDirection: 'row',
+    gap: 15,
+    marginTop: 30,
+  },
+  fixedBottomButtons: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 15,
+  },
   timerSubtitle: {
     fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginTop: 5,
+  },
+  timerDescription: {
+    fontSize: 16,
     color: Colors.text.secondary,
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 40,
   },
   finishedContainer: {
     alignItems: 'center',

@@ -81,8 +81,8 @@ const LetterScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <Text style={styles.title}>방문한 민간 개방 시설 목록</Text>
-        <Text style={styles.subtitle}>감사 편지를 보내 마음을 전하세요.</Text>
+        <Text style={styles.title}>나의 쉼표 기록</Text>
+        <Text style={styles.subtitle}>한 줄의 편지가 쉼표의 따스함을 이어갑니다.</Text>
       </View>
 
       <FlatList
