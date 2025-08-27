@@ -14,7 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
@@ -55,6 +55,7 @@ const LoginScreen: React.FC = () => {
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={-100}
         >
           <View style={styles.contentContainer}>
             <View style={styles.logoContainer}>
@@ -75,11 +76,11 @@ const LoginScreen: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={[styles.socialButton, styles.facebookButton]}
-                onPress={() => handleSocialLogin('Facebook')}
+                style={[styles.socialButton, styles.googleButton]}
+                onPress={() => handleSocialLogin('Google')}
               >
-                <FontAwesome name="facebook-square" size={24} color="white" style={styles.icon} />
-                <Text style={styles.socialButtonText}>페이스북으로 쉬운시작</Text>
+                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.icon} />
+                <Text style={[styles.socialButtonText, styles.googleButtonText]}>구글로 쉬운시작</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -91,7 +92,7 @@ const LoginScreen: React.FC = () => {
 
               <TouchableOpacity 
                 style={[styles.socialButton, styles.generalButton]}
-                onPress={() => handleSocialLogin('General')}
+                onPress={() => navigation.navigate('GeneralLogin')}
               >
                 <FontAwesome name="user" size={20} color={Colors.text.primary} style={styles.icon} />
                 <Text style={[styles.socialButtonText, styles.generalButtonText]}>일반 로그인</Text>
@@ -121,17 +122,17 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: 30,
+    justifyContent: 'center',
+    paddingTop: 50,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 40,
   },
   logo: {
     width: 180,
     height: 100,
-    marginBottom: 15,
   },
   subtitle: {
     fontSize: 18,
@@ -162,8 +163,13 @@ const styles = StyleSheet.create({
   kakaoButtonText: {
     color: '#3B1E1E',
   },
-  facebookButton: {
-    backgroundColor: '#1877F2',
+  googleButton: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  googleButtonText: {
+    color: Colors.text.primary,
   },
   naverButton: {
     backgroundColor: '#03C75A',

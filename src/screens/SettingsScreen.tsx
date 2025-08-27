@@ -11,11 +11,15 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
+import { RootStackParamList } from '../types';
+
+type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<SettingsScreenNavigationProp>();
 
   const settingsOptions = [
     { title: '언어', value: '한국어', icon: 'language-outline', screen: '' },
@@ -23,6 +27,10 @@ const SettingsScreen: React.FC = () => {
     { title: '화면 테마 · 진동', icon: 'contrast-outline', screen: '' },
     { title: '연락처 관리', icon: 'call-outline', screen: '' },
   ];
+
+  const handleLogout = () => {
+    navigation.replace('Login');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -54,6 +62,13 @@ const SettingsScreen: React.FC = () => {
                 <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
             </TouchableOpacity>
         ))}
+
+        {/* 로그아웃 버튼 */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="#FF4444" style={styles.itemIcon} />
+            <Text style={styles.logoutText}>로그아웃</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -125,6 +140,21 @@ const styles = StyleSheet.create({
       fontSize: 16,
       color: Colors.text.secondary,
       marginRight: 10,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderTopWidth: 8,
+    borderTopColor: '#F0F0F0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  logoutText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#FF4444',
+    fontWeight: '500',
   },
 });
 
