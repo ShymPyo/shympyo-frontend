@@ -233,6 +233,33 @@ const HomeScreen: React.FC = () => {
     };
   });
 
+  // 내 위치 버튼 애니메이션 스타일 - 하단 슬라이드와 함께 움직임
+  const locationButtonStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
+
+  // 헤더 터치 시 리스트 토글 (펼치기/접기)
+  const handleHeaderPress = () => {
+    const currentPos = translateY.value;
+    // 현재 위치에 따라 토글 결정
+    if (currentPos < -200) {
+      // 많이 열려있으면 닫기
+      translateY.value = withSpring(0, {
+        damping: 30,
+        stiffness: 300,
+      });
+    } else {
+      // 닫혀있거나 살짝 열려있으면 완전히 열기
+      translateY.value = withSpring(-maxHeight + 85, {
+        damping: 30,
+        stiffness: 300,
+      });
+    }
+  };
+
   // 대중교통 관련 함수 제거 - 쉼터 기능에만 집중
 
   // 쉼터 정보 카드 렌더링 함수 - 선택 가능한 카드 리스트 형태
@@ -345,25 +372,27 @@ const HomeScreen: React.FC = () => {
           <View style={styles.thermometerContainer}>
             <AnimatedThermometer temperature={65} />
             <View style={styles.temperatureLabel}>
-              <Text style={styles.temperatureText}>26°</Text>
+              <Text style={styles.temperatureText}>99°</Text>
               <View style={styles.trianglePointer} />
             </View>
           </View>
           
-          {/* 내 위치 버튼 - 우측 하단 */}
-          <TouchableOpacity style={styles.locationButton}>
-            <Ionicons name="locate" size={20} color={Colors.text.primary} />
-          </TouchableOpacity>
+          {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
+          <Animated.View style={[styles.locationButtonContainer, locationButtonStyle]}>
+            <TouchableOpacity style={styles.locationButton}>
+              <Ionicons name="locate" size={20} color={Colors.text.primary} />
+            </TouchableOpacity>
+          </Animated.View>
           
           <PanGestureHandler onGestureEvent={gestureHandler}>
             <Animated.View style={[styles.overlayBottom, bottomSheetStyle]}>
               {/* 드래그 핸들 - 미니멀한 회색 바 */}
               <View style={styles.dragHandle} />
               
-              {/* 헤더 부분 - 간단한 제목 */}
-              <View style={styles.bottomHeader}>
+              {/* 헤더 부분 - 터치 시 리스트 토글 */}
+              <TouchableOpacity style={styles.bottomHeader} onPress={handleHeaderPress}>
                 <Text style={styles.headerTitle}>반경 100m 내 쉼터</Text>
-              </View>
+              </TouchableOpacity>
 
               {/* 쉼터 목록 - 스크롤 가능한 영역 */}
               <ScrollView 
@@ -371,13 +400,17 @@ const HomeScreen: React.FC = () => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContentContainer}
               >
-                <FlatList
-                  data={shelters}
-                  renderItem={renderShelterCard}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                />
-                <Text style={styles.bottomNote}>※ 실시간으로 업데이트 됩니다.</Text>
+                {/* 실시간 업데이트 안내 - 리스트 내부 */}
+                <Text style={styles.topNote}>※ 실시간으로 업데이트 됩니다.</Text>
+                
+                <View style={{ backgroundColor: 'transparent' }}>
+                  <FlatList
+                    data={shelters}
+                    renderItem={renderShelterCard}
+                    keyExtractor={(item) => item.id}
+                    scrollEnabled={false}
+                  />
+                </View>
                 <View style={styles.bottomFiller} />
               </ScrollView>
             </Animated.View>
@@ -481,10 +514,13 @@ const styles = StyleSheet.create({
         borderRightColor: '#000',
         borderBottomColor: 'transparent',
     },
-    locationButton: {
+    locationButtonContainer: {
         position: 'absolute',
         bottom: 120,
         right: 20,
+        zIndex: 10,
+    },
+    locationButton: {
         backgroundColor: 'white',
         width: 44,
         height: 44,
@@ -496,7 +532,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
-        zIndex: 10,
     },
     overlayBottom: {
         position: 'absolute',
@@ -525,11 +560,12 @@ const styles = StyleSheet.create({
     contentContainer: {
         flex: 1,
         paddingHorizontal: 20,
+        paddingTop: 0,
     },
     bottomHeader: {
         alignItems: 'center',
-        marginBottom: 20,
-        paddingBottom: 12,
+        marginBottom: 0,
+        paddingBottom: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
     },
@@ -538,6 +574,14 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: Colors.text.primary,
         textAlign: 'center',
+    },
+    topNote: {
+        fontSize: 12,
+        color: Colors.text.light,
+        textAlign: 'center',
+        marginBottom: 10,
+        marginTop: 8,
+        paddingHorizontal: 0,
     },
     shelterCard: {
         flexDirection: 'row',
@@ -588,13 +632,6 @@ const styles = StyleSheet.create({
         color: Colors.primary,
         minWidth: 50,
         textAlign: 'right',
-    },
-    bottomNote: {
-        fontSize: 12,
-        color: Colors.text.light,
-        textAlign: 'center',
-        marginTop: 15,
-        marginBottom: 10,
     },
     scrollContentContainer: {
         flexGrow: 1,
