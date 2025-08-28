@@ -180,7 +180,7 @@ const AdminLetterListScreen: React.FC = () => {
               </View>
               <View style={styles.modalTextSection}>
                 <Text style={styles.modalLabel}>자기소개</Text>
-                <Text style={styles.modalText}>대출 프로필에 설정한 자기 소개</Text>
+                <Text style={styles.modalText}>대출 프로필에 설정한 자기 소개{'\n'}공간 프로필 편하게 쉬었다 가세요~!</Text>
               </View>
             </View>
             
@@ -424,6 +424,12 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     lineHeight: 24,
+  },
+  modalSubText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });
 

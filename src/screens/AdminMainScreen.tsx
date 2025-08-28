@@ -42,15 +42,22 @@ const AdminMainScreen: React.FC = () => {
       id: '1', 
       name: '배민형', 
       time: '19:59', 
-      profileEmoji: '😊',
+      profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
       introduction: '안녕하세요! 개발자로 일하고 있습니다.\n조용한 곳에서 집중하며 작업하는 것을 좋아해요.'
     },
     { 
       id: '2', 
       name: '아구팀', 
       time: '1:04', 
-      profileEmoji: '😊',
+      profileImage: 'https://images.unsplash.com/photo-1494790108755-2616c56fb9ac?w=150&h=150&fit=crop&crop=face',
       introduction: '팀프로젝트를 진행하고 있습니다!\n토론하면서 아이디어를 나누는 시간을 갖고 있어요.'
+    },
+    { 
+      id: '3', 
+      name: '김철수', 
+      time: '14:23', 
+      profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      introduction: '대학생입니다! 시험 기간이라 조용한 곳에서 공부하고 있어요.'
     }
   ];
 
@@ -122,8 +129,7 @@ const AdminMainScreen: React.FC = () => {
             </View>
           </View>
           
-          <Text style={styles.shopDescription}>다정한 카페로 유명한 카페 빈스입니다 !</Text>
-          <Text style={styles.shopSubDescription}>편하게 쉬었다 가세요 ~ !</Text>
+          <Text style={styles.shopDescription}>다정한 카페로 유명한 카페 빈스입니다 !{'\n'}편하게 쉬었다 가세요 ~ !</Text>
         </View>
 
         {/* 편지함 섹션 */}
@@ -143,13 +149,13 @@ const AdminMainScreen: React.FC = () => {
           )}
           <View style={styles.notificationBanner}>
             <Ionicons name="mail" size={20} color={Colors.text.primary} />
-            <Text style={styles.notificationText}>지금까지 총 130개의{'\n'}감사 편지를 받았어요 !</Text>
+            <Text style={styles.notificationText}>지금까지 총 130개의 감사 편지를 받았어요 !</Text>
           </View>
         </TouchableOpacity>
 
         {/* 인원 현황 */}
         <View style={styles.statsSection}>
-          <Text style={styles.statsTitle}>인원 현황 (2/5)</Text>
+          <Text style={styles.statsTitle}>인원 현황 ({currentUsers.length}/6)</Text>
           <View style={styles.statsGrid}>
             {/* 현재 사용자들 */}
             {currentUsers.map((user) => (
@@ -158,16 +164,17 @@ const AdminMainScreen: React.FC = () => {
                 style={styles.userStats}
                 onPress={() => handleUserPress(user)}
               >
-                <View style={styles.userProfile}>
-                  <Text style={styles.userProfileText}>{user.profileEmoji}</Text>
-                </View>
+                <Image 
+                  source={{ uri: user.profileImage }} 
+                  style={styles.userProfile}
+                />
                 <Text style={styles.userName}>{user.name} 님</Text>
                 <Text style={styles.userTime}>{user.time}</Text>
               </TouchableOpacity>
             ))}
             
-            {/* 빈 자리들 (총 5자리 중 사용자 수만큼 빼기) */}
-            {Array.from({ length: 5 - currentUsers.length }, (_, index) => (
+            {/* 빈 자리들 (총 6자리 중 사용자 수만큼 빼기) */}
+            {Array.from({ length: 6 - currentUsers.length }, (_, index) => (
               <View key={`empty-${index}`} style={styles.emptySlot}>
                 <View style={styles.emptyProfile}>
                   <Ionicons name="person-outline" size={24} color={Colors.text.light} />
@@ -212,9 +219,10 @@ const AdminMainScreen: React.FC = () => {
             </View>
             
             <View style={styles.userModalProfile}>
-              <View style={styles.userModalProfileCircle}>
-                <Text style={styles.userModalProfileEmoji}>{selectedUser?.profileEmoji}</Text>
-              </View>
+              <Image 
+                source={{ uri: selectedUser?.profileImage }} 
+                style={styles.userModalProfileCircle}
+              />
               <Text style={styles.userModalName}>{selectedUser?.name}</Text>
             </View>
             
@@ -411,14 +419,14 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
   },
   userStats: {
     alignItems: 'center',
     backgroundColor: Colors.surface,
     padding: 15,
     borderRadius: 12,
-    width: '48%',
+    width: '31%',
     marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -431,7 +439,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     padding: 15,
     borderRadius: 12,
-    width: '48%',
+    width: '31%',
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#E5E5E5',
@@ -532,8 +540,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: '#FFE4B5',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 15,
   },
   userModalProfileEmoji: {
