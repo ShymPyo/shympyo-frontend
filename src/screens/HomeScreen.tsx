@@ -8,6 +8,7 @@ import {
   FlatList,
   Dimensions,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -169,6 +170,8 @@ const HomeScreen: React.FC = () => {
   // 상태 관리: 선택된 쉼터 정보만 관리
   const [selectedShelter, setSelectedShelter] = useState<Shelter>(shelters[0]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['민간 개방 시설', '스마트 쉼터', '교통 시설', '공공 시설']);
   
   // 하단 슬라이드 애니메이션을 위한 값들
   const bottomSheetHeight = height * 0.5; // 전체 높이의 50%
@@ -260,7 +263,19 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  // 대중교통 관련 함수 제거 - 쉼터 기능에만 집중
+  // 필터링된 쉼터 목록
+  const filteredShelters = shelters.filter(shelter => 
+    selectedCategories.includes(shelter.category)
+  );
+
+  // 카테고리 토글 함수
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
 
   // 쉼터 정보 카드 렌더링 함수 - 선택 가능한 카드 리스트 형태
   const renderShelterCard = ({ item }: { item: Shelter }) => (
@@ -378,32 +393,54 @@ const HomeScreen: React.FC = () => {
           </View>
           
           {/* 쉼터 종류 범례 - 상단 가로 배치 */}
-          <View style={styles.shelterCategoryContainer}>
-            <View style={styles.categoryItem}>
-              <View style={[styles.categoryPin, { backgroundColor: '#4A90E2' }]}>
-                <Ionicons name="medical" size={12} color="white" />
+          <TouchableOpacity 
+            style={[
+              styles.shelterCategoryContainer,
+              selectedCategories.length === 0 && styles.shelterCategoryContainerSquare
+            ]}
+            onPress={() => setFilterModalVisible(true)}
+          >
+            {selectedCategories.length === 0 ? (
+              <View style={styles.filterIconContainer}>
+                <Ionicons name="options" size={18} color={Colors.text.secondary} />
               </View>
-              <Text style={styles.categoryText}>쉘터</Text>
-            </View>
-            <View style={styles.categoryItem}>
-              <View style={[styles.categoryPin, { backgroundColor: '#FFA500' }]}>
-                <Ionicons name="business" size={12} color="white" />
-              </View>
-              <Text style={styles.categoryText}>민간</Text>
-            </View>
-            <View style={styles.categoryItem}>
-              <View style={[styles.categoryPin, { backgroundColor: '#27AE60' }]}>
-                <Ionicons name="car" size={12} color="white" />
-              </View>
-              <Text style={styles.categoryText}>교통</Text>
-            </View>
-            <View style={styles.categoryItem}>
-              <View style={[styles.categoryPin, { backgroundColor: '#E74C3C' }]}>
-                <Ionicons name="library" size={12} color="white" />
-              </View>
-              <Text style={styles.categoryText}>공공</Text>
-            </View>
-          </View>
+            ) : (
+              <>
+                {selectedCategories.includes('스마트 쉼터') && (
+                  <View style={styles.categoryItem}>
+                    <View style={[styles.categoryPin, { backgroundColor: '#4A90E2' }]}>
+                      <Ionicons name="medical" size={12} color="white" />
+                    </View>
+                    <Text style={styles.categoryText}>쉘터</Text>
+                  </View>
+                )}
+                {selectedCategories.includes('민간 개방 시설') && (
+                  <View style={styles.categoryItem}>
+                    <View style={[styles.categoryPin, { backgroundColor: '#FFA500' }]}>
+                      <Ionicons name="business" size={12} color="white" />
+                    </View>
+                    <Text style={styles.categoryText}>민간</Text>
+                  </View>
+                )}
+                {selectedCategories.includes('교통 시설') && (
+                  <View style={styles.categoryItem}>
+                    <View style={[styles.categoryPin, { backgroundColor: '#27AE60' }]}>
+                      <Ionicons name="car" size={12} color="white" />
+                    </View>
+                    <Text style={styles.categoryText}>교통</Text>
+                  </View>
+                )}
+                {selectedCategories.includes('공공 시설') && (
+                  <View style={styles.categoryItem}>
+                    <View style={[styles.categoryPin, { backgroundColor: '#E74C3C' }]}>
+                      <Ionicons name="library" size={12} color="white" />
+                    </View>
+                    <Text style={styles.categoryText}>공공</Text>
+                  </View>
+                )}
+              </>
+            )}
+          </TouchableOpacity>
 
           {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
           <Animated.View style={[styles.locationButtonContainer, locationButtonStyle]}>
@@ -433,7 +470,7 @@ const HomeScreen: React.FC = () => {
                 
                 <View style={{ backgroundColor: 'transparent' }}>
                   <FlatList
-                    data={shelters}
+                    data={filteredShelters}
                     renderItem={renderShelterCard}
                     keyExtractor={(item) => item.id}
                     scrollEnabled={false}
@@ -451,6 +488,120 @@ const HomeScreen: React.FC = () => {
           shelter={selectedShelter}
           onClose={() => setModalVisible(false)}
         />
+
+        {/* 필터 모달 */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={filterModalVisible}
+          onRequestClose={() => setFilterModalVisible(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setFilterModalVisible(false)}
+          >
+            <TouchableOpacity 
+              style={styles.filterModalContent}
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.filterModalHeader}>
+                <Text style={styles.filterModalTitle}>쉼터 종류 선택</Text>
+                <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                  <Ionicons name="close" size={24} color={Colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.filterOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    selectedCategories.includes('스마트 쉼터') && styles.filterOptionSelected
+                  ]}
+                  onPress={() => toggleCategory('스마트 쉼터')}
+                >
+                  <View style={[styles.filterIcon, { backgroundColor: '#4A90E2' }]}>
+                    <Ionicons name="medical" size={16} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterOptionText,
+                    selectedCategories.includes('스마트 쉼터') && styles.filterOptionTextSelected
+                  ]}>스마트 쉼터</Text>
+                  {selectedCategories.includes('스마트 쉼터') && (
+                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    selectedCategories.includes('민간 개방 시설') && styles.filterOptionSelected
+                  ]}
+                  onPress={() => toggleCategory('민간 개방 시설')}
+                >
+                  <View style={[styles.filterIcon, { backgroundColor: '#FFA500' }]}>
+                    <Ionicons name="business" size={16} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterOptionText,
+                    selectedCategories.includes('민간 개방 시설') && styles.filterOptionTextSelected
+                  ]}>민간 개방 시설</Text>
+                  {selectedCategories.includes('민간 개방 시설') && (
+                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    selectedCategories.includes('교통 시설') && styles.filterOptionSelected
+                  ]}
+                  onPress={() => toggleCategory('교통 시설')}
+                >
+                  <View style={[styles.filterIcon, { backgroundColor: '#27AE60' }]}>
+                    <Ionicons name="car" size={16} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterOptionText,
+                    selectedCategories.includes('교통 시설') && styles.filterOptionTextSelected
+                  ]}>교통 시설</Text>
+                  {selectedCategories.includes('교통 시설') && (
+                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    selectedCategories.includes('공공 시설') && styles.filterOptionSelected
+                  ]}
+                  onPress={() => toggleCategory('공공 시설')}
+                >
+                  <View style={[styles.filterIcon, { backgroundColor: '#E74C3C' }]}>
+                    <Ionicons name="library" size={16} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterOptionText,
+                    selectedCategories.includes('공공 시설') && styles.filterOptionTextSelected
+                  ]}>공공 시설</Text>
+                  {selectedCategories.includes('공공 시설') && (
+                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterModalFooter}>
+                <TouchableOpacity 
+                  style={styles.filterApplyButton}
+                  onPress={() => setFilterModalVisible(false)}
+                >
+                  <Text style={styles.filterApplyText}>적용하기</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
       </View>
     </GestureHandlerRootView>
   );
@@ -559,6 +710,8 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 3,
         zIndex: 10,
+        minWidth: 60,
+        minHeight: 40,
     },
     categoryItem: {
         alignItems: 'center',
@@ -576,6 +729,31 @@ const styles = StyleSheet.create({
         fontSize: 9,
         color: Colors.text.secondary,
         fontWeight: '500',
+    },
+    filterIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 8,
+    },
+    filterText: {
+        fontSize: 12,
+        color: Colors.text.secondary,
+        fontWeight: '500',
+        marginLeft: 4,
+    },
+    shelterCategoryContainerSquare: {
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        minWidth: 40,
+        minHeight: 40,
+        maxWidth: 40,
+        maxHeight: 40,
     },
     locationButtonContainer: {
         position: 'absolute',
@@ -702,6 +880,85 @@ const styles = StyleSheet.create({
     bottomFiller: {
         height: 100, // 하단 네비게이션 바 높이만큼 여백 추가
         backgroundColor: 'transparent',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    filterModalContent: {
+        width: '85%',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        maxHeight: '70%',
+    },
+    filterModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingBottom: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E5E5',
+    },
+    filterModalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: Colors.text.primary,
+    },
+    filterOptions: {
+        marginBottom: 20,
+    },
+    filterOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
+        paddingHorizontal: 15,
+        borderRadius: 12,
+        marginBottom: 10,
+        backgroundColor: '#F8F9FA',
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    filterOptionSelected: {
+        backgroundColor: '#F0F8FF',
+        borderColor: Colors.primary,
+    },
+    filterIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    filterOptionText: {
+        flex: 1,
+        fontSize: 16,
+        color: Colors.text.primary,
+        fontWeight: '500',
+    },
+    filterOptionTextSelected: {
+        color: Colors.primary,
+        fontWeight: '600',
+    },
+    filterModalFooter: {
+        paddingTop: 15,
+        borderTopWidth: 1,
+        borderTopColor: '#E5E5E5',
+    },
+    filterApplyButton: {
+        backgroundColor: Colors.primary,
+        paddingVertical: 15,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    filterApplyText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
 
