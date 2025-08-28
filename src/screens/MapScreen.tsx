@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
+import { Ionicons } from '@expo/vector-icons';
 
 const MapScreen: React.FC = () => {
   const [htmlUri, setHtmlUri] = useState<string | null>(null);
@@ -42,6 +43,34 @@ const MapScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* 핀 카테고리 */}
+      <View style={styles.categoryContainer}>
+        <View style={styles.categoryItem}>
+          <View style={[styles.categoryPin, { backgroundColor: '#7B7BF7' }]}>
+            <Ionicons name="medical" size={16} color="#FFFFFF" />
+          </View>
+          <Text style={styles.categoryText}>쉘터</Text>
+        </View>
+        <View style={styles.categoryItem}>
+          <View style={[styles.categoryPin, { backgroundColor: '#A5A5E8' }]}>
+            <Ionicons name="business" size={16} color="#FFFFFF" />
+          </View>
+          <Text style={styles.categoryText}>민간</Text>
+        </View>
+        <View style={styles.categoryItem}>
+          <View style={[styles.categoryPin, { backgroundColor: '#4A90E2' }]}>
+            <Ionicons name="car" size={16} color="#FFFFFF" />
+          </View>
+          <Text style={styles.categoryText}>교통</Text>
+        </View>
+        <View style={styles.categoryItem}>
+          <View style={[styles.categoryPin, { backgroundColor: '#8A8A8A' }]}>
+            <Ionicons name="library" size={16} color="#FFFFFF" />
+          </View>
+          <Text style={styles.categoryText}>공공</Text>
+        </View>
+      </View>
+      
       <WebView
         originWhitelist={['*']}
         source={{ uri: htmlUri }}
@@ -78,6 +107,32 @@ const styles = StyleSheet.create({
     color: 'red',
     textAlign: 'center',
     fontSize: 16,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  categoryItem: {
+    alignItems: 'center',
+  },
+  categoryPin: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  categoryText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
   },
 });
 

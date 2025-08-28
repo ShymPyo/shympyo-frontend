@@ -115,6 +115,7 @@ const AdminLetterListScreen: React.FC = () => {
         </View>
       </View>
 
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 편지함 정보 */}
         <View style={styles.letterInfo}>

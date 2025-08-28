@@ -12,11 +12,108 @@
         }
         #map {
             width: 100%;
-            height: 100%;
+            height: calc(100% - 70px);
+        }
+        .category-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #FFFFFF;
+            border-bottom: 1px solid #E5E5E5;
+            height: 70px;
+            box-sizing: border-box;
+        }
+        .category-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .category-pin {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 4px;
+            position: relative;
+        }
+        .category-pin::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid currentColor;
+        }
+        .category-pin.shelter {
+            background-color: #7B7BF7;
+        }
+        .category-pin.shelter::after {
+            border-top-color: #7B7BF7;
+        }
+        .category-pin.private {
+            background-color: #A5A5E8;
+        }
+        .category-pin.private::after {
+            border-top-color: #A5A5E8;
+        }
+        .category-pin.transport {
+            background-color: #4A90E2;
+        }
+        .category-pin.transport::after {
+            border-top-color: #4A90E2;
+        }
+        .category-pin.public {
+            background-color: #8A8A8A;
+        }
+        .category-pin.public::after {
+            border-top-color: #8A8A8A;
+        }
+        .category-text {
+            font-size: 12px;
+            color: #666666;
+            font-weight: 500;
+        }
+        .pin-icon {
+            color: white;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
+    <!-- 핀 카테고리 -->
+    <div class="category-container">
+        <div class="category-item">
+            <div class="category-pin shelter">
+                <span class="pin-icon">+</span>
+            </div>
+            <span class="category-text">쉘터</span>
+        </div>
+        <div class="category-item">
+            <div class="category-pin private">
+                <span class="pin-icon">🏢</span>
+            </div>
+            <span class="category-text">민간</span>
+        </div>
+        <div class="category-item">
+            <div class="category-pin transport">
+                <span class="pin-icon">🚗</span>
+            </div>
+            <span class="category-text">교통</span>
+        </div>
+        <div class="category-item">
+            <div class="category-pin public">
+                <span class="pin-icon">🏛️</span>
+            </div>
+            <span class="category-text">공공</span>
+        </div>
+    </div>
     <div id="map"></div>
     <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985"></script>
     <script>

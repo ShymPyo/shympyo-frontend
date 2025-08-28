@@ -368,7 +368,7 @@ const HomeScreen: React.FC = () => {
             style={styles.map}
           />
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
-          {/* 온도계 - 좌측 상단 */}
+          {/* 온도계 - 좌측 하단 (카테고리 아래) */}
           <View style={styles.thermometerContainer}>
             <AnimatedThermometer temperature={65} />
             <View style={styles.temperatureLabel}>
@@ -377,6 +377,34 @@ const HomeScreen: React.FC = () => {
             </View>
           </View>
           
+          {/* 쉼터 종류 범례 - 상단 가로 배치 */}
+          <View style={styles.shelterCategoryContainer}>
+            <View style={styles.categoryItem}>
+              <View style={[styles.categoryPin, { backgroundColor: '#4A90E2' }]}>
+                <Ionicons name="medical" size={12} color="white" />
+              </View>
+              <Text style={styles.categoryText}>쉘터</Text>
+            </View>
+            <View style={styles.categoryItem}>
+              <View style={[styles.categoryPin, { backgroundColor: '#FFA500' }]}>
+                <Ionicons name="business" size={12} color="white" />
+              </View>
+              <Text style={styles.categoryText}>민간</Text>
+            </View>
+            <View style={styles.categoryItem}>
+              <View style={[styles.categoryPin, { backgroundColor: '#27AE60' }]}>
+                <Ionicons name="car" size={12} color="white" />
+              </View>
+              <Text style={styles.categoryText}>교통</Text>
+            </View>
+            <View style={styles.categoryItem}>
+              <View style={[styles.categoryPin, { backgroundColor: '#E74C3C' }]}>
+                <Ionicons name="library" size={12} color="white" />
+              </View>
+              <Text style={styles.categoryText}>공공</Text>
+            </View>
+          </View>
+
           {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
           <Animated.View style={[styles.locationButtonContainer, locationButtonStyle]}>
             <TouchableOpacity style={styles.locationButton}>
@@ -513,6 +541,41 @@ const styles = StyleSheet.create({
         borderTopColor: 'transparent',
         borderRightColor: '#000',
         borderBottomColor: 'transparent',
+    },
+    shelterCategoryContainer: {
+        position: 'absolute',
+        top: 60,
+        right: 20,
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 3,
+        zIndex: 10,
+    },
+    categoryItem: {
+        alignItems: 'center',
+        marginHorizontal: 6,
+    },
+    categoryPin: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 2,
+    },
+    categoryText: {
+        fontSize: 9,
+        color: Colors.text.secondary,
+        fontWeight: '500',
     },
     locationButtonContainer: {
         position: 'absolute',
