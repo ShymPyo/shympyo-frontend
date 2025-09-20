@@ -38,3 +38,7 @@ yarn-error.*
 babel.config.js
 개발일지.md
 .gitignore
+CORS_SOLUTION.md
+BACKEND_INTEGRATION.md
+.env
+metro.config.js
