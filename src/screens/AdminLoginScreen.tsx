@@ -9,7 +9,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
+  Pressable,
   Keyboard,
   Alert,
 } from 'react-native';
@@ -43,7 +43,7 @@ const AdminLoginScreen: React.FC = () => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+    <Pressable onPress={dismissKeyboard} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" />
         
@@ -126,7 +126,7 @@ const AdminLoginScreen: React.FC = () => {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </TouchableWithoutFeedback>
+    </Pressable>
   );
 };
 

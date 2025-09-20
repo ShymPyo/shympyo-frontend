@@ -9,6 +9,7 @@ import {
   Dimensions,
   ScrollView,
   Modal,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,28 @@ import { Colors } from '../constants/colors';
 import ShelterDetailModal from '../components/ShelterDetailModal';
 
 const { width, height } = Dimensions.get('window');
+
+// Shadow 스타일 헬퍼 함수
+const getShadowStyle = (shadowConfig: {
+  shadowColor?: string;
+  shadowOffset?: { width: number; height: number };
+  shadowOpacity?: number;
+  shadowRadius?: number;
+  elevation?: number;
+}) => {
+  if (Platform.OS === 'web') {
+    const { shadowOffset, shadowOpacity, shadowRadius } = shadowConfig;
+    const offsetX = shadowOffset?.width || 0;
+    const offsetY = shadowOffset?.height || 0;
+    const blur = shadowRadius || 0;
+    const opacity = shadowOpacity || 0;
+    return {
+      boxShadow: `${offsetX}px ${offsetY}px ${blur}px rgba(0, 0, 0, ${opacity})`
+    };
+  }
+  
+  return shadowConfig;
+};
 
 // SVG Path로 자연스러운 물결 (안전한 버전)
 const AnimatedThermometer: React.FC<{ temperature: number }> = ({ temperature }) => {
@@ -625,11 +648,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         zIndex: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 2, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 10,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 2, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 10,
+        }),
     },
     modernThermometer: {
         width: 28,
@@ -663,11 +688,13 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
-        elevation: 10,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 10,
+        }),
         marginLeft: 8,
     },
     temperatureText: {
@@ -704,11 +731,13 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 3,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+          elevation: 3,
+        }),
         zIndex: 10,
         minWidth: 60,
         minHeight: 40,
@@ -768,11 +797,13 @@ const styles = StyleSheet.create({
         borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 3,
+        }),
     },
     overlayBottom: {
         position: 'absolute',
@@ -784,11 +815,13 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         paddingTop: 12,
         height: height * 0.5, // 슬라이드 전체 높이
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 8,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 8,
+        }),
     },
     dragHandle: {
         width: 36,
@@ -833,11 +866,13 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#F0F0F0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+          elevation: 1,
+        }),
     },
     selectedCard: {
         backgroundColor: '#F8F9FF',

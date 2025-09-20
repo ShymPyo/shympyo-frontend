@@ -9,9 +9,10 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
+  Pressable,
   Keyboard,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,35 +21,67 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
+import ApiService from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 type GeneralLoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'GeneralLogin'>;
 
 const GeneralLoginScreen: React.FC = () => {
   const navigation = useNavigation<GeneralLoginScreenNavigationProp>();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('알림', '이메일과 비밀번호를 모두 입력해주세요.');
       return;
     }
 
-    // 테스트용으로 바로 로그인
-    navigation.replace('Main');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('알림', '올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const loginData = {
+        email: email.trim(),
+        password: password,
+      };
+
+      const response = await ApiService.login(loginData);
+
+      if (response.success) {
+        console.log('✅ 로그인 성공');
+        await login(response.data.accessToken, response.data.refreshToken);
+        navigation.navigate('Main');
+      } else {
+        console.log('❌ 로그인 실패');
+        Alert.alert('로그인 실패', response.message || '이메일 또는 비밀번호가 올바르지 않습니다.');
+      }
+    } catch (error: any) {
+      console.error('❌ 로그인 오류:', error);
+      Alert.alert('로그인 실패', '로그인 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = () => {
-    Alert.alert('안내', '일반 회원가입 기능은 준비 중입니다.\n소셜 로그인을 이용해주세요.');
+    navigation.navigate('SignUp');
   };
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+    <Pressable onPress={dismissKeyboard} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" />
         
@@ -112,10 +145,15 @@ const GeneralLoginScreen: React.FC = () => {
             </View>
 
             <TouchableOpacity 
-              style={styles.loginButton} 
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
               onPress={handleLogin}
+              disabled={isLoading}
             >
-              <Text style={styles.loginButtonText}>로그인</Text>
+              {isLoading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.loginButtonText}>로그인</Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -131,7 +169,7 @@ const GeneralLoginScreen: React.FC = () => {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </TouchableWithoutFeedback>
+    </Pressable>
   );
 };
 
@@ -212,6 +250,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
   signUpButton: {
     backgroundColor: 'transparent',

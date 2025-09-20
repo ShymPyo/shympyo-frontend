@@ -8,6 +8,7 @@ import {
   Image,
   ScrollView,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -85,16 +86,23 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
       animationType="fade"
       transparent={true}
       onRequestClose={onClose}
+      statusBarTranslucent={true}
+      {...(Platform.OS === 'web' && {
+        accessibilityViewIsModal: false,
+        presentationStyle: 'overFullScreen'
+      })}
     >
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.overlay}
         activeOpacity={1}
         onPress={onClose}
+        {...(Platform.OS === 'web' && { accessible: false })}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.container}
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
+          accessible={false}
         >
           {/* 헤더 */}
           <View style={styles.header}>
@@ -167,11 +175,16 @@ const styles = StyleSheet.create({
     height: 400,
     backgroundColor: 'white',
     borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 20,
+    ...(Platform.OS === 'web' 
+      ? { boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.3)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.3,
+          shadowRadius: 20,
+          elevation: 20,
+        }
+    ),
     overflow: 'hidden',
   },
   header: {

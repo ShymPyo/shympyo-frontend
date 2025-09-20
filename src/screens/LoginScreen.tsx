@@ -8,7 +8,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
+  Pressable,
   Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -48,7 +48,7 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+    <Pressable onPress={dismissKeyboard} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" />
         
@@ -108,7 +108,7 @@ const LoginScreen: React.FC = () => {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </TouchableWithoutFeedback>
+    </Pressable>
   );
 };
 

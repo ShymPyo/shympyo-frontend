@@ -10,9 +10,31 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
+  Pressable,
   Keyboard,
 } from 'react-native';
+
+// Shadow 스타일 헬퍼 함수
+const getShadowStyle = (shadowConfig: {
+  shadowColor?: string;
+  shadowOffset?: { width: number; height: number };
+  shadowOpacity?: number;
+  shadowRadius?: number;
+  elevation?: number;
+}) => {
+  if (Platform.OS === 'web') {
+    const { shadowOffset, shadowOpacity, shadowRadius } = shadowConfig;
+    const offsetX = shadowOffset?.width || 0;
+    const offsetY = shadowOffset?.height || 0;
+    const blur = shadowRadius || 0;
+    const opacity = shadowOpacity || 0;
+    return {
+      boxShadow: `${offsetX}px ${offsetY}px ${blur}px rgba(0, 0, 0, ${opacity})`
+    };
+  }
+  
+  return shadowConfig;
+};
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -98,7 +120,7 @@ const LetterScreen: React.FC = () => {
         visible={isModalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={dismissKeyboard}>
+        <Pressable onPress={dismissKeyboard} style={{ flex: 1 }}>
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalContainer}
@@ -130,7 +152,7 @@ const LetterScreen: React.FC = () => {
               </View>
             </View>
           </KeyboardAvoidingView>
-        </TouchableWithoutFeedback>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
@@ -165,11 +187,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    ...getShadowStyle({
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 2,
+    }),
   },
   cardContent: {
     marginBottom: 15,

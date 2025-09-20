@@ -8,6 +8,7 @@ export type RootStackParamList = {
   AdminSpaceEdit: undefined;
   AdminLetterList: undefined;
   GeneralLogin: undefined;
+  SignUp: undefined;
 };
 
 export type MainTabParamList = {

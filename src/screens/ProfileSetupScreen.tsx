@@ -10,7 +10,7 @@ import {
   Modal,
   FlatList,
   Keyboard,
-  TouchableWithoutFeedback,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -60,7 +60,7 @@ const ProfileSetupScreen: React.FC = () => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+    <Pressable onPress={dismissKeyboard} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" />
         <View style={styles.header}>
@@ -147,7 +147,7 @@ const ProfileSetupScreen: React.FC = () => {
         </View>
       </Modal>
       </SafeAreaView>
-    </TouchableWithoutFeedback>
+    </Pressable>
   );
 };
 
