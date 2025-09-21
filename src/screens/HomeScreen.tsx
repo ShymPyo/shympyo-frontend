@@ -10,6 +10,7 @@ import {
   ScrollView,
   Modal,
   Platform,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,9 +27,15 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+import * as Location from 'expo-location';
 
 import { Colors } from '../constants/colors';
 import ShelterDetailModal from '../components/ShelterDetailModal';
+import ApiService, { MapLocation, NearbyPlace } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types';
 
 const { width, height } = Dimensions.get('window');
 
@@ -189,20 +196,204 @@ const shelters: Shelter[] = [
   }
 ];
 
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+
 const HomeScreen: React.FC = () => {
+  const { accessToken, refreshTokens } = useAuth();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+
   // 상태 관리: 선택된 쉼터 정보만 관리
   const [selectedShelter, setSelectedShelter] = useState<Shelter>(shelters[0]);
   const [modalVisible, setModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['민간 개방 시설', '스마트 쉼터', '교통 시설', '공공 시설']);
-  
+
+  // 위치 관련 상태
+  const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
+  const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
+  const [mapLocations, setMapLocations] = useState<MapLocation[]>([]);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+  // 위치 권한 요청 및 초기 위치 설정
+  useEffect(() => {
+    const requestLocationPermission = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        setLocationPermission(status);
+
+        if (status === 'granted') {
+          // 권한이 있으면 현재 위치 가져오기
+          getCurrentLocation();
+        } else {
+          console.log('위치 권한이 거부됨');
+        }
+      } catch (error) {
+        console.error('위치 권한 요청 실패:', error);
+      }
+    };
+
+    requestLocationPermission();
+  }, []);
+
+  // 현재 위치 가져오기
+  const getCurrentLocation = async () => {
+    try {
+      setIsLoadingLocation(true);
+
+      // 테스트용으로 서울 합정역 위치 사용
+      const testLocation = {
+        coords: {
+          latitude: 37.5492056,
+          longitude: 126.9140677,
+          altitude: 0,
+          accuracy: 10,
+          altitudeAccuracy: 0,
+          heading: 0,
+          speed: 0,
+        },
+        timestamp: Date.now(),
+      };
+
+      setCurrentLocation(testLocation);
+      console.log('✅ 테스트 위치 (서울 합정역):', testLocation.coords.latitude, testLocation.coords.longitude);
+
+      // 주변 장소 조회
+      await loadNearbyPlaces(testLocation.coords.latitude, testLocation.coords.longitude);
+    } catch (error) {
+      console.error('❌ 현재 위치 가져오기 실패:', error);
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
+  // 주변 장소 조회
+  const loadNearbyPlaces = async (lat: number, lon: number, radius: number = 2000) => {
+    try {
+      console.log(`🔍 검색 조건: 위치(${lat}, ${lon}), 반경: ${radius}m`);
+
+      const [mapResponse, listResponse] = await Promise.all([
+        ApiService.getNearbyMap(lat, lon, radius, 100, accessToken),
+        ApiService.getNearbyList(lat, lon, radius, 50, accessToken)
+      ]);
+
+      console.log('🔍 API 응답 상세 정보:');
+      console.log('지도 API 응답:', JSON.stringify(mapResponse, null, 2));
+      console.log('리스트 API 응답:', JSON.stringify(listResponse, null, 2));
+
+      if (mapResponse.success) {
+        setMapLocations(mapResponse.data);
+        console.log('✅ 지도 위치 데이터 로드:', mapResponse.data.length, '개');
+        console.log('지도 데이터 내용:', mapResponse.data);
+      } else {
+        console.log('❌ 지도 API 실패:', mapResponse.message);
+      }
+
+      if (listResponse.success) {
+        setNearbyPlaces(listResponse.data);
+        console.log('✅ 주변 장소 리스트 로드:', listResponse.data.length, '개');
+        console.log('리스트 데이터 내용:', listResponse.data);
+      } else {
+        console.log('❌ 리스트 API 실패:', listResponse.message);
+      }
+    } catch (error) {
+      console.error('❌ 주변 장소 조회 실패:', error);
+
+      // 401/403 오류인 경우 토큰 재발급 시도
+      if (error.toString().includes('401') || error.toString().includes('403')) {
+        console.log('🔄 토큰 만료 감지, 재발급 시도...');
+
+        try {
+          await refreshTokens();
+          console.log('✅ 토큰 재발급 성공, 재시도...');
+
+          // 토큰 재발급 후 다시 시도
+          const [retryMapResponse, retryListResponse] = await Promise.all([
+            ApiService.getNearbyMap(lat, lon, radius, 100, accessToken || undefined),
+            ApiService.getNearbyList(lat, lon, radius, 50, accessToken || undefined)
+          ]);
+
+          if (retryMapResponse.success) {
+            setMapLocations(retryMapResponse.data);
+            console.log('✅ 재시도 - 지도 위치 데이터 로드:', retryMapResponse.data.length);
+          }
+
+          if (retryListResponse.success) {
+            setNearbyPlaces(retryListResponse.data);
+            console.log('✅ 재시도 - 주변 장소 리스트 로드:', retryListResponse.data.length);
+          }
+        } catch (refreshError) {
+          console.error('❌ 토큰 재발급 실패:', refreshError);
+          console.log('🔐 로그인이 필요합니다.');
+        }
+      }
+    }
+  };
+
+  // 내 위치 버튼 클릭 핸들러
+  const handleMyLocationPress = () => {
+    if (locationPermission !== 'granted') {
+      Alert.alert(
+        '위치 권한 필요',
+        '내 위치를 확인하려면 위치 권한이 필요합니다.',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '설정으로 이동',
+            onPress: () => {
+              if (Platform.OS === 'ios') {
+                // iOS에서는 설정 앱으로 직접 이동하기 어려우므로 안내만
+                Alert.alert('설정 안내', '설정 > 개인정보 보호 및 보안 > 위치 서비스에서 권한을 허용해주세요.');
+              } else {
+                // Android에서는 앱 설정으로 이동 가능
+                Location.requestForegroundPermissionsAsync();
+              }
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    getCurrentLocation();
+  };
+
+  // 장소 상세 정보 가져오기
+  const handleShelterPress = async (shelter: Shelter) => {
+    setSelectedShelter(shelter);
+
+    // 백엔드에서 실제 데이터가 있는 경우 상세 정보 조회
+    if (mapLocations.length > 0) {
+      try {
+        // shelter의 id를 숫자로 변환하여 사용
+        const placeId = parseInt(shelter.id);
+        const response = await ApiService.getPlaceDetail(placeId, accessToken || undefined);
+
+        if (response.success) {
+          console.log('✅ 장소 상세 정보 로드:', response.data);
+          // 상세 정보로 shelter 객체 업데이트
+          const updatedShelter = {
+            ...shelter,
+            address: response.data.address,
+            description: response.data.content,
+          };
+          setSelectedShelter(updatedShelter);
+        }
+      } catch (error) {
+        console.error('❌ 장소 상세 정보 조회 실패:', error);
+      }
+    }
+
+    setModalVisible(true);
+  };
+
   // 하단 슬라이드 애니메이션을 위한 값들
   const bottomSheetHeight = height * 0.5; // 전체 높이의 50%
   const peekHeight = 120; // 기본적으로 살짝 보이는 높이
   const minHeight = peekHeight; // 최소 높이 - 제목과 첫 번째 카드 일부만 보임
   const maxHeight = bottomSheetHeight; // 최대 높이 - 전체 목록 표시
   
-  // CSS로 위치를 조정했으므로 translateY는 0에서 시작
+  // 초기값을 0으로 설정 (원래 상태)
   const translateY = useSharedValue(0);
 
   // 팬 제스처 핸들러 - 3단계 상태를 지원하는 스마트 슬라이드
@@ -307,10 +498,7 @@ const HomeScreen: React.FC = () => {
         styles.shelterCard, 
         selectedShelter.id === item.id && styles.selectedCard // 선택된 카드는 다른 스타일 적용
       ]}
-      onPress={() => {
-        setSelectedShelter(item);
-        setModalVisible(true);
-      }} // 카드 선택 시 상태 업데이트하고 모달 열기
+      onPress={() => handleShelterPress(item)} // 카드 선택 시 상세 정보 로드 후 모달 열기
     >
       {/* 쉼터 타입별 색상 아이콘 */}
       <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
@@ -320,6 +508,14 @@ const HomeScreen: React.FC = () => {
       <View style={styles.shelterInfo}>
         <Text style={styles.shelterCategory}>{item.category}</Text>
         <Text style={styles.shelterName}>{item.name}</Text>
+        {item.address && (
+          <Text style={styles.shelterAddress}>{item.address}</Text>
+        )}
+        {item.description && (
+          <Text style={styles.shelterDescription} numberOfLines={1}>
+            {item.description}
+          </Text>
+        )}
       </View>
       {/* 거리 정보 - 오른쪽에 큰 글씨로 표시 */}
       <Text style={styles.shelterDistance}>{item.distance}</Text>
@@ -350,45 +546,95 @@ const HomeScreen: React.FC = () => {
       <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985"></script>
       <script>
           var container = document.getElementById('map');
+
+          // 현재 위치가 있으면 해당 위치를 중심으로, 없으면 기본 위치 사용
+          var centerLat = ${currentLocation?.coords.latitude || 37.4485};
+          var centerLng = ${currentLocation?.coords.longitude || 126.6584};
+
           var options = {
-              center: new kakao.maps.LatLng(37.4485, 126.6584),
-              level: 4
+              center: new kakao.maps.LatLng(centerLat, centerLng),
+              level: 2  // 더 크게 보이도록 줌 레벨 조정 (작을수록 더 확대됨)
           };
-  
+
           var map = new kakao.maps.Map(container, options);
+
+          // 내 위치 마커 (현재 위치가 있는 경우에만)
+          ${currentLocation ? `
+          var myLocationMarker = new kakao.maps.Marker({
+              map: map,
+              position: new kakao.maps.LatLng(${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}),
+              title: '내 위치',
+              image: new kakao.maps.MarkerImage(
+                  'data:image/svg+xml;base64,' + btoa(\`
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="8" fill="#007AFF" stroke="white" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="3" fill="white"/>
+                    </svg>
+                  \`),
+                  new kakao.maps.Size(24, 24),
+                  { offset: new kakao.maps.Point(12, 12) }
+              )
+          });
+          ` : ''}
   
+          // 백엔드에서 가져온 주변 장소들로 마커 생성
           var positions = [
-              {
-                  title: '카페 빈스',
-                  latlng: new kakao.maps.LatLng(37.4485, 126.6584)
-              },
-              {
-                  title: '용현노인문화센터',
-                  latlng: new kakao.maps.LatLng(37.4505, 126.6564)
-              },
-              {
-                  title: '인하대역',
-                  latlng: new kakao.maps.LatLng(37.4495, 126.6554)
-              },
-              {
-                  title: '스마트쉼터',
-                  latlng: new kakao.maps.LatLng(37.4515, 126.6594)
-              },
-              {
-                  title: '공공시설',
-                  latlng: new kakao.maps.LatLng(37.4475, 126.6534)
-              }
+              ${mapLocations.map((location, index) => {
+                const place = nearbyPlaces.find(p => p.id === location.id);
+                const title = place ? place.name : location.type;
+                const content = place ? place.content : '';
+                return `{
+                  title: "${title}",
+                  content: "${content}",
+                  latlng: new kakao.maps.LatLng(${location.latitude}, ${location.longitude}),
+                  type: "${location.type}",
+                  id: ${location.id}
+                }`;
+              }).join(',')}
           ];
   
-          for (var i = 0; i < positions.length; i ++) {
-              var marker = new kakao.maps.Marker({
-                  map: map,
-                  position: positions[i].latlng,
-                  title: positions[i].title
-              });
+          // 마커 생성 (데이터가 있는 경우에만)
+          if (positions.length > 0) {
+              for (var i = 0; i < positions.length; i ++) {
+                  // 쉼터 타입에 따른 마커 이미지 설정
+                  var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="16" cy="16" r="14" fill="#4A90E2" stroke="white" stroke-width="2"/>
+                      <path d="M16 10L18 14H22L19 17L20 22L16 19L12 22L13 17L10 14H14L16 10Z" fill="white"/>
+                    </svg>
+                  \`);
+
+                  var markerImage = new kakao.maps.MarkerImage(
+                      markerImageSrc,
+                      new kakao.maps.Size(32, 32),
+                      { offset: new kakao.maps.Point(16, 32) }
+                  );
+
+                  var marker = new kakao.maps.Marker({
+                      map: map,
+                      position: positions[i].latlng,
+                      title: positions[i].title,
+                      image: markerImage
+                  });
+
+                  // 정보창 생성
+                  var infoWindow = new kakao.maps.InfoWindow({
+                      content: \`
+                        <div style="padding: 10px; min-width: 200px;">
+                          <h4 style="margin: 0 0 5px 0; color: #333;">\${positions[i].title}</h4>
+                          <p style="margin: 0; color: #666; font-size: 12px;">\${positions[i].content}</p>
+                        </div>
+                      \`
+                  });
+
+                  // 마커 클릭 이벤트
+                  (function(marker, infoWindow) {
+                      kakao.maps.event.addListener(marker, 'click', function() {
+                          infoWindow.open(map, marker);
+                      });
+                  })(marker, infoWindow);
+              }
           }
-          
-          map.setCenter(positions[0].latlng);
   
       </script>
   </body>
@@ -467,8 +713,19 @@ const HomeScreen: React.FC = () => {
 
           {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
           <Animated.View style={[styles.locationButtonContainer, locationButtonStyle]}>
-            <TouchableOpacity style={styles.locationButton}>
-              <Ionicons name="locate" size={20} color={Colors.text.primary} />
+            <TouchableOpacity
+              style={[
+                styles.locationButton,
+                isLoadingLocation && styles.locationButtonLoading
+              ]}
+              onPress={handleMyLocationPress}
+              disabled={isLoadingLocation}
+            >
+              <Ionicons
+                name={isLoadingLocation ? "refresh" : "locate"}
+                size={20}
+                color={isLoadingLocation ? Colors.primary : Colors.text.primary}
+              />
             </TouchableOpacity>
           </Animated.View>
           
@@ -479,12 +736,12 @@ const HomeScreen: React.FC = () => {
               
               {/* 헤더 부분 - 터치 시 리스트 토글 */}
               <TouchableOpacity style={styles.bottomHeader} onPress={handleHeaderPress}>
-                <Text style={styles.headerTitle}>반경 100m 내 쉼터</Text>
+                <Text style={styles.headerTitle}>반경 2km 내 쉼터</Text>
               </TouchableOpacity>
 
               {/* 쉼터 목록 - 스크롤 가능한 영역 */}
-              <ScrollView 
-                style={styles.contentContainer} 
+              <ScrollView
+                style={styles.contentContainer}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContentContainer}
               >
@@ -492,12 +749,23 @@ const HomeScreen: React.FC = () => {
                 <Text style={styles.topNote}>※ 실시간으로 업데이트 됩니다.</Text>
                 
                 <View style={{ backgroundColor: 'transparent' }}>
-                  <FlatList
-                    data={filteredShelters}
-                    renderItem={renderShelterCard}
-                    keyExtractor={(item) => item.id}
-                    scrollEnabled={false}
-                  />
+                  {/* 쉼터 목록 항상 표시 */}
+                    <FlatList
+                      data={nearbyPlaces.map(place => ({
+                        id: place.id.toString(),
+                        name: place.name,
+                        category: place.type === 'SHELTER' ? '스마트 쉼터' : '기타 시설',
+                        type: place.type,
+                        distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
+                        address: place.address,
+                        description: place.content,
+                        icon: place.type === 'SHELTER' ? 'home' : 'business',
+                        color: place.type === 'SHELTER' ? '#4A90E2' : '#7ED321'
+                      }))}
+                      renderItem={renderShelterCard}
+                      keyExtractor={(item) => item.id}
+                      scrollEnabled={false}
+                    />
                 </View>
                 <View style={styles.bottomFiller} />
               </ScrollView>
@@ -805,16 +1073,19 @@ const styles = StyleSheet.create({
           elevation: 3,
         }),
     },
+    locationButtonLoading: {
+        backgroundColor: '#f0f8ff',
+    },
     overlayBottom: {
         position: 'absolute',
-        bottom: -height * 0.5 + 85, // 슬라이드를 아래로 숨기고 15px만 보이게
+        bottom: -height * 0.4, // 원래 위치로 복구
         left: 0,
         right: 0,
         backgroundColor: 'white',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         paddingTop: 12,
-        height: height * 0.5, // 슬라이드 전체 높이
+        height: height * 0.5, // 원래 높이로 복구
         ...getShadowStyle({
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
@@ -901,6 +1172,21 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: Colors.text.primary,
         lineHeight: 20,
+    },
+    shelterAddress: {
+        fontSize: 12,
+        fontWeight: '400',
+        color: Colors.text.light,
+        marginTop: 2,
+        lineHeight: 16,
+    },
+    shelterDescription: {
+        fontSize: 11,
+        fontWeight: '400',
+        color: Colors.text.secondary,
+        marginTop: 1,
+        lineHeight: 14,
+        fontStyle: 'italic',
     },
     shelterDistance: {
         fontSize: 16,
@@ -994,6 +1280,43 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: '600',
+    },
+    emptyStateContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 40,
+        paddingHorizontal: 20,
+    },
+    emptyStateTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.text.primary,
+        marginTop: 16,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    emptyStateSubtitle: {
+        fontSize: 14,
+        color: Colors.text.light,
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 24,
+    },
+    refreshButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f8ff',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: Colors.primary,
+    },
+    refreshButtonText: {
+        fontSize: 14,
+        color: Colors.primary,
+        fontWeight: '500',
+        marginLeft: 6,
     },
 });
 

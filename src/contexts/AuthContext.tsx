@@ -6,9 +6,12 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
+  accessToken: string | null;
+  refreshToken: string | null;
   login: (accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
+  refreshTokens: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,10 +24,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+
+  const refreshTokens = async (): Promise<string | null> => {
+    try {
+      if (!refreshToken) {
+        console.error('❌ 리프레시 토큰이 없습니다.');
+        await logout();
+        return null;
+      }
+
+      console.log('🔄 토큰 재발급 시도...');
+      const response = await ApiService.refreshToken(refreshToken);
+
+      if (response.success) {
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
+
+        await StorageService.setTokens(newAccessToken, newRefreshToken);
+        setAccessToken(newAccessToken);
+        setRefreshToken(newRefreshToken);
+
+        console.log('✅ 토큰 재발급 성공');
+        return newAccessToken;
+      } else {
+        console.error('❌ 토큰 재발급 실패:', response.message);
+        await logout();
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ 토큰 재발급 실패:', error);
+      await logout();
+      return null;
+    }
+  };
 
   useEffect(() => {
     checkAuthStatus();
     testBackendConnection();
+
+    // API 서비스에 토큰 재발급 콜백 설정
+    ApiService.setRefreshTokenCallback(refreshTokens);
   }, []);
 
   const testBackendConnection = async () => {
@@ -42,10 +82,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const accessToken = await StorageService.getAccessToken();
+      const storedAccessToken = await StorageService.getAccessToken();
+      const storedRefreshToken = await StorageService.getRefreshToken();
       const userData = await StorageService.getUserData();
 
-      if (accessToken && userData) {
+      if (storedAccessToken && userData) {
+        setAccessToken(storedAccessToken);
+        setRefreshToken(storedRefreshToken);
         setIsAuthenticated(true);
         setUser(userData);
       }
@@ -57,11 +100,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (accessToken: string, refreshToken: string) => {
+  const login = async (newAccessToken: string, newRefreshToken: string) => {
     try {
-      await StorageService.setTokens(accessToken, refreshToken);
-      
-      const userResponse = await ApiService.getMe(accessToken);
+      await StorageService.setTokens(newAccessToken, newRefreshToken);
+      setAccessToken(newAccessToken);
+      setRefreshToken(newRefreshToken);
+
+      const userResponse = await ApiService.getMe(newAccessToken);
       if (userResponse.success) {
         await StorageService.setUserData(userResponse.data);
         setUser(userResponse.data);
@@ -80,6 +125,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await StorageService.clearAll();
       setIsAuthenticated(false);
       setUser(null);
+      setAccessToken(null);
+      setRefreshToken(null);
     } catch (error) {
       console.error('로그아웃 에러:', error);
     }
@@ -97,9 +144,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated,
     user,
     isLoading,
+    accessToken,
+    refreshToken,
     login,
     logout,
     updateUser,
+    refreshTokens,
   };
 
   return (
