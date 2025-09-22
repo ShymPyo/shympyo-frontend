@@ -241,11 +241,11 @@ const HomeScreen: React.FC = () => {
     try {
       setIsLoadingLocation(true);
 
-      // 테스트용으로 서울 합정역 위치 사용
+      // 테스트용으로 그린스마트쉼터 위치 사용
       const testLocation = {
         coords: {
-          latitude: 37.5492056,
-          longitude: 126.9140677,
+          latitude: 37.5016667,
+          longitude: 127.0385582,
           altitude: 0,
           accuracy: 10,
           altitudeAccuracy: 0,
@@ -256,7 +256,7 @@ const HomeScreen: React.FC = () => {
       };
 
       setCurrentLocation(testLocation);
-      console.log('✅ 테스트 위치 (서울 합정역):', testLocation.coords.latitude, testLocation.coords.longitude);
+      console.log('✅ 테스트 위치 (그린스마트쉼터):', testLocation.coords.latitude, testLocation.coords.longitude);
 
       // 주변 장소 조회
       await loadNearbyPlaces(testLocation.coords.latitude, testLocation.coords.longitude);
@@ -330,6 +330,9 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  // WebView 참조
+  const webViewRef = React.useRef<any>(null);
+
   // 내 위치 버튼 클릭 핸들러
   const handleMyLocationPress = () => {
     if (locationPermission !== 'granted') {
@@ -355,7 +358,20 @@ const HomeScreen: React.FC = () => {
       return;
     }
 
+    // 현재 위치 갱신 및 지도 이동
     getCurrentLocation();
+
+    // WebView의 지도를 현재 위치(그린스마트쉼터)로 이동하고 줌 레벨 초기화
+    if (webViewRef.current) {
+      const moveScript = `
+        if (typeof map !== 'undefined') {
+          var moveLatLon = new kakao.maps.LatLng(37.5016667, 127.0385582);
+          map.setCenter(moveLatLon);
+          map.setLevel(3);
+        }
+      `;
+      webViewRef.current.injectJavaScript(moveScript);
+    }
   };
 
   // 장소 상세 정보 가져오기
@@ -556,13 +572,13 @@ const HomeScreen: React.FC = () => {
       <script>
           var container = document.getElementById('map');
 
-          // 현재 위치가 있으면 해당 위치를 중심으로, 없으면 기본 위치 사용
-          var centerLat = ${currentLocation?.coords.latitude || 37.4485};
-          var centerLng = ${currentLocation?.coords.longitude || 126.6584};
+          // 현재 위치가 있으면 해당 위치를 중심으로, 없으면 그린스마트쉼터 위치 사용
+          var centerLat = ${currentLocation?.coords.latitude || 37.5016667};
+          var centerLng = ${currentLocation?.coords.longitude || 127.0385582};
 
           var options = {
               center: new kakao.maps.LatLng(centerLat, centerLng),
-              level: 4  // 모바일에 적합한 줌 레벨
+              level: 3  // 한 단계 더 확대
           };
 
           var map = new kakao.maps.Map(container, options);
@@ -584,21 +600,34 @@ const HomeScreen: React.FC = () => {
               }
           }, 500);
 
-          // 내 위치 마커 (현재 위치가 있는 경우에만)
+          // 내 위치 마커 - 카카오맵 스타일로 강조
           ${currentLocation ? `
+          // 내 위치 원형 범위 표시 (정확도 범위)
+          var myLocationCircle = new kakao.maps.Circle({
+              center: new kakao.maps.LatLng(${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}),
+              radius: 15, // 15m 반경으로 축소
+              strokeWeight: 1,
+              strokeColor: '#FF0000',
+              strokeOpacity: 0.6,
+              fillColor: '#FF0000',
+              fillOpacity: 0.1
+          });
+          myLocationCircle.setMap(map);
+
+          // 내 위치 마커 - 빨간색 원형
           var myLocationMarker = new kakao.maps.Marker({
               map: map,
               position: new kakao.maps.LatLng(${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}),
               title: '내 위치',
               image: new kakao.maps.MarkerImage(
                   'data:image/svg+xml;base64,' + btoa(\`
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="12" cy="12" r="8" fill="#007AFF" stroke="white" stroke-width="2"/>
-                      <circle cx="12" cy="12" r="3" fill="white"/>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="10" cy="10" r="9" fill="#FF0000" stroke="white" stroke-width="2"/>
+                      <circle cx="10" cy="10" r="3" fill="white"/>
                     </svg>
                   \`),
-                  new kakao.maps.Size(24, 24),
-                  { offset: new kakao.maps.Point(12, 12) }
+                  new kakao.maps.Size(20, 20),
+                  { offset: new kakao.maps.Point(10, 10) }
               )
           });
           ` : ''}
@@ -673,6 +702,7 @@ const HomeScreen: React.FC = () => {
         <StatusBar style="dark" translucent backgroundColor="rgba(255,255,255,0.8)" />
         <View style={styles.mapContainer}>
           <WebView
+            ref={webViewRef}
             originWhitelist={['*']}
             source={{ html: mapHtml, baseUrl: '' }}
             style={styles.map}
@@ -794,7 +824,7 @@ const HomeScreen: React.FC = () => {
                         distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
                         address: place.address,
                         description: place.content,
-                        icon: place.type === 'SHELTER' ? 'home' : 'business',
+                        icon: place.type === 'SHELTER' ? 'medical' : 'business',
                         color: place.type === 'SHELTER' ? '#4A90E2' : '#7ED321'
                       }))}
                       renderItem={renderShelterCard}
