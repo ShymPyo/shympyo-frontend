@@ -540,19 +540,109 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  // 필터링된 쉼터 목록
-  const filteredShelters = shelters.filter(shelter => 
-    selectedCategories.includes(shelter.category)
-  );
+  // 실제 API 데이터를 필터링된 쉼터 목록으로 변환
+  const filteredShelters = nearbyPlaces
+    .map(place => ({
+      id: place.id.toString(),
+      name: place.name,
+      category: place.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설' as const,
+      type: place.type,
+      distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
+      address: place.address,
+      description: place.content,
+      content: place.content,
+      icon: place.type === 'SHELTER' ? 'medical' : 'business',
+      color: place.type === 'SHELTER' ? '#4A90E2' : '#7ED321'
+    }))
+    .filter(shelter => selectedCategories.includes(shelter.category));
+
+  // 필터링된 쉼터에 해당하는 지도 위치 데이터
+  const filteredMapLocations = mapLocations.filter(location => {
+    const matchingPlace = nearbyPlaces.find(place => place.id === location.id);
+    if (!matchingPlace) return false;
+    const category = matchingPlace.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설';
+    return selectedCategories.includes(category);
+  });
 
   // 카테고리 토글 함수
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(category) 
+    setSelectedCategories(prev =>
+      prev.includes(category)
         ? prev.filter(c => c !== category)
         : [...prev, category]
     );
   };
+
+  // 필터 변경 시 지도 마커 업데이트
+  useEffect(() => {
+    if (webViewRef.current && mapLocations.length > 0) {
+      // JavaScript를 통해 마커만 업데이트
+      const filteredPositions = filteredMapLocations.map((location, index) => {
+        const place = nearbyPlaces.find(p => p.id === location.id);
+        const title = place ? place.name : location.type;
+        const content = place ? place.content : '';
+        return {
+          title: title,
+          latlng: [location.latitude, location.longitude],
+          content: content,
+          id: location.id,
+          type: location.type
+        };
+      });
+
+      const updateMarkersScript = `
+        // 기존 마커들 제거
+        if (window.markers) {
+          window.markers.forEach(marker => marker.setMap(null));
+        }
+        window.markers = [];
+
+        // 새로운 마커들 생성
+        var positions = ${JSON.stringify(filteredPositions)};
+        positions.forEach(function(position, index) {
+          var markerPosition = new kakao.maps.LatLng(position.latlng[0], position.latlng[1]);
+
+          // 쉼터 타입에 따른 마커 이미지 설정
+          var markerColor = position.type === 'SHELTER' ? '#4A90E2' : '#7ED321';
+          var markerIcon = position.type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' : 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
+
+          var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="14" fill="\${markerColor}" stroke="white" stroke-width="2"/>
+              <path d="\${markerIcon}" fill="white" transform="translate(8, 8) scale(0.7)"/>
+            </svg>
+          \`);
+
+          var markerImage = new kakao.maps.MarkerImage(
+            markerImageSrc,
+            new kakao.maps.Size(32, 32),
+            { offset: new kakao.maps.Point(16, 16) }
+          );
+
+          var marker = new kakao.maps.Marker({
+            position: markerPosition,
+            image: markerImage,
+            clickable: true
+          });
+
+          marker.setMap(window.map);
+          window.markers.push(marker);
+
+          kakao.maps.event.addListener(marker, 'click', function() {
+            console.log('🗺️ 동적 마커 클릭됨! Place ID:', position.id);
+            if (window.ReactNativeWebView) {
+              console.log('📤 React Native로 메시지 전송:', 'MARKER_CLICK:' + position.id);
+              window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
+            } else {
+              console.log('❌ ReactNativeWebView 없음');
+            }
+          });
+        });
+      `;
+
+      webViewRef.current.injectJavaScript(updateMarkersScript);
+    }
+  }, [selectedCategories, filteredMapLocations, nearbyPlaces]);
 
   // 쉼터 정보 카드 렌더링 함수 - 선택 가능한 카드 리스트 형태
   const renderShelterCard = ({ item }: { item: Shelter }) => (
@@ -679,9 +769,9 @@ const HomeScreen: React.FC = () => {
           });
           ` : ''}
   
-          // 백엔드에서 가져온 주변 장소들로 마커 생성
+          // 필터링된 주변 장소들로 마커 생성
           var positions = [
-              ${mapLocations.map((location, index) => {
+              ${filteredMapLocations.map((location, index) => {
                 const place = nearbyPlaces.find(p => p.id === location.id);
                 const title = place ? place.name : location.type;
                 const content = place ? place.content : '';
@@ -695,21 +785,28 @@ const HomeScreen: React.FC = () => {
               }).join(',')}
           ];
   
+          // 마커 배열을 전역 변수로 저장
+          window.markers = [];
+          window.map = map;
+
           // 마커 생성 (데이터가 있는 경우에만)
           if (positions.length > 0) {
               for (var i = 0; i < positions.length; i ++) {
                   // 쉼터 타입에 따른 마커 이미지 설정
+                  var markerColor = positions[i].type === 'SHELTER' ? '#4A90E2' : '#7ED321';
+                  var markerIcon = positions[i].type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' : 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
+
                   var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
                     <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="16" cy="16" r="14" fill="#4A90E2" stroke="white" stroke-width="2"/>
-                      <path d="M16 10L18 14H22L19 17L20 22L16 19L12 22L13 17L10 14H14L16 10Z" fill="white"/>
+                      <circle cx="16" cy="16" r="14" fill="\${markerColor}" stroke="white" stroke-width="2"/>
+                      <path d="\${markerIcon}" fill="white" transform="translate(8, 8) scale(0.7)"/>
                     </svg>
                   \`);
 
                   var markerImage = new kakao.maps.MarkerImage(
                       markerImageSrc,
                       new kakao.maps.Size(32, 32),
-                      { offset: new kakao.maps.Point(16, 32) }
+                      { offset: new kakao.maps.Point(16, 16) }
                   );
 
                   var marker = new kakao.maps.Marker({
@@ -718,6 +815,9 @@ const HomeScreen: React.FC = () => {
                       title: positions[i].title,
                       image: markerImage
                   });
+
+                  // 마커를 배열에 저장
+                  window.markers.push(marker);
 
                   // 정보창 생성
                   var infoWindow = new kakao.maps.InfoWindow({
@@ -745,7 +845,16 @@ const HomeScreen: React.FC = () => {
                   })(marker, infoWindow, positions[i].id);
               }
           }
-  
+
+          // React Native에서 메시지를 받을 리스너 추가
+          window.addEventListener('message', function(event) {
+            try {
+              eval(event.data);
+            } catch (e) {
+              console.error('메시지 실행 오류:', e);
+            }
+          });
+
       </script>
   </body>
   </html>
@@ -774,10 +883,24 @@ const HomeScreen: React.FC = () => {
               const message = event.nativeEvent.data;
               console.log('📱 WebView 메시지 수신:', message);
 
+              // 문자열 메시지 처리
               if (message.startsWith('MARKER_CLICK:')) {
                 const placeId = message.replace('MARKER_CLICK:', '');
                 console.log('🔍 마커 클릭 감지, Place ID:', placeId);
                 handleMarkerClick(parseInt(placeId));
+                return;
+              }
+
+              // JSON 메시지 처리
+              try {
+                const jsonMessage = JSON.parse(message);
+                if (jsonMessage.type === 'markerClick') {
+                  console.log('🔍 JSON 마커 클릭 감지, Place ID:', jsonMessage.id);
+                  handleMarkerClick(parseInt(jsonMessage.id));
+                }
+              } catch (e) {
+                // JSON이 아닌 경우 무시
+                console.log('📱 일반 메시지:', message);
               }
             }}
           />
@@ -802,6 +925,7 @@ const HomeScreen: React.FC = () => {
             {selectedCategories.length === 0 ? (
               <View style={styles.filterIconContainer}>
                 <Ionicons name="options" size={18} color={Colors.text.secondary} />
+                <Text style={styles.filterText}></Text>
               </View>
             ) : (
               <>
@@ -876,23 +1000,12 @@ const HomeScreen: React.FC = () => {
                 contentContainerStyle={styles.scrollContentContainer}
               >
                 {/* 실시간 업데이트 안내 - 리스트 내부 */}
-                <Text style={styles.topNote}>※ 내 주변에 쉼터가 {nearbyPlaces.length}개 있습니다.</Text>
+                <Text style={styles.topNote}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
                 
                 <View style={{ backgroundColor: 'transparent' }}>
                   {/* 쉼터 목록 항상 표시 */}
                     <FlatList
-                      data={nearbyPlaces.map(place => ({
-                        id: place.id.toString(),
-                        name: place.name,
-                        category: place.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설' as const,
-                        type: place.type,
-                        distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
-                        address: place.address,
-                        description: place.content,
-                        content: place.content,
-                        icon: place.type === 'SHELTER' ? 'medical' : 'business',
-                        color: place.type === 'SHELTER' ? '#4A90E2' : '#7ED321'
-                      }))}
+                      data={filteredShelters}
                       renderItem={renderShelterCard}
                       keyExtractor={(item) => item.id}
                       scrollEnabled={false}

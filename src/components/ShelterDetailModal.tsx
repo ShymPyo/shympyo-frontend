@@ -20,7 +20,7 @@ interface Shelter {
   name: string;
   type: string;
   distance?: string;
-  category: '민간 개방 시설' | '스마트 쉘터' | '교통 시설' | '공공 시설';
+  category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설';
   icon: string;
   color: string;
   address?: string;
