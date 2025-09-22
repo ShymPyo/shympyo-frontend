@@ -23,8 +23,7 @@ type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
-  const { accessToken, logout } = useAuth();
-  const [user, setUser] = useState<User | null>(null);
+  const { accessToken, logout, user: authUser } = useAuth();
   const [loading, setLoading] = useState(true);
 
   const settingsOptions = [
@@ -34,32 +33,12 @@ const SettingsScreen: React.FC = () => {
     { title: '연락처 관리', icon: 'call-outline', screen: '' },
   ];
 
-  // 사용자 정보 로드
+  // 로딩 상태 초기화
   useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
-    if (!accessToken) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await ApiService.getMe(accessToken);
-
-      if (response.success) {
-        setUser(response.data);
-      } else {
-        console.log('프로필 로드 실패:', response.message);
-      }
-    } catch (error) {
-      console.error('프로필 로드 실패:', error);
-    } finally {
+    if (authUser || !accessToken) {
       setLoading(false);
     }
-  };
+  }, [authUser, accessToken]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -77,8 +56,8 @@ const SettingsScreen: React.FC = () => {
   };
 
   const handleProfilePress = () => {
-    if (user) {
-      navigation.navigate('ProfileEdit', { user });
+    if (authUser) {
+      navigation.navigate('ProfileEdit', { user: authUser });
     } else {
       navigation.navigate('Login');
     }
@@ -101,10 +80,10 @@ const SettingsScreen: React.FC = () => {
             />
             <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>
-                  {loading ? '로딩 중...' : (user ? user.name : '로그인이 필요합니다')}
+                  {loading ? '로딩 중...' : (authUser ? authUser.name : '로그인이 필요합니다')}
                 </Text>
                 <Text style={styles.profileLink}>
-                  {user ? '내 정보 · 주소 관리' : '로그인하여 프로필을 확인하세요'}
+                  {authUser ? '내 정보 · 주소 관리' : '로그인하여 프로필을 확인하세요'}
                 </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
@@ -120,7 +99,7 @@ const SettingsScreen: React.FC = () => {
         ))}
 
         {/* 로그아웃 버튼 - 로그인된 경우에만 표시 */}
-        {user && (
+        {authUser && (
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={24} color="#FF4444" style={styles.itemIcon} />
               <Text style={styles.logoutText}>로그아웃</Text>
