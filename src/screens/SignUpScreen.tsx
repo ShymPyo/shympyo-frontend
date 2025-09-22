@@ -157,12 +157,12 @@ const SignUpScreen: React.FC = () => {
               />
             </View>
 
-            <Text style={styles.title}>회원가입</Text>
+            <Text style={styles.title} numberOfLines={1}>회원가입</Text>
             
             <View style={styles.inputContainer}>
               {/* 이메일 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>이메일 *</Text>
+                <Text style={styles.fieldLabel} numberOfLines={1}>이메일 *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="user@example.com"
@@ -178,7 +178,7 @@ const SignUpScreen: React.FC = () => {
 
               {/* 이름 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>이름 *</Text>
+                <Text style={styles.fieldLabel} numberOfLines={1}>이름 *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="홍길동"
@@ -192,7 +192,7 @@ const SignUpScreen: React.FC = () => {
 
               {/* 전화번호 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>전화번호 *</Text>
+                <Text style={styles.fieldLabel} numberOfLines={1}>전화번호 *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="010-1234-5678"
@@ -207,7 +207,7 @@ const SignUpScreen: React.FC = () => {
               
               {/* 비밀번호 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>비밀번호 *</Text>
+                <Text style={styles.fieldLabel} numberOfLines={1}>비밀번호 *</Text>
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={styles.passwordInput}
@@ -235,7 +235,7 @@ const SignUpScreen: React.FC = () => {
 
               {/* 비밀번호 확인 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>비밀번호 확인 *</Text>
+                <Text style={styles.fieldLabel} numberOfLines={1}>비밀번호 확인 *</Text>
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={styles.passwordInput}
@@ -273,7 +273,7 @@ const SignUpScreen: React.FC = () => {
               {isLoading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text style={styles.signUpButtonText}>회원가입</Text>
+                <Text style={styles.signUpButtonText} numberOfLines={1}>회원가입</Text>
               )}
             </TouchableOpacity>
             

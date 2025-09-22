@@ -17,7 +17,7 @@
       "bundleIdentifier": "com.anonymous.ShympyoExpoApp"
     },
     "android": {
-      "package": "com.kpaas.shimpyo.app",
+      "package": "com.shimpyo.newapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

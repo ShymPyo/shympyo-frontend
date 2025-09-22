@@ -527,17 +527,26 @@ const HomeScreen: React.FC = () => {
   <html>
   <head>
     <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
     <title>Kakao Maps</title>
       <style>
+          * { box-sizing: border-box; }
           html, body {
               width: 100%;
               height: 100%;
               margin: 0;
               padding: 0;
+              overflow: hidden;
+              font-size: 16px;
+              -webkit-text-size-adjust: 100%;
+              -webkit-user-select: none;
+              user-select: none;
           }
           #map {
-              width: 100%;
-              height: 100%;
+              width: 100vw;
+              height: 100vh;
+              position: relative;
+              z-index: 1;
           }
       </style>
   </head>
@@ -553,10 +562,27 @@ const HomeScreen: React.FC = () => {
 
           var options = {
               center: new kakao.maps.LatLng(centerLat, centerLng),
-              level: 2  // 더 크게 보이도록 줌 레벨 조정 (작을수록 더 확대됨)
+              level: 4  // 모바일에 적합한 줌 레벨
           };
 
           var map = new kakao.maps.Map(container, options);
+
+          // POI 숨기기를 위한 스타일 적용
+          setTimeout(function() {
+              try {
+                  var style = document.createElement('style');
+                  style.innerHTML = \`
+                      .overlay_info, .label, .info, .marker,
+                      .MapWalkthrough, .bg_present, .sprite_blank,
+                      [class*="category"], [class*="place_"], [class*="info_"],
+                      .ollie, .category, .category_bg, .txt_category,
+                      .overlay { display: none !important; }
+                  \`;
+                  document.head.appendChild(style);
+              } catch (error) {
+                  console.log('POI 숨김 실패:', error);
+              }
+          }, 500);
 
           // 내 위치 마커 (현재 위치가 있는 경우에만)
           ${currentLocation ? `
@@ -650,6 +676,15 @@ const HomeScreen: React.FC = () => {
             originWhitelist={['*']}
             source={{ html: mapHtml, baseUrl: '' }}
             style={styles.map}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            scalesPageToFit={false}
+            scrollEnabled={false}
+            bounces={false}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            automaticallyAdjustContentInsets={false}
+            contentInset={{ top: 0, left: 0, bottom: 0, right: 0 }}
           />
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
           {/* 온도계 - 좌측 하단 (카테고리 아래) */}

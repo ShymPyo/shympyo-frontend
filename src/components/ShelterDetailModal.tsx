@@ -16,16 +16,19 @@ import { Colors } from '../constants/colors';
 const { width, height } = Dimensions.get('window');
 
 interface Shelter {
-  id: string;
+  id: string | number;
   name: string;
   type: string;
-  distance: string;
-  category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설';
+  distance?: string;
+  category: '민간 개방 시설' | '스마트 쉘터' | '교통 시설' | '공공 시설';
   icon: string;
   color: string;
   address?: string;
   hours?: string;
   description?: string;
+  content?: string | null;
+  latitude?: number;
+  longitude?: number;
   image?: string;
 }
 
@@ -42,43 +45,34 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
 }) => {
   if (!shelter) return null;
 
-  // 카테고리별 기본 정보 설정
-  const getDefaultInfo = (category: string, name: string) => {
-    switch (category) {
-      case '민간 개방 시설':
-        return {
-          hours: '09:00 ~ 22:00\n연중무휴',
-          address: '인천 미추홀구 인하로 100',
-          description: '무료 Wi-Fi와 충전 시설이 구비되어 있습니다.',
-        };
-      case '스마트 쉼터':
-        return {
-          hours: '24시간 운영\n연중무휴',
-          address: '인천 미추홀구 용현동 123',
-          description: '스마트 시설과 에어컨이 완비된 쉼터입니다.',
-        };
-      case '교통 시설':
-        return {
-          hours: '05:30 ~ 24:00\n지하철 운행시간',
-          address: '인천 미추홀구 용현동',
-          description: '지하철역 내부 대합실에서 휴식 가능합니다.',
-        };
-      case '공공 시설':
-        return {
-          hours: '09:00 ~ 18:00\n토요일 정기휴무',
-          address: '인천 미추홀구 용현동 456',
-          description: '1층에 쉼터 공간이 마련되어있습니다.',
-        };
+
+  // 스마트쉘터 기본 설명
+  const getDefaultDescription = (type: string, content: string | null | undefined) => {
+    if (content) {
+      return content;
+    }
+
+    // content가 null이거나 없을 때 기본 설명
+    switch (type) {
+      case 'SHELTER':
+        return '스마트 시설과 에어컨이 완비된 쉼터입니다. 24시간 이용 가능하며, 무료 Wi-Fi와 충전 시설을 제공합니다.';
+      case 'CAFE':
+        return '편안한 휴식 공간을 제공하는 카페입니다.';
+      case 'RESTAURANT':
+        return '맛있는 음식을 제공하는 식당입니다.';
+      case 'STORE':
+        return '생필품을 구매할 수 있는 상점입니다.';
       default:
-        return {
-          hours: '운영시간 확인 필요',
-          address: '주소 정보 없음',
-          description: '시설 정보를 확인해주세요.',
-        };
+        return '시설 정보를 확인해주세요.';
     }
   };
 
-  const defaultInfo = getDefaultInfo(shelter.category, shelter.name);
+  // 실제 데이터 사용
+  const displayInfo = {
+    hours: shelter.hours || '24시간 운영\n연중무휴',
+    address: shelter.address || '주소 정보 없음',
+    description: getDefaultDescription(shelter.type, shelter.content || shelter.description),
+  };
 
   return (
     <Modal
@@ -111,7 +105,7 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
             </TouchableOpacity>
             
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.categoryText}>{shelter.category}</Text>
+              <Text style={styles.categoryText} numberOfLines={1}>{shelter.category}</Text>
               <View style={[styles.locationIcon, { backgroundColor: shelter.color }]}>
                 <Ionicons name="location" size={12} color="white" />
               </View>
@@ -133,14 +127,14 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
               
               {/* 오른쪽: 시설명과 기본 정보 */}
               <View style={styles.infoContainer}>
-                <Text style={styles.shelterName}>{shelter.name}</Text>
+                <Text style={styles.shelterName} numberOfLines={2}>{shelter.name}</Text>
                 <View style={styles.infoRow}>
                   <Ionicons name="time-outline" size={16} color="#666" />
-                  <Text style={styles.infoText}>{defaultInfo.hours}</Text>
+                  <Text style={styles.infoText} numberOfLines={2}>{displayInfo.hours}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Ionicons name="location-outline" size={16} color="#666" />
-                  <Text style={styles.infoText}>{defaultInfo.address}</Text>
+                  <Text style={styles.infoText} numberOfLines={2}>{displayInfo.address}</Text>
                 </View>
               </View>
             </View>
@@ -148,10 +142,10 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
             {/* 시설 소개 */}
             <View style={styles.descriptionSection}>
               <View style={styles.descriptionHeader}>
-                <Text style={styles.descriptionTitle}>시설 소개</Text>
+                <Text style={styles.descriptionTitle} numberOfLines={1}>시설 소개</Text>
               </View>
-              <Text style={styles.descriptionText}>
-                {defaultInfo.description}
+              <Text style={styles.descriptionText} numberOfLines={5}>
+                {displayInfo.description}
               </Text>
             </View>
           </View>
@@ -250,6 +244,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text.primary,
     marginBottom: 8,
+    lineHeight: 28,
   },
   infoRow: {
     flexDirection: 'row',
