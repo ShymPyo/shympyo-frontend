@@ -49,7 +49,13 @@ const SettingsScreen: React.FC = () => {
         {
           text: '로그아웃',
           style: 'destructive',
-          onPress: () => logout()
+          onPress: async () => {
+            await logout();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+          }
         }
       ]
     );
