@@ -157,6 +157,7 @@ interface Shelter {
   color: string;
   address?: string;
   description?: string;
+  content?: string | null;
 }
 
 const shelters: Shelter[] = [
@@ -270,7 +271,7 @@ const HomeScreen: React.FC = () => {
   };
 
   // 주변 장소 조회
-  const loadNearbyPlaces = async (lat: number, lon: number, radius: number = 2000) => {
+  const loadNearbyPlaces = async (lat: number, lon: number, radius: number = 1000) => {
     try {
       console.log(`🔍 검색 조건: 위치(${lat}, ${lon}), 반경: ${radius}m`);
 
@@ -386,17 +387,24 @@ const HomeScreen: React.FC = () => {
       if (response.success) {
         console.log('✅ 장소 상세 정보 로드:', response.data);
 
-        // 백엔드 응답을 Shelter 형태로 변환
+        // 리스트 API에서 content 정보 찾기
+        const listPlace = nearbyPlaces.find(p => p.id === placeId);
+        const content = listPlace ? listPlace.content : response.data.content;
+
+        console.log(`🔍 Content 정보 비교 - List API: "${listPlace?.content}", Detail API: "${response.data.content}"`);
+
+        // 백엔드 응답을 Shelter 형태로 변환 (리스트 API의 content 사용)
         const detailShelter: Shelter = {
           id: response.data.id.toString(),
-          name: response.data.content || response.data.name || '쉼터', // content가 null이면 name 사용
+          name: response.data.name || '쉼터', // name을 시설명으로 사용
           type: response.data.type,
           distance: '0m', // 거리는 계산하거나 기본값
           category: response.data.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설',
           icon: response.data.type === 'SHELTER' ? 'medical' : 'business',
           color: response.data.type === 'SHELTER' ? '#4A90E2' : '#7ED321',
           address: response.data.address,
-          description: response.data.name || '상세 정보 없음' // name을 description으로 사용
+          description: content, // 리스트 API의 content 사용 (버스정류장 정보 등)
+          content: content // 리스트 API의 content 사용
         };
 
         console.log('🔍 변환된 Shelter 객체:', detailShelter);
@@ -858,7 +866,7 @@ const HomeScreen: React.FC = () => {
               
               {/* 헤더 부분 - 터치 시 리스트 토글 */}
               <TouchableOpacity style={styles.bottomHeader} onPress={handleHeaderPress}>
-                <Text style={styles.headerTitle}>반경 2km 내 쉼터</Text>
+                <Text style={styles.headerTitle}>반경 1km 내 쉼터</Text>
               </TouchableOpacity>
 
               {/* 쉼터 목록 - 스크롤 가능한 영역 */}
@@ -876,11 +884,12 @@ const HomeScreen: React.FC = () => {
                       data={nearbyPlaces.map(place => ({
                         id: place.id.toString(),
                         name: place.name,
-                        category: place.type === 'SHELTER' ? '스마트 쉼터' : '기타 시설',
+                        category: place.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설' as const,
                         type: place.type,
                         distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
                         address: place.address,
                         description: place.content,
+                        content: place.content,
                         icon: place.type === 'SHELTER' ? 'medical' : 'business',
                         color: place.type === 'SHELTER' ? '#4A90E2' : '#7ED321'
                       }))}
