@@ -122,6 +122,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
+      if (accessToken) {
+        try {
+          await ApiService.logout(accessToken);
+        } catch (error) {
+          console.error('서버 로그아웃 에러 (계속 진행):', error);
+        }
+      }
+
       await StorageService.clearAll();
       setIsAuthenticated(false);
       setUser(null);

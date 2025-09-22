@@ -143,10 +143,12 @@ class ApiService {
     });
   }
 
-  static async logout(refreshToken: string): Promise<ApiResponse<string>> {
+  static async logout(accessToken: string): Promise<ApiResponse<string>> {
     return this.request<string>('/auth/logout', {
       method: 'POST',
-      body: JSON.stringify({ refreshToken }),
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
   }
 

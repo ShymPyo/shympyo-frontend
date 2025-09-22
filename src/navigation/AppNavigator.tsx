@@ -10,6 +10,7 @@ import { Colors } from '../constants/colors';
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import ProfileSetupScreen from '../screens/ProfileSetupScreen';
+import ProfileEditScreen from '../screens/ProfileEditScreen';
 import HomeScreen from '../screens/HomeScreen';
 import QRScreen from '../screens/QRScreen';
 import LetterScreen from '../screens/LetterScreen';
@@ -98,6 +99,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+        <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
         <Stack.Screen name="Main" component={MainTabNavigator} />
         <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
         <Stack.Screen name="AdminMain" component={AdminMainScreen} />

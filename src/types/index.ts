@@ -1,7 +1,10 @@
+import { User } from '../services/api';
+
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   ProfileSetup: undefined;
+  ProfileEdit: { user: User };
   Main: undefined;
   AdminLogin: undefined;
   AdminMain: undefined;

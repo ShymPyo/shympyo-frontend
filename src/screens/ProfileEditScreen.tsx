@@ -1,0 +1,345 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  Image,
+  Modal,
+  FlatList,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
+import { Colors } from '../constants/colors';
+import { RootStackParamList } from '../types';
+import ApiService, { User } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+
+type ProfileEditScreenRouteProp = RouteProp<RootStackParamList, 'ProfileEdit'>;
+type ProfileEditScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
+// 로컬 프로필 이미지들
+const profileImages = [
+  { id: '1', image: require('../../assets/profiles/profile1.png') },
+  { id: '2', image: require('../../assets/profiles/profile2.png') },
+  { id: '3', image: require('../../assets/profiles/profile3.png') },
+  { id: '4', image: require('../../assets/profiles/profile4.png') },
+  { id: '5', image: require('../../assets/profiles/profile5.png') },
+  { id: '6', image: require('../../assets/profiles/profile6.png') },
+  { id: '7', image: require('../../assets/profiles/profile7.png') },
+  { id: '8', image: require('../../assets/profiles/profile8.png') },
+];
+
+const ProfileEditScreen: React.FC = () => {
+  const navigation = useNavigation<ProfileEditScreenNavigationProp>();
+  const route = useRoute<ProfileEditScreenRouteProp>();
+  const { user: initialUser } = route.params;
+  const { accessToken, updateUser } = useAuth();
+
+  const [name, setName] = useState(initialUser.name);
+  const [phone, setPhone] = useState(initialUser.phone);
+  const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState(profileImages[0].image);
+  const [isModalVisible, setModalVisible] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('오류', '이름을 입력해주세요.');
+      return;
+    }
+
+    if (!phone.trim()) {
+      Alert.alert('오류', '전화번호를 입력해주세요.');
+      return;
+    }
+
+    if (!accessToken) {
+      Alert.alert('오류', '로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const updateData = {
+        name: name.trim(),
+        phone: phone.trim(),
+      };
+
+      const response = await ApiService.updateMe(accessToken, updateData);
+
+      if (response.success) {
+        updateUser(response.data);
+        Alert.alert('성공', '프로필이 업데이트되었습니다.', [
+          { text: '확인', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        Alert.alert('오류', response.message || '프로필 업데이트에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('프로필 업데이트 에러:', error);
+      Alert.alert('오류', '프로필 업데이트 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectImage = (image: any) => {
+    setProfileImage(image);
+    setModalVisible(false);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+
+      {/* 헤더 */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>프로필 편집</Text>
+        <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveButton}>
+          <Text style={[styles.saveButtonText, loading && styles.saveButtonTextDisabled]}>
+            {loading ? '저장 중...' : '저장'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.scrollView}>
+        {/* 프로필 이미지 섹션 */}
+        <View style={styles.profileImageSection}>
+          <TouchableOpacity style={styles.profileImageContainer} onPress={() => setModalVisible(true)}>
+            <Image source={profileImage} style={styles.profileImage} />
+            <View style={styles.cameraIconContainer}>
+              <Ionicons name="camera" size={20} color="white" />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.profileImageText}>프로필 사진</Text>
+        </View>
+
+        {/* 정보 입력 섹션 */}
+        <View style={styles.formSection}>
+          {/* 이메일 (읽기 전용) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>이메일</Text>
+            <View style={styles.readOnlyInput}>
+              <Text style={styles.readOnlyText}>{initialUser.email}</Text>
+            </View>
+          </View>
+
+          {/* 이름 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>이름</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="이름을 입력하세요"
+              placeholderTextColor={Colors.text.light}
+              editable={!loading}
+            />
+          </View>
+
+          {/* 전화번호 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>전화번호</Text>
+            <TextInput
+              style={styles.input}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="전화번호를 입력하세요"
+              placeholderTextColor={Colors.text.light}
+              keyboardType="phone-pad"
+              editable={!loading}
+            />
+          </View>
+
+        </View>
+      </ScrollView>
+
+      {/* 프로필 이미지 선택 Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setModalVisible(false)}
+        presentationStyle="overFullScreen"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>프로필 이미지 선택</Text>
+            <FlatList
+              data={profileImages}
+              renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => handleSelectImage(item.image)}>
+                  <Image source={item.image} style={styles.modalImage} />
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item) => item.id}
+              numColumns={4}
+              contentContainerStyle={styles.imageList}
+              scrollEnabled={false}
+            />
+            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.closeButtonText}>취소</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  saveButtonTextDisabled: {
+    color: Colors.text.light,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  profileImageSection: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    backgroundColor: Colors.surface,
+    marginBottom: 20,
+  },
+  profileImageContainer: {
+    marginBottom: 12,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: Colors.primary,
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.primary,
+    borderRadius: 15,
+    padding: 5,
+  },
+  profileImageText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  formSection: {
+    paddingHorizontal: 20,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 8,
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: Colors.text.primary,
+    backgroundColor: Colors.surface,
+  },
+  readOnlyInput: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  readOnlyText: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    maxHeight: 350,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  imageList: {
+    justifyContent: 'center',
+  },
+  modalImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    margin: 8,
+  },
+  closeButton: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 20,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
+export default ProfileEditScreen;

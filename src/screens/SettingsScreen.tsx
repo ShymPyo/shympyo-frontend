@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,11 +16,16 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
+import ApiService, { User } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
+  const { accessToken, logout } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const settingsOptions = [
     { title: '언어', value: '한국어', icon: 'language-outline', screen: '' },
@@ -28,8 +34,54 @@ const SettingsScreen: React.FC = () => {
     { title: '연락처 관리', icon: 'call-outline', screen: '' },
   ];
 
+  // 사용자 정보 로드
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await ApiService.getMe(accessToken);
+
+      if (response.success) {
+        setUser(response.data);
+      } else {
+        console.log('프로필 로드 실패:', response.message);
+      }
+    } catch (error) {
+      console.error('프로필 로드 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
-    navigation.replace('Login');
+    Alert.alert(
+      '로그아웃',
+      '정말 로그아웃하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '로그아웃',
+          style: 'destructive',
+          onPress: () => logout()
+        }
+      ]
+    );
+  };
+
+  const handleProfilePress = () => {
+    if (user) {
+      navigation.navigate('ProfileEdit', { user });
+    } else {
+      navigation.navigate('Login');
+    }
   };
 
   return (
@@ -41,15 +93,19 @@ const SettingsScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.scrollView}>
-        <TouchableOpacity style={styles.profileSection} onPress={() => navigation.navigate('ProfileSetup')}>
+        <TouchableOpacity style={styles.profileSection} onPress={handleProfilePress}>
             {/* 로컬 프로필 이미지 사용 - profile1.png가 기본값 */}
-            <Image 
-                source={require('../../assets/profiles/profile1.png')} 
+            <Image
+                source={require('../../assets/profiles/profile1.png')}
                 style={styles.profileImage}
             />
             <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>김진</Text>
-                <Text style={styles.profileLink}>내 정보 · 주소 관리</Text>
+                <Text style={styles.profileName}>
+                  {loading ? '로딩 중...' : (user ? user.name : '로그인이 필요합니다')}
+                </Text>
+                <Text style={styles.profileLink}>
+                  {user ? '내 정보 · 주소 관리' : '로그인하여 프로필을 확인하세요'}
+                </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
         </TouchableOpacity>
@@ -63,12 +119,14 @@ const SettingsScreen: React.FC = () => {
             </TouchableOpacity>
         ))}
 
-        {/* 로그아웃 버튼 */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="#FF4444" style={styles.itemIcon} />
-            <Text style={styles.logoutText}>로그아웃</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
-        </TouchableOpacity>
+        {/* 로그아웃 버튼 - 로그인된 경우에만 표시 */}
+        {user && (
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="#FF4444" style={styles.itemIcon} />
+              <Text style={styles.logoutText}>로그아웃</Text>
+              <Ionicons name="chevron-forward" size={20} color={Colors.text.light} />
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
