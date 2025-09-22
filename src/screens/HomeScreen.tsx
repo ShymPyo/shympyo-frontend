@@ -876,7 +876,7 @@ const HomeScreen: React.FC = () => {
                 contentContainerStyle={styles.scrollContentContainer}
               >
                 {/* 실시간 업데이트 안내 - 리스트 내부 */}
-                <Text style={styles.topNote}>※ 실시간으로 업데이트 됩니다.</Text>
+                <Text style={styles.topNote}>※ 내 주변에 쉼터가 {nearbyPlaces.length}개 있습니다.</Text>
                 
                 <View style={{ backgroundColor: 'transparent' }}>
                   {/* 쉼터 목록 항상 표시 */}
