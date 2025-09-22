@@ -155,6 +155,8 @@ interface Shelter {
   category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설';
   icon: string;
   color: string;
+  address?: string;
+  description?: string;
 }
 
 const shelters: Shelter[] = [
@@ -371,6 +373,43 @@ const HomeScreen: React.FC = () => {
         }
       `;
       webViewRef.current.injectJavaScript(moveScript);
+    }
+  };
+
+  // 마커 클릭 핸들러 - 백엔드 API 호출
+  const handleMarkerClick = async (placeId: number) => {
+    try {
+      console.log('🔍 마커 클릭 - 장소 ID:', placeId);
+
+      const response = await ApiService.getPlaceDetail(placeId, accessToken || undefined);
+
+      if (response.success) {
+        console.log('✅ 장소 상세 정보 로드:', response.data);
+
+        // 백엔드 응답을 Shelter 형태로 변환
+        const detailShelter: Shelter = {
+          id: response.data.id.toString(),
+          name: response.data.content || response.data.name || '쉼터', // content가 null이면 name 사용
+          type: response.data.type,
+          distance: '0m', // 거리는 계산하거나 기본값
+          category: response.data.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설',
+          icon: response.data.type === 'SHELTER' ? 'medical' : 'business',
+          color: response.data.type === 'SHELTER' ? '#4A90E2' : '#7ED321',
+          address: response.data.address,
+          description: response.data.name || '상세 정보 없음' // name을 description으로 사용
+        };
+
+        console.log('🔍 변환된 Shelter 객체:', detailShelter);
+
+        setSelectedShelter(detailShelter);
+        setModalVisible(true);
+      } else {
+        console.error('❌ 장소 상세 정보 조회 실패:', response.message);
+        Alert.alert('오류', '장소 정보를 불러올 수 없습니다.');
+      }
+    } catch (error) {
+      console.error('❌ 장소 상세 정보 조회 에러:', error);
+      Alert.alert('오류', '장소 정보를 불러오는 중 오류가 발생했습니다.');
     }
   };
 
@@ -682,12 +721,20 @@ const HomeScreen: React.FC = () => {
                       \`
                   });
 
-                  // 마커 클릭 이벤트
-                  (function(marker, infoWindow) {
+                  // 마커 클릭 이벤트 - React Native로 상세 정보 요청
+                  (function(marker, infoWindow, placeId) {
                       kakao.maps.event.addListener(marker, 'click', function() {
-                          infoWindow.open(map, marker);
+                          console.log('🗺️ 마커 클릭됨! Place ID:', placeId);
+
+                          // React Native로 장소 ID 전달
+                          if (window.ReactNativeWebView) {
+                              console.log('📤 React Native로 메시지 전송:', 'MARKER_CLICK:' + placeId);
+                              window.ReactNativeWebView.postMessage('MARKER_CLICK:' + placeId);
+                          } else {
+                              console.log('❌ ReactNativeWebView 없음');
+                          }
                       });
-                  })(marker, infoWindow);
+                  })(marker, infoWindow, positions[i].id);
               }
           }
   
@@ -715,6 +762,16 @@ const HomeScreen: React.FC = () => {
             showsVerticalScrollIndicator={false}
             automaticallyAdjustContentInsets={false}
             contentInset={{ top: 0, left: 0, bottom: 0, right: 0 }}
+            onMessage={(event) => {
+              const message = event.nativeEvent.data;
+              console.log('📱 WebView 메시지 수신:', message);
+
+              if (message.startsWith('MARKER_CLICK:')) {
+                const placeId = message.replace('MARKER_CLICK:', '');
+                console.log('🔍 마커 클릭 감지, Place ID:', placeId);
+                handleMarkerClick(parseInt(placeId));
+              }
+            }}
           />
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
           {/* 온도계 - 좌측 하단 (카테고리 아래) */}
