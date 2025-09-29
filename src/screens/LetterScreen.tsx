@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
   Platform,
   Pressable,
   Keyboard,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 
 // Shadow 스타일 헬퍼 함수
@@ -39,22 +42,57 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../constants/colors';
+import ApiService, { VisitedPlace } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
-const visitedPlaces = [
-  { id: '1', name: '카페 빈스', date: '2025-07-15 10:30', sent: false },
-  { id: '2', name: '관동 카페', date: '2025-07-14 10:30', sent: false },
-  { id: '3', name: 'CU 인하대점', date: '2025-07-13 10:30', sent: false },
-  { id: '4', name: '탄포포', date: '2025-07-12 10:30', sent: true },
-  { id: '5', name: '알케미스타', date: '2025-07-11 10:30', sent: true },
-];
 
 const LetterScreen: React.FC = () => {
-  const [places, setPlaces] = useState(visitedPlaces);
+  const { accessToken } = useAuth();
+  const [places, setPlaces] = useState<VisitedPlace[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState<{ id: string; name: string } | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<{ placeId: number; placeName: string } | null>(null);
   const [letterText, setLetterText] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
-  const handleWriteLetter = (place: { id: string; name: string }) => {
+  // 방문한 장소 목록 가져오기
+  const fetchVisitedPlaces = async () => {
+    if (!accessToken) {
+      console.log('❌ 로그인되지 않음');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      console.log('📋 방문한 장소 목록 가져오기...');
+
+      const response = await ApiService.getVisitedPlaces(accessToken);
+
+      if (response.success) {
+        console.log('✅ 방문한 장소 목록 가져오기 성공:', response.data);
+        setPlaces(response.data);
+      } else {
+        console.log('❌ 방문한 장소 목록 가져오기 실패:', response.message);
+        Alert.alert('오류', '방문한 장소 목록을 불러올 수 없습니다.');
+      }
+    } catch (error: any) {
+      console.error('💥 방문한 장소 목록 오류:', error);
+      Alert.alert('오류', '방문한 장소 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // 새로고침
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchVisitedPlaces();
+  };
+
+  // 편지 작성하기
+  const handleWriteLetter = (place: { placeId: number; placeName: string }) => {
     setSelectedPlace(place);
     setModalVisible(true);
   };
@@ -63,37 +101,92 @@ const LetterScreen: React.FC = () => {
     Keyboard.dismiss();
   };
 
-  const handleSendLetter = () => {
-    if (!selectedPlace) return;
+  // 편지 보내기
+  const handleSendLetter = async () => {
+    if (!selectedPlace || !accessToken) return;
 
-    const updatedPlaces = places.map((p) =>
-      p.id === selectedPlace.id ? { ...p, sent: true } : p
-    );
-    setPlaces(updatedPlaces);
+    if (!letterText.trim()) {
+      Alert.alert('알림', '편지 내용을 입력해주세요.');
+      return;
+    }
 
-    setLetterText('');
-    setModalVisible(false);
-    setSelectedPlace(null);
+    setIsSending(true);
+
+    try {
+      console.log('✉️ 편지 보내기...', {
+        placeId: selectedPlace.placeId,
+        content: letterText
+      });
+
+      const response = await ApiService.sendLetter(
+        accessToken,
+        selectedPlace.placeId,
+        letterText.trim()
+      );
+
+      if (response.success) {
+        console.log('✅ 편지 보내기 성공:', response.data);
+
+        Alert.alert(
+          '전송 완료',
+          `${selectedPlace.placeName} 사장님에게 감사 편지를 전송했습니다.`,
+          [{ text: '확인' }]
+        );
+
+        // 편지 전송 성공 시 목록 새로고침
+        fetchVisitedPlaces();
+      } else {
+        console.log('❌ 편지 보내기 실패:', response.message);
+        Alert.alert('전송 실패', response.message || '편지 전송에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('💥 편지 보내기 오류:', error);
+      Alert.alert('오류', '편지 전송 중 오류가 발생했습니다.');
+    } finally {
+      setIsSending(false);
+      setLetterText('');
+      setModalVisible(false);
+      setSelectedPlace(null);
+    }
   };
 
-  const renderItem = ({ item }: { item: typeof visitedPlaces[0] }) => (
+  // 화면 로드 시 방문한 장소 목록 가져오기
+  useEffect(() => {
+    fetchVisitedPlaces();
+  }, [accessToken]);
+
+  // 날짜 포맷팅 함수
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hour = String(date.getHours()).padStart(2, '0');
+    const minute = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hour}:${minute}`;
+  };
+
+  const renderItem = ({ item }: { item: VisitedPlace }) => (
     <View style={styles.card}>
       <View style={styles.cardContent}>
-        <Text style={styles.date}>{item.date}</Text>
-        <Text style={styles.placeName}>{item.name}</Text>
+        <Text style={styles.date}>{formatDate(item.visitDate)}</Text>
+        <Text style={styles.placeName}>{item.placeName}</Text>
+        <Text style={styles.rentalInfo}>렌탈 ID: {item.rentalId}</Text>
       </View>
       <TouchableOpacity
-        style={[styles.button, item.sent && styles.sentButton]}
-        onPress={() => !item.sent && handleWriteLetter(item)}
-        disabled={item.sent}
+        style={styles.button}
+        onPress={() => handleWriteLetter({
+          placeId: item.placeId,
+          placeName: item.placeName
+        })}
       >
-        <Ionicons 
-          name={item.sent ? 'checkmark-done' : 'pencil'} 
-          size={20} 
-          color={item.sent ? Colors.text.secondary : Colors.text.white} 
+        <Ionicons
+          name="pencil"
+          size={20}
+          color={Colors.text.white}
         />
-        <Text style={[styles.buttonText, item.sent && styles.sentButtonText]}>
-          {item.sent ? '전송 완료' : '고마운 마음 전하기'}
+        <Text style={styles.buttonText}>
+          고마운 마음 전하기
         </Text>
       </TouchableOpacity>
     </View>
@@ -107,12 +200,36 @@ const LetterScreen: React.FC = () => {
         <Text style={styles.subtitle}>한 줄의 편지가 쉼표의 따스함을 이어갑니다.</Text>
       </View>
 
-      <FlatList
-        data={places}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>방문한 장소를 불러오는 중...</Text>
+        </View>
+      ) : places.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="location-outline" size={80} color={Colors.text.light} />
+          <Text style={styles.emptyTitle}>아직 방문한 쉼터가 없어요</Text>
+          <Text style={styles.emptySubtitle}>
+            QR 코드를 스캔해서 쉼터를 방문하고{'\n'}
+            감사 편지를 작성해보세요!
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={places}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.primary]}
+              tintColor={Colors.primary}
+            />
+          }
+        />
+      )}
 
       <Modal
         animationType="slide"
@@ -128,7 +245,7 @@ const LetterScreen: React.FC = () => {
           >
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>감사 편지 작성</Text>
-              <Text style={styles.modalRecipient}>To. {selectedPlace?.name} 사장님</Text>
+              <Text style={styles.modalRecipient}>To. {selectedPlace?.placeName} 사장님</Text>
               <TextInput
                 style={styles.textInput}
                 value={letterText}
@@ -143,11 +260,20 @@ const LetterScreen: React.FC = () => {
                 >
                   <Text style={styles.cancelButtonText}>취소</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.sendButton]} 
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton,
+                    styles.sendButton,
+                    (isSending || !letterText.trim()) && styles.disabledButton
+                  ]}
                   onPress={handleSendLetter}
+                  disabled={isSending || !letterText.trim()}
                 >
-                  <Text style={styles.sendButtonText}>전송</Text>
+                  {isSending ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={styles.sendButtonText}>전송</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -207,6 +333,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  rentalInfo: {
+    fontSize: 12,
+    color: Colors.text.light,
   },
   button: {
     flexDirection: 'row',
@@ -292,6 +423,40 @@ const styles = StyleSheet.create({
     color: Colors.text.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+    marginTop: 15,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 80,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
 

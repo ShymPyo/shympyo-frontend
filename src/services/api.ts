@@ -75,6 +75,31 @@ interface RentalEnterResponse {
   startTime: string;
 }
 
+interface VisitedPlace {
+  id: number;
+  placeId: number;
+  placeName: string;
+  visitDate: string;
+  rentalId: number;
+}
+
+interface SendLetterRequest {
+  placeId: number;
+  content: string;
+}
+
+interface SendLetterResponse {
+  id: number;
+  placeId: number;
+  placeName: string;
+  writerId: number;
+  writeName: string;
+  content: string;
+  readAt?: string;
+  createdAt: string;
+  read: boolean;
+}
+
 
 class ApiService {
   private static refreshTokenCallback?: () => Promise<string | null>;
@@ -308,7 +333,49 @@ class ApiService {
       body: JSON.stringify(requestBody),
     });
   }
+
+  static async getVisitedPlaces(accessToken: string): Promise<ApiResponse<VisitedPlace[]>> {
+    console.log('📋 방문한 장소 목록 API 호출');
+
+    return this.request<VisitedPlace[]>('/rental/history', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  static async sendLetter(
+    accessToken: string,
+    placeId: number,
+    content: string
+  ): Promise<ApiResponse<SendLetterResponse>> {
+    console.log('✉️ 편지 보내기 API 호출:', { placeId, content });
+
+    const requestBody = { placeId, content };
+    console.log('📤 편지 요청 본문:', JSON.stringify(requestBody));
+
+    return this.request<SendLetterResponse>('/letters/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+  }
 }
 
 export default ApiService;
-export type { ApiResponse, UserSignUpRequest, UserLoginRequest, AuthTokens, User, MapLocation, NearbyPlace, PlaceDetail };
+export type {
+  ApiResponse,
+  UserSignUpRequest,
+  UserLoginRequest,
+  AuthTokens,
+  User,
+  MapLocation,
+  NearbyPlace,
+  PlaceDetail,
+  VisitedPlace,
+  SendLetterRequest,
+  SendLetterResponse
+};
