@@ -100,7 +100,13 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
         <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
-        <Stack.Screen name="Main" component={MainTabNavigator} />
+        <Stack.Screen
+          name="Main"
+          component={MainTabNavigator}
+          options={{
+            gestureEnabled: false, // 제스처로 뒤로가기 비활성화
+          }}
+        />
         <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
         <Stack.Screen name="AdminMain" component={AdminMainScreen} />
         <Stack.Screen name="AdminSpaceEdit" component={AdminSpaceEditScreen} />

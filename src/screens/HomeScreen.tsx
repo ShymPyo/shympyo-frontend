@@ -11,6 +11,7 @@ import {
   Modal,
   Platform,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -642,6 +643,28 @@ const HomeScreen: React.FC = () => {
       webViewRef.current.injectJavaScript(updateMarkersScript);
     }
   }, [selectedCategories, filteredMapLocations, nearbyPlaces]);
+
+  // 하드웨어 백 버튼 처리 - Android에서 앱 종료
+  useEffect(() => {
+    const backAction = () => {
+      Alert.alert('앱 종료', '앱을 종료하시겠습니까?', [
+        {
+          text: '취소',
+          onPress: () => null,
+          style: 'cancel',
+        },
+        { text: '종료', onPress: () => BackHandler.exitApp() },
+      ]);
+      return true; // 뒤로가기 이벤트를 처리했음을 나타냄
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, []);
 
   // 쉼터 정보 카드 렌더링 함수 - 선택 가능한 카드 리스트 형태
   const renderShelterCard = ({ item }: { item: Shelter }) => (

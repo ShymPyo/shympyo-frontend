@@ -63,7 +63,11 @@ const GeneralLoginScreen: React.FC = () => {
       if (response.success) {
         console.log('✅ 로그인 성공');
         await login(response.data.accessToken, response.data.refreshToken);
-        navigation.navigate('Main');
+        // 네비게이션 스택을 리셋해서 뒤로가기 방지
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
       } else {
         console.log('❌ 로그인 실패');
         Alert.alert('로그인 실패', response.message || '이메일 또는 비밀번호가 올바르지 않습니다.');
