@@ -10,6 +10,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,8 @@ import * as Notifications from 'expo-notifications';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { Colors } from '../constants/colors';
+import ApiService from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 
 type ScreenState = 'scanning' | 'timer' | 'finished';
@@ -35,12 +38,15 @@ Notifications.setNotificationHandler({
 
 const QRScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { accessToken } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [screenState, setScreenState] = useState<ScreenState>('scanning');
   const [timeLeft, setTimeLeft] = useState(10); // 10 seconds for testing
   const [totalTime, setTotalTime] = useState(10); // 총 시간
   const [cameraEnabled, setCameraEnabled] = useState(false); // 카메라 활성화 상태
+  const [placeName, setPlaceName] = useState<string>(''); // 입장한 장소명
+  const [rentalId, setRentalId] = useState<number | null>(null); // 렌탈 ID
   
   // 원형 프로그레스 바 애니메이션을 위한 값들
   const progress = useSharedValue(0);
@@ -79,7 +85,7 @@ const QRScreen: React.FC = () => {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '쉼터 이용 완료! 🌿',
-        body: '카페 빈스에서의 휴식이 끝났습니다.\n감사 편지를 작성해보세요! ✉️',
+        body: `${placeName || '쉼터'}에서의 휴식이 끝났습니다.\n감사 편지를 작성해보세요! ✉️`,
         sound: 'default',
       },
       trigger: null, // 즉시 발송
@@ -93,12 +99,91 @@ const QRScreen: React.FC = () => {
     }
   }, [screenState, progress]);
 
-  const handleBarCodeScanned = ({ data: _data }: { data: string }) => {
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+    if (scanned) return;
+
     setScanned(true);
-    // QR 코드 스캔 성공 시 타이머 화면으로 이동
-    setScreenState('timer');
-    setTimeLeft(10); // 10초로 초기화
-    setTotalTime(10); // 총 시간도 설정
+
+    if (!accessToken) {
+      Alert.alert('로그인 필요', '쉼터를 이용하려면 로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      console.log('🔍 QR 코드 스캔 데이터:', data);
+      console.log('🔍 QR 코드 스캔 데이터 타입:', typeof data);
+      console.log('🔍 QR 코드 스캔 데이터 길이:', data.length);
+
+      // QR 코드에서 placeCode 추출
+      let placeCode = data.trim();
+
+      // QR 코드가 JSON 형태인 경우 처리
+      try {
+        const qrData = JSON.parse(data);
+        if (qrData.placeCode) {
+          placeCode = qrData.placeCode;
+          console.log('📱 JSON에서 placeCode 추출:', placeCode);
+        }
+      } catch {
+        // JSON이 아닌 경우 무시
+      }
+
+      // QR 코드가 URL 형태인 경우 처리 (예: https://example.com/place/PL-A12F9C3D)
+      if (placeCode.includes('://')) {
+        const urlParts = placeCode.split('/');
+        const lastPart = urlParts[urlParts.length - 1];
+        if (lastPart.startsWith('PL-')) {
+          placeCode = lastPart;
+          console.log('🔗 URL에서 placeCode 추출:', placeCode);
+        }
+      }
+
+      console.log('📡 쉼터 입장 API 호출 중...', {
+        placeCode,
+        placeCodeLength: placeCode.length,
+        accessToken: accessToken ? '토큰 있음' : '토큰 없음'
+      });
+
+      const response = await ApiService.enterPlace(accessToken, placeCode);
+
+      if (response.success) {
+        console.log('✅ 쉼터 입장 성공:', response.data);
+
+        // 성공 시 응답 데이터 저장
+        setPlaceName(response.data.placeName);
+        setRentalId(response.data.rentalId);
+
+        // 타이머 화면으로 이동
+        setScreenState('timer');
+        setTimeLeft(10); // 10초로 초기화 (실제로는 API에서 받은 시간 사용 가능)
+        setTotalTime(10);
+
+        console.log('🏢 입장 완료:', response.data.placeName);
+      } else {
+        console.log('❌ 쉼터 입장 실패:', {
+          success: response.success,
+          code: response.code,
+          message: response.message,
+          data: response.data
+        });
+
+        Alert.alert(
+          '입장 실패',
+          `오류 코드: ${response.code}\n${response.message || '쉼터 입장에 실패했습니다.'}`
+        );
+        setScanned(false); // 다시 스캔할 수 있도록
+      }
+    } catch (error: any) {
+      console.error('💥 쉼터 입장 오류:', error);
+      console.error('💥 에러 메시지:', error.message);
+      console.error('💥 에러 스택:', error.stack);
+
+      Alert.alert(
+        '오류',
+        `네트워크 오류: ${error.message}\n쉼터 입장 중 오류가 발생했습니다.`
+      );
+      setScanned(false); // 다시 스캔할 수 있도록
+    }
   };
 
   const formatTime = () => {
@@ -116,6 +201,8 @@ const QRScreen: React.FC = () => {
       setScanned(false);
       setTimeLeft(10);
       setTotalTime(10);
+      setPlaceName('');
+      setRentalId(null);
       setCameraEnabled(true);
 
       return () => {
@@ -199,6 +286,14 @@ const QRScreen: React.FC = () => {
                 사장님의 자발적인 나눔으로 마련된 쉼터입니다.{'\n'}
                 서로를 배려하며 사용해 주세요.
               </Text>
+
+              {/* 테스트용 버튼 */}
+              <TouchableOpacity
+                style={styles.testButton}
+                onPress={() => handleBarCodeScanned({ data: 'PL-A12F9C3D' })}
+              >
+                <Text style={styles.testButtonText}>테스트 QR</Text>
+              </TouchableOpacity>
             </View>
             {scanned && (
               <TouchableOpacity
@@ -260,7 +355,7 @@ const QRScreen: React.FC = () => {
                 </View>
               </View>
               
-              <Text style={styles.timerSubtitle}>카페 빈스</Text>
+              <Text style={styles.timerSubtitle}>{placeName || '쉼터'}</Text>
               <Text style={styles.timerDescription}>깨끗하고 조용한 공간에서 편히 쉬어가세요</Text>
             </View>
             
@@ -282,7 +377,7 @@ const QRScreen: React.FC = () => {
           <View style={styles.finishedContainer}>
             <Ionicons name="checkmark-circle-outline" size={100} color={Colors.success} />
             <Text style={styles.finishedTitle}>시간이 다 되었습니다!</Text>
-            <Text style={styles.finishedSubtitle}>카페 빈스</Text>
+            <Text style={styles.finishedSubtitle}>{placeName || '쉼터'}</Text>
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('Home' as never)}>
                 <Text style={styles.buttonText}>홈으로</Text>
@@ -514,6 +609,20 @@ const styles = StyleSheet.create({
   permissionButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  testButton: {
+    position: 'absolute',
+    bottom: -100,
+    backgroundColor: Colors.success,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: 'bold',
   },
 });

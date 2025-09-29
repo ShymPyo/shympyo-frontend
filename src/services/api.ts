@@ -65,6 +65,16 @@ interface PlaceDetail {
   type: 'SHELTER' | 'CAFE' | 'RESTAURANT' | 'STORE';
 }
 
+interface RentalEnterRequest {
+  placeCode: string;
+}
+
+interface RentalEnterResponse {
+  rentalId: number;
+  placeName: string;
+  startTime: string;
+}
+
 
 class ApiService {
   private static refreshTokenCallback?: () => Promise<string | null>;
@@ -275,6 +285,28 @@ class ApiService {
       console.log('❌ 백엔드 연결 실패');
       return false;
     }
+  }
+
+  static async enterPlace(
+    accessToken: string,
+    placeCode: string
+  ): Promise<ApiResponse<RentalEnterResponse>> {
+    console.log('🔑 enterPlace API 호출:', {
+      endpoint: '/rental/enter',
+      placeCode,
+      hasAccessToken: !!accessToken
+    });
+
+    const requestBody = { placeCode };
+    console.log('📤 요청 본문:', JSON.stringify(requestBody));
+
+    return this.request<RentalEnterResponse>('/rental/enter', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
   }
 }
 
