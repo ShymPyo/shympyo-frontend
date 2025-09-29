@@ -12,6 +12,9 @@ interface UserSignUpRequest {
   password: string;
   name: string;
   phone: string;
+  nickname: string;
+  imageUrl?: string;
+  bio?: string;
   role: 'USER';
 }
 
@@ -30,6 +33,9 @@ interface User {
   email: string;
   name: string;
   phone: string;
+  nickname: string;
+  imageUrl?: string;
+  bio?: string;
   role: string;
 }
 
@@ -111,9 +117,30 @@ class ApiService {
 
       if (!response.ok) {
         console.error(`❌ API 실패: ${response.status} ${response.statusText} - ${url}`);
-        const errorText = await response.text();
-        console.error('응답 내용:', errorText);
-        throw new Error(`${response.status}: ${response.statusText}`);
+
+        try {
+          const errorData = await response.json();
+          console.error('응답 내용:', errorData);
+
+          // 백엔드에서 보낸 에러 메시지를 그대로 반환
+          return {
+            success: false,
+            code: response.status,
+            message: errorData.message || `${response.status}: ${response.statusText}`,
+            data: errorData.data || null
+          };
+        } catch (parseError) {
+          // JSON 파싱에 실패한 경우 기본 에러 응답
+          const errorText = await response.text();
+          console.error('파싱 실패, 원본 응답:', errorText);
+
+          return {
+            success: false,
+            code: response.status,
+            message: `${response.status}: ${response.statusText}`,
+            data: null
+          };
+        }
       }
 
       const data = await response.json();
