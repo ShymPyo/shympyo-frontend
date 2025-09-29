@@ -40,6 +40,7 @@ const QRScreen: React.FC = () => {
   const [screenState, setScreenState] = useState<ScreenState>('scanning');
   const [timeLeft, setTimeLeft] = useState(10); // 10 seconds for testing
   const [totalTime, setTotalTime] = useState(10); // 총 시간
+  const [cameraEnabled, setCameraEnabled] = useState(false); // 카메라 활성화 상태
   
   // 원형 프로그레스 바 애니메이션을 위한 값들
   const progress = useSharedValue(0);
@@ -107,13 +108,20 @@ const QRScreen: React.FC = () => {
     return `${minutes}:${seconds}`;
   };
 
-  // 화면 포커스 시 상태 초기화
+  // 화면 포커스 관리 - 카메라 활성화/비활성화
   useFocusEffect(
     useCallback(() => {
+      // 화면 포커스 시 상태 초기화 및 카메라 활성화
       setScreenState('scanning');
       setScanned(false);
       setTimeLeft(10);
       setTotalTime(10);
+      setCameraEnabled(true);
+
+      return () => {
+        // 화면을 떠날 때 카메라 비활성화
+        setCameraEnabled(false);
+      };
     }, [])
   );
 
@@ -145,14 +153,16 @@ const QRScreen: React.FC = () => {
         }
         return (
           <View style={styles.scannerContainer}>
-            <CameraView
-              style={styles.scanner}
-              facing="back"
-              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-              barcodeScannerSettings={{
-                barcodeTypes: ["qr", "pdf417"],
-              }}
-            />
+            {cameraEnabled && (
+              <CameraView
+                style={styles.scanner}
+                facing="back"
+                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                barcodeScannerSettings={{
+                  barcodeTypes: ["qr", "pdf417"],
+                }}
+              />
+            )}
             {/* SVG 마스크 오버레이 */}
             <Svg style={styles.svgOverlay} width="100%" height="100%">
               <Defs>
