@@ -16,15 +16,12 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
-import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
-  withRepeat,
-  interpolate,
 } from 'react-native-reanimated';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Location from 'expo-location';
@@ -459,25 +456,28 @@ const HomeScreen: React.FC = () => {
   // 초기값을 0으로 설정 (원래 상태)
   const translateY = useSharedValue(0);
 
+  // 드래그 시작 위치를 저장할 변수
+  const startY = useSharedValue(0);
+
   // 팬 제스처 핸들러 - 3단계 상태를 지원하는 스마트 슬라이드
-  const gestureHandler = useAnimatedGestureHandler({
-    onStart: (_, context: any) => {
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
       // 드래그 시작 위치 저장
-      context.startY = translateY.value;
-    },
-    onActive: (event, context) => {
+      startY.value = translateY.value;
+    })
+    .onUpdate((event) => {
       // 드래그 중 위치 업데이트 - 부드러운 따라감
-      const newTranslateY = context.startY + event.translationY;
+      const newTranslateY = startY.value + event.translationY;
       // 범위 제한: 완전히 닫힌 상태(0)부터 완전히 열린 상태(-maxHeight + 85)까지, 과도한 탄성 방지
       translateY.value = Math.max(-maxHeight + 85, Math.min(20, newTranslateY));
-    },
-    onEnd: (event) => {
+    })
+    .onEnd((event) => {
       // 3단계 상태 결정: 완전히 닫힘(0), 살짝 열림(-peekHeight), 완전히 열림(-maxHeight)
       const currentPos = translateY.value;
       const velocity = event.velocityY;
-      
+
       let targetY = 0; // 기본값은 닫힌 상태
-      
+
       // 위로 빠르게 드래그하면 완전히 열기
       if (velocity < -500) {
         targetY = -maxHeight + 85; // 완전히 열림 (하단 네비 고려)
@@ -496,14 +496,13 @@ const HomeScreen: React.FC = () => {
           targetY = -peekHeight; // 중간 상태 (살짝 열림)
         }
       }
-      
+
       // 부드러운 스프링 애니메이션으로 목표 위치로 이동
       translateY.value = withSpring(targetY, {
         damping: 30,
         stiffness: 300,
       });
-    },
-  });
+    });
 
 
   // 애니메이션 스타일 정의
@@ -983,11 +982,11 @@ const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </Animated.View>
           
-          <PanGestureHandler onGestureEvent={gestureHandler}>
+          <GestureDetector gesture={panGesture}>
             <Animated.View style={[styles.overlayBottom, bottomSheetStyle]}>
               {/* 드래그 핸들 - 미니멀한 회색 바 */}
               <View style={styles.dragHandle} />
-              
+
               {/* 헤더 부분 - 터치 시 리스트 토글 */}
               <TouchableOpacity style={styles.bottomHeader} onPress={handleHeaderPress}>
                 <Text style={styles.headerTitle}>반경 1km 내 쉼터</Text>
@@ -1001,7 +1000,7 @@ const HomeScreen: React.FC = () => {
               >
                 {/* 실시간 업데이트 안내 - 리스트 내부 */}
                 <Text style={styles.topNote}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
-                
+
                 <View style={{ backgroundColor: 'transparent' }}>
                   {/* 쉼터 목록 항상 표시 */}
                     <FlatList
@@ -1014,7 +1013,7 @@ const HomeScreen: React.FC = () => {
                 <View style={styles.bottomFiller} />
               </ScrollView>
             </Animated.View>
-          </PanGestureHandler>
+          </GestureDetector>
         </View>
 
         {/* 쉼터 세부정보 모달 */}
