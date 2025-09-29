@@ -469,8 +469,8 @@ const HomeScreen: React.FC = () => {
     .onUpdate((event) => {
       // 드래그 중 위치 업데이트 - 부드러운 따라감
       const newTranslateY = startY.value + event.translationY;
-      // 범위 제한: 완전히 닫힌 상태(0)부터 완전히 열린 상태(-maxHeight + 85)까지, 과도한 탄성 방지
-      translateY.value = Math.max(-maxHeight + 85, Math.min(20, newTranslateY));
+      // 범위 제한: 완전히 닫힌 상태(0)부터 완전히 열린 상태(-maxHeight + 70)까지, 과도한 탄성 방지
+      translateY.value = Math.max(-maxHeight + 100, Math.min(20, newTranslateY));
     })
     .onEnd((event) => {
       // 3단계 상태 결정: 완전히 닫힘(0), 살짝 열림(-peekHeight), 완전히 열림(-maxHeight)
@@ -481,7 +481,7 @@ const HomeScreen: React.FC = () => {
 
       // 위로 빠르게 드래그하면 완전히 열기
       if (velocity < -500) {
-        targetY = -maxHeight + 85; // 완전히 열림 (하단 네비 고려)
+        targetY = -maxHeight + 100; // 완전히 열림 (하단 탭바와 여백 제거)
       }
       // 아래로 빠르게 드래그하면 닫기
       else if (velocity > 500) {
@@ -492,7 +492,7 @@ const HomeScreen: React.FC = () => {
         if (currentPos > -50) {
           targetY = 0; // 닫힌 상태
         } else if (currentPos < -200) {
-          targetY = -maxHeight + 85; // 완전히 열림
+          targetY = -maxHeight + 100; // 완전히 열림
         } else {
           targetY = -peekHeight; // 중간 상태 (살짝 열림)
         }
@@ -500,8 +500,9 @@ const HomeScreen: React.FC = () => {
 
       // 부드러운 스프링 애니메이션으로 목표 위치로 이동
       translateY.value = withSpring(targetY, {
-        damping: 30,
-        stiffness: 300,
+        damping: 20,
+        stiffness: 120,
+        mass: 1,
       });
     });
 
@@ -528,14 +529,16 @@ const HomeScreen: React.FC = () => {
     if (currentPos < -200) {
       // 많이 열려있으면 닫기
       translateY.value = withSpring(0, {
-        damping: 30,
-        stiffness: 300,
+        damping: 20,
+        stiffness: 120,
+        mass: 1,
       });
     } else {
       // 닫혀있거나 살짝 열려있으면 완전히 열기
-      translateY.value = withSpring(-maxHeight + 85, {
-        damping: 30,
-        stiffness: 300,
+      translateY.value = withSpring(-maxHeight + 100, {
+        damping: 20,
+        stiffness: 120,
+        mass: 1,
       });
     }
   };
@@ -1372,11 +1375,13 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 20,
         paddingTop: 0,
+        marginTop: -1, // 여백 제거
     },
     bottomHeader: {
         alignItems: 'center',
         marginBottom: 0,
         paddingBottom: 8,
+        paddingHorizontal: 20,
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
     },
@@ -1390,8 +1395,8 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: Colors.text.light,
         textAlign: 'center',
-        marginBottom: 10,
-        marginTop: 8,
+        marginBottom: 8,
+        marginTop: 4, // 상단 여백 줄임
         paddingHorizontal: 0,
     },
     shelterCard: {
@@ -1463,9 +1468,10 @@ const styles = StyleSheet.create({
     },
     scrollContentContainer: {
         flexGrow: 1,
+        paddingTop: 0, // 상단 여백 제거
     },
     bottomFiller: {
-        height: 100, // 하단 네비게이션 바 높이만큼 여백 추가
+        height: 20, // 하단 여백 최소화
         backgroundColor: 'transparent',
     },
     modalOverlay: {
