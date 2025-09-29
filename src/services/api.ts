@@ -198,7 +198,7 @@ class ApiService {
 
   static async updateMe(
     accessToken: string,
-    updateData: Partial<Pick<User, 'name' | 'phone'>>
+    updateData: Partial<Pick<User, 'name' | 'phone' | 'nickname' | 'imageUrl' | 'bio'>>
   ): Promise<ApiResponse<User>> {
     return this.request<User>('/users/me', {
       method: 'PATCH',

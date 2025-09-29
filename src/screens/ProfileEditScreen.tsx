@@ -12,6 +12,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -45,9 +46,14 @@ const ProfileEditScreen: React.FC = () => {
 
   const [name, setName] = useState(initialUser.name);
   const [phone, setPhone] = useState(initialUser.phone);
+  const [nickname, setNickname] = useState(initialUser.nickname || '');
+  const [bio, setBio] = useState(initialUser.bio || '');
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(profileImages[0].image);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [customImage, setCustomImage] = useState<string | null>(null);
   const [isModalVisible, setModalVisible] = useState(false);
+  const [isImageSourceModalVisible, setImageSourceModalVisible] = useState(false);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -57,6 +63,16 @@ const ProfileEditScreen: React.FC = () => {
 
     if (!phone.trim()) {
       Alert.alert('오류', '전화번호를 입력해주세요.');
+      return;
+    }
+
+    if (!nickname.trim()) {
+      Alert.alert('오류', '닉네임을 입력해주세요.');
+      return;
+    }
+
+    if (!bio.trim()) {
+      Alert.alert('오류', '자기소개를 입력해주세요.');
       return;
     }
 
@@ -71,6 +87,9 @@ const ProfileEditScreen: React.FC = () => {
       const updateData = {
         name: name.trim(),
         phone: phone.trim(),
+        nickname: nickname.trim(),
+        bio: bio.trim(),
+        imageUrl: customImage || `default_${selectedImageIndex}`,
       };
 
       const response = await ApiService.updateMe(accessToken, updateData);
@@ -91,9 +110,66 @@ const ProfileEditScreen: React.FC = () => {
     }
   };
 
-  const handleSelectImage = (image: any) => {
+  const handleSelectImage = (image: any, index: number) => {
     setProfileImage(image);
+    setSelectedImageIndex(index);
+    setCustomImage(null); // 기본 이미지 선택 시 커스텀 이미지 초기화
     setModalVisible(false);
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진을 선택하려면 갤러리 접근 권한이 필요합니다.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setCustomImage(result.assets[0].uri);
+      setProfileImage({ uri: result.assets[0].uri });
+      setImageSourceModalVisible(false);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진을 촬영하려면 카메라 접근 권한이 필요합니다.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setCustomImage(result.assets[0].uri);
+      setProfileImage({ uri: result.assets[0].uri });
+      setImageSourceModalVisible(false);
+    }
+  };
+
+  const showImageSourceOptions = () => {
+    Alert.alert(
+      '프로필 이미지 선택',
+      '이미지를 선택하는 방법을 고르세요',
+      [
+        { text: '기본 프로필 선택', onPress: () => setModalVisible(true) },
+        { text: '갤러리에서 선택', onPress: pickImage },
+        { text: '사진 촬영', onPress: takePhoto },
+        { text: '취소', style: 'cancel' },
+      ]
+    );
   };
 
   return (
@@ -116,7 +192,7 @@ const ProfileEditScreen: React.FC = () => {
       <ScrollView style={styles.scrollView}>
         {/* 프로필 이미지 섹션 */}
         <View style={styles.profileImageSection}>
-          <TouchableOpacity style={styles.profileImageContainer} onPress={() => setModalVisible(true)}>
+          <TouchableOpacity style={styles.profileImageContainer} onPress={showImageSourceOptions}>
             <Image source={profileImage} style={styles.profileImage} />
             <View style={styles.cameraIconContainer}>
               <Ionicons name="camera" size={20} color="white" />
@@ -162,6 +238,36 @@ const ProfileEditScreen: React.FC = () => {
             />
           </View>
 
+          {/* 닉네임 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>닉네임</Text>
+            <TextInput
+              style={styles.input}
+              value={nickname}
+              onChangeText={setNickname}
+              placeholder="닉네임을 입력하세요"
+              placeholderTextColor={Colors.text.light}
+              editable={!loading}
+            />
+          </View>
+
+          {/* 자기소개 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>자기소개</Text>
+            <TextInput
+              style={[styles.input, styles.bioInput]}
+              value={bio}
+              onChangeText={setBio}
+              placeholder="자기소개를 입력하세요"
+              placeholderTextColor={Colors.text.light}
+              multiline={true}
+              numberOfLines={3}
+              textAlignVertical="top"
+              maxLength={200}
+              editable={!loading}
+            />
+          </View>
+
         </View>
       </ScrollView>
 
@@ -178,8 +284,8 @@ const ProfileEditScreen: React.FC = () => {
             <Text style={styles.modalTitle}>프로필 이미지 선택</Text>
             <FlatList
               data={profileImages}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => handleSelectImage(item.image)}>
+              renderItem={({ item, index }) => (
+                <TouchableOpacity onPress={() => handleSelectImage(item.image, index)}>
                   <Image source={item.image} style={styles.modalImage} />
                 </TouchableOpacity>
               )}
@@ -300,6 +406,10 @@ const styles = StyleSheet.create({
   readOnlyText: {
     fontSize: 16,
     color: Colors.text.secondary,
+  },
+  bioInput: {
+    height: 80,
+    paddingTop: 12,
   },
   modalContainer: {
     flex: 1,
