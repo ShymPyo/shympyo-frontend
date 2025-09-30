@@ -18,20 +18,10 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
-import ApiService, { AdminPlace } from '../services/api';
+import ApiService, { AdminPlace, LetterCount } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 type AdminMainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminMain'>;
-
-// 임시 데이터
-const mockLetters = [
-  { id: '1', customerName: '배민형', content: '대출 프로필에 설정한 자기 소개', date: '2025-07-15 10:30', isRead: false },
-  { id: '2', customerName: '배민형2', content: '감사 편지', date: '2025-07-15 10:30', isRead: true },
-  { id: '3', customerName: '인하대 12학번의', content: '감사 편지', date: '2025-07-14 10:30', isRead: true },
-  { id: '4', customerName: '아구팀', content: '감사 편지', date: '2025-07-13 10:30', isRead: true },
-  { id: '5', customerName: '김가고던', content: '감사 편지', date: '2025-07-12 10:30', isRead: true },
-  { id: '6', customerName: '삼창주식회사', content: '감사 편지', date: '2025-07-11 10:30', isRead: true },
-];
 
 const AdminMainScreen: React.FC = () => {
   const navigation = useNavigation<AdminMainScreenNavigationProp>();
@@ -42,6 +32,7 @@ const AdminMainScreen: React.FC = () => {
   const [adminPlace, setAdminPlace] = useState<AdminPlace | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [letterCount, setLetterCount] = useState<LetterCount>({ total: 0, unRead: 0, read: 0 });
 
   // accessToken이나 user가 없으면 로딩 상태 유지
   useEffect(() => {
@@ -49,8 +40,6 @@ const AdminMainScreen: React.FC = () => {
       setIsLoading(true);
     }
   }, [accessToken, user]);
-
-  const unreadCount = mockLetters.filter(letter => !letter.isRead).length;
 
   // 데이터 로드 함수
   const loadAdminData = async () => {
@@ -84,6 +73,15 @@ const AdminMainScreen: React.FC = () => {
         } else {
           console.log('❌ 현재 사용자 목록 조회 실패:', usersResponse.message);
           setUsers([]);
+        }
+
+        // 편지 개수 조회
+        const letterCountResponse = await ApiService.getLetterCount(accessToken);
+        if (letterCountResponse.success && letterCountResponse.data) {
+          setLetterCount(letterCountResponse.data);
+          console.log('✅ 편지 개수 로드:', letterCountResponse.data);
+        } else {
+          console.log('❌ 편지 개수 조회 실패:', letterCountResponse.message);
         }
       } else {
         console.log('❌ 관리자 장소 조회 실패:', placesResponse.message);
@@ -221,15 +219,15 @@ const AdminMainScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>편지함</Text>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.primary} />
           </View>
-          {unreadCount > 0 && (
+          {letterCount.unRead > 0 && (
             <View style={styles.letterCount}>
               <Ionicons name="alert-circle" size={16} color={Colors.primary} />
-              <Text style={styles.countText}>새로운 편지가 {unreadCount}개 도착했습니다.</Text>
+              <Text style={styles.countText}>새로운 편지가 {letterCount.unRead}개 도착했습니다.</Text>
             </View>
           )}
           <View style={styles.notificationBanner}>
             <Ionicons name="mail" size={20} color={Colors.text.primary} />
-            <Text style={styles.notificationText}>지금까지 총 130개의 감사 편지를 받았어요 !</Text>
+            <Text style={styles.notificationText}>지금까지 총 {letterCount.total}개의 감사 편지를 받았어요 !</Text>
           </View>
         </TouchableOpacity>
 

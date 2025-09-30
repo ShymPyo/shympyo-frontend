@@ -116,6 +116,28 @@ interface SendLetterResponse {
   read: boolean;
 }
 
+interface ReceivedLetter {
+  id: number;
+  placeId: number;
+  placeName: string;
+  writerInfo: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  content: string;
+  readAt?: string;
+  createdAt: string;
+  read: boolean;
+}
+
+interface LetterCount {
+  total: number;
+  unRead: number;
+  read: number;
+}
+
 
 class ApiService {
   private static refreshTokenCallback?: () => Promise<string | null>;
@@ -462,6 +484,39 @@ class ApiService {
       body: JSON.stringify(placeData),
     });
   }
+
+  // 받은 편지함 조회
+  static async getReceivedLetters(accessToken: string): Promise<ApiResponse<ReceivedLetter[]>> {
+    console.log('📬 받은 편지함 조회 API 호출');
+    return this.request<ReceivedLetter[]>('/letters/received', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 받은 편지 개수 조회
+  static async getLetterCount(accessToken: string): Promise<ApiResponse<LetterCount>> {
+    console.log('🔢 받은 편지 개수 조회 API 호출');
+    return this.request<LetterCount>('/letters/count', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 편지 상세 조회
+  static async getLetterDetail(letterId: number, accessToken: string): Promise<ApiResponse<string>> {
+    console.log('📖 편지 상세 조회 API 호출:', letterId);
+    return this.request<string>(`/letters/${letterId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
 }
 
 export default ApiService;
@@ -477,5 +532,7 @@ export type {
   VisitedPlace,
   SendLetterRequest,
   SendLetterResponse,
-  AdminPlace
+  AdminPlace,
+  ReceivedLetter,
+  LetterCount
 };

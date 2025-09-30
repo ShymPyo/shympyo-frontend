@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,42 +17,75 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
+import ApiService, { ReceivedLetter, LetterCount } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 type AdminLetterListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminLetterList'>;
 
-// 임시 데이터
-const mockLetters = [
-  { id: '1', customerName: '배민형', content: '대출 프로필에 설정한 자기 소개', date: '2025-07-15 10:30', isRead: false },
-  { id: '2', customerName: '배민형2', content: '감사 편지', date: '2025-07-15 10:30', isRead: true },
-  { id: '3', customerName: '인하대 12학번의', content: '감사 편지', date: '2025-07-14 10:30', isRead: true },
-  { id: '4', customerName: '아구팀', content: '감사 편지', date: '2025-07-13 10:30', isRead: true },
-  { id: '5', customerName: '김가고던', content: '감사 편지', date: '2025-07-12 10:30', isRead: true },
-  { id: '6', customerName: '삼창주식회사', content: '감사 편지', date: '2025-07-11 10:30', isRead: true },
-  { id: '7', customerName: '김진우', content: '감사 편지', date: '2025-07-10 10:30', isRead: true },
-  { id: '8', customerName: '박서연', content: '감사 편지', date: '2025-07-09 10:30', isRead: true },
-  { id: '9', customerName: '이하늘', content: '감사 편지', date: '2025-07-08 10:30', isRead: true },
-  { id: '10', customerName: '최민수', content: '감사 편지', date: '2025-07-07 10:30', isRead: true },
-];
-
 const AdminLetterListScreen: React.FC = () => {
   const navigation = useNavigation<AdminLetterListScreenNavigationProp>();
-  const [selectedLetter, setSelectedLetter] = useState<typeof mockLetters[0] | null>(null);
+  const { accessToken } = useAuth();
+
+  const [selectedLetter, setSelectedLetter] = useState<ReceivedLetter | null>(null);
   const [isModalVisible, setModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [letters, setLetters] = useState<ReceivedLetter[]>([]);
+  const [letterCount, setLetterCount] = useState<LetterCount>({ total: 0, unRead: 0, read: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [letterDetail, setLetterDetail] = useState<string>('');
 
-  const unreadCount = mockLetters.filter(letter => !letter.isRead).length;
-  
-  // 검색 필터링된 편지 목록
-  const filteredLetters = mockLetters.filter(letter => 
-    letter.customerName.toLowerCase().includes(searchText.toLowerCase())
-  );
+  useEffect(() => {
+    loadLetters();
+  }, []);
 
-  const handleLetterPress = (letter: typeof mockLetters[0]) => {
-    setSelectedLetter(letter);
-    setModalVisible(true);
+  const loadLetters = async () => {
+    if (!accessToken) return;
+
+    try {
+      setIsLoading(true);
+
+      // 편지 목록 조회
+      const lettersResponse = await ApiService.getReceivedLetters(accessToken);
+      if (lettersResponse.success && lettersResponse.data) {
+        setLetters(lettersResponse.data);
+      }
+
+      // 편지 개수 조회
+      const countResponse = await ApiService.getLetterCount(accessToken);
+      if (countResponse.success && countResponse.data) {
+        setLetterCount(countResponse.data);
+      }
+    } catch (error) {
+      console.error('편지 로드 오류:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const renderLetter = (letter: typeof mockLetters[0]) => (
+  const unreadCount = letterCount.unRead;
+
+  // 검색 필터링된 편지 목록
+  const filteredLetters = letters.filter(letter =>
+    letter.writerInfo.name.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleLetterPress = async (letter: ReceivedLetter) => {
+    if (!accessToken) return;
+
+    try {
+      // 편지 상세 조회
+      const detailResponse = await ApiService.getLetterDetail(letter.id, accessToken);
+      if (detailResponse.success && detailResponse.data) {
+        setLetterDetail(detailResponse.data);
+        setSelectedLetter(letter);
+        setModalVisible(true);
+      }
+    } catch (error) {
+      console.error('편지 상세 조회 오류:', error);
+    }
+  };
+
+  const renderLetter = (letter: ReceivedLetter) => (
     <TouchableOpacity
       key={letter.id}
       style={styles.letterCard}
@@ -59,21 +93,21 @@ const AdminLetterListScreen: React.FC = () => {
     >
       <View style={styles.letterContent}>
         <View style={styles.letterHeader}>
-          <Text style={styles.letterDate}>{letter.date}</Text>
-          {!letter.isRead && <View style={styles.unreadIndicator} />}
+          <Text style={styles.letterDate}>{new Date(letter.createdAt).toLocaleString('ko-KR')}</Text>
+          {!letter.read && <View style={styles.unreadIndicator} />}
         </View>
         <View style={styles.letterMain}>
           <View style={styles.profileCircle}>
             <Text style={styles.profileText}>😊</Text>
           </View>
           <View style={styles.letterTextContainer}>
-            <Text style={styles.customerName}>{letter.customerName}</Text>
-            <Text style={styles.letterPreview}>{letter.content}</Text>
+            <Text style={styles.customerName}>{letter.writerInfo.name}</Text>
+            <Text style={styles.letterPreview} numberOfLines={1}>{letter.content}</Text>
           </View>
-          <Ionicons 
-            name={letter.isRead ? "mail-open" : "mail"} 
-            size={24} 
-            color={letter.isRead ? Colors.text.light : Colors.primary} 
+          <Ionicons
+            name={letter.read ? "mail-open" : "mail"}
+            size={24}
+            color={letter.read ? Colors.text.light : Colors.primary}
           />
         </View>
       </View>
@@ -116,36 +150,45 @@ const AdminLetterListScreen: React.FC = () => {
       </View>
 
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 편지함 정보 */}
-        <View style={styles.letterInfo}>
-          <View style={styles.letterCount}>
-            <Ionicons name="mail" size={20} color={Colors.primary} />
-            <Text style={styles.countText}>지금까지 총 130개의 감사 편지를 받았어요 !</Text>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* 편지함 정보 */}
+          <View style={styles.letterInfo}>
+            <View style={styles.letterCount}>
+              <Ionicons name="mail" size={20} color={Colors.primary} />
+              <Text style={styles.countText}>지금까지 총 {letterCount.total}개의 감사 편지를 받았어요 !</Text>
+            </View>
+            {unreadCount > 0 && (
+              <View style={styles.unreadCount}>
+                <Ionicons name="alert-circle" size={16} color={Colors.primary} />
+                <Text style={styles.unreadCountText}>새로운 편지가 {unreadCount}개 도착했습니다.</Text>
+              </View>
+            )}
           </View>
-          {unreadCount > 0 && (
-            <View style={styles.unreadCount}>
-              <Ionicons name="alert-circle" size={16} color={Colors.primary} />
-              <Text style={styles.unreadCountText}>새로운 편지가 {unreadCount}개 도착했습니다.</Text>
-            </View>
-          )}
-        </View>
 
-        {/* 편지 리스트 */}
-        <View style={styles.letterList}>
-          {filteredLetters.length > 0 ? (
-            filteredLetters.map(renderLetter)
-          ) : searchText.length > 0 ? (
-            <View style={styles.noResultsContainer}>
-              <Ionicons name="search" size={48} color={Colors.text.light} />
-              <Text style={styles.noResultsText}>'{searchText}'에 대한 검색 결과가 없습니다.</Text>
-              <Text style={styles.noResultsSubtext}>다른 닉네임으로 검색해보세요.</Text>
-            </View>
-          ) : (
-            mockLetters.map(renderLetter)
-          )}
-        </View>
-      </ScrollView>
+          {/* 편지 리스트 */}
+          <View style={styles.letterList}>
+            {filteredLetters.length > 0 ? (
+              filteredLetters.map(renderLetter)
+            ) : searchText.length > 0 ? (
+              <View style={styles.noResultsContainer}>
+                <Ionicons name="search" size={48} color={Colors.text.light} />
+                <Text style={styles.noResultsText}>'{searchText}'에 대한 검색 결과가 없습니다.</Text>
+                <Text style={styles.noResultsSubtext}>다른 닉네임으로 검색해보세요.</Text>
+              </View>
+            ) : (
+              <View style={styles.noResultsContainer}>
+                <Ionicons name="mail-outline" size={48} color={Colors.text.light} />
+                <Text style={styles.noResultsText}>아직 받은 편지가 없습니다.</Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      )}
 
       {/* 편지 상세 모달 */}
       <Modal
@@ -168,28 +211,31 @@ const AdminLetterListScreen: React.FC = () => {
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>{selectedLetter?.customerName} 님의 감사 편지</Text>
+              <Text style={styles.modalTitle}>{selectedLetter?.writerInfo.name} 님의 감사 편지</Text>
               <View style={{ width: 24 }} />
             </View>
-            
-            <Text style={styles.modalDate}>{selectedLetter?.date} 발송</Text>
-            
+
+            <Text style={styles.modalDate}>
+              {selectedLetter?.createdAt ? new Date(selectedLetter.createdAt).toLocaleString('ko-KR') : ''} 발송
+            </Text>
+
             <View style={styles.modalLetterContent}>
               <View style={styles.modalProfile}>
                 <Text style={styles.modalProfileText}>😊</Text>
               </View>
               <View style={styles.modalTextSection}>
-                <Text style={styles.modalLabel}>자기소개</Text>
-                <Text style={styles.modalText}>대출 프로필에 설정한 자기 소개{'\n'}공간 프로필 편하게 쉬었다 가세요~!</Text>
+                <Text style={styles.modalLabel}>작성자 정보</Text>
+                <Text style={styles.modalText}>
+                  {selectedLetter?.writerInfo.name}{'\n'}
+                  {selectedLetter?.writerInfo.email}
+                </Text>
               </View>
             </View>
-            
+
             <View style={styles.modalLetterSection}>
               <Text style={styles.modalLabel}>편지 내용</Text>
               <Text style={styles.modalLetterText}>
-                대출 더한 좋았는데 쇼핑다른 말{'\n'}
-                삼겹련서 고맙다는 말{'\n'}
-                나중에 커피 마시러 가겠다.
+                {letterDetail || selectedLetter?.content}
               </Text>
             </View>
           </TouchableOpacity>
@@ -203,6 +249,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',

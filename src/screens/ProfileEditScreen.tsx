@@ -96,7 +96,7 @@ const ProfileEditScreen: React.FC = () => {
 
       const response = await ApiService.updateMe(accessToken, updateData);
 
-      if (response.success) {
+      if (response.success && response.data) {
         updateUser(response.data);
         Alert.alert('성공', '프로필이 업데이트되었습니다.', [
           { text: '확인', onPress: () => navigation.goBack() }
