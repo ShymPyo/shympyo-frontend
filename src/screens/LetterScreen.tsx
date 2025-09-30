@@ -44,10 +44,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import ApiService, { VisitedPlace } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 
 const LetterScreen: React.FC = () => {
   const { accessToken } = useAuth();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
+
   const [places, setPlaces] = useState<VisitedPlace[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -193,23 +196,23 @@ const LetterScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      <View style={styles.header}>
-        <Text style={styles.title}>나의 쉼표 기록</Text>
-        <Text style={styles.subtitle}>한 줄의 편지가 쉼표의 따스함을 이어갑니다.</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={statusBarStyle as any} />
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
+        <Text style={[styles.title, { fontSize: getFontSize(22), color: colors.text.primary }]}>나의 쉼표 기록</Text>
+        <Text style={[styles.subtitle, { fontSize: getFontSize(14), color: colors.text.secondary }]}>한 줄의 편지가 쉼표의 따스함을 이어갑니다.</Text>
       </View>
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>방문한 장소를 불러오는 중...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>방문한 장소를 불러오는 중...</Text>
         </View>
       ) : places.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="location-outline" size={80} color={Colors.text.light} />
-          <Text style={styles.emptyTitle}>아직 방문한 쉼터가 없어요</Text>
-          <Text style={styles.emptySubtitle}>
+          <Ionicons name="location-outline" size={80} color={colors.text.light} />
+          <Text style={[styles.emptyTitle, { fontSize: getFontSize(20), color: colors.text.primary }]}>아직 방문한 쉼터가 없어요</Text>
+          <Text style={[styles.emptySubtitle, { fontSize: getFontSize(14), color: colors.text.secondary }]}>
             QR 코드를 스캔해서 쉼터를 방문하고{'\n'}
             감사 편지를 작성해보세요!
           </Text>
@@ -224,8 +227,8 @@ const LetterScreen: React.FC = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[Colors.primary]}
-              tintColor={Colors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         />
