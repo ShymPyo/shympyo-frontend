@@ -27,13 +27,14 @@ import Animated, {
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Location from 'expo-location';
 
-import { Colors } from '../constants/colors';
+import { Colors, getColors } from '../constants/colors';
 import ShelterDetailModal from '../components/ShelterDetailModal';
 import ApiService, { MapLocation, NearbyPlace } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types';
+import { MainTabParamList } from '../types';
 
 const { width, height } = Dimensions.get('window');
 
@@ -197,11 +198,12 @@ const shelters: Shelter[] = [
   }
 ];
 
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+type HomeScreenNavigationProp = StackNavigationProp<MainTabParamList, 'Home'>;
 
 const HomeScreen: React.FC = () => {
   const { accessToken, refreshTokens } = useAuth();
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
   // 상태 관리: 선택된 쉼터 정보만 관리
   const [selectedShelter, setSelectedShelter] = useState<Shelter>(shelters[0]);
@@ -274,15 +276,15 @@ const HomeScreen: React.FC = () => {
       console.log(`🔍 검색 조건: 위치(${lat}, ${lon}), 반경: ${radius}m`);
 
       const [mapResponse, listResponse] = await Promise.all([
-        ApiService.getNearbyMap(lat, lon, radius, 100, accessToken),
-        ApiService.getNearbyList(lat, lon, radius, 50, accessToken)
+        ApiService.getNearbyMap(lat, lon, radius, 100, accessToken || ''),
+        ApiService.getNearbyList(lat, lon, radius, 50, accessToken || '')
       ]);
 
       console.log('🔍 API 응답 상세 정보:');
       console.log('지도 API 응답:', JSON.stringify(mapResponse, null, 2));
       console.log('리스트 API 응답:', JSON.stringify(listResponse, null, 2));
 
-      if (mapResponse.success) {
+      if (mapResponse.success && mapResponse.data) {
         setMapLocations(mapResponse.data);
         console.log('✅ 지도 위치 데이터 로드:', mapResponse.data.length, '개');
         console.log('지도 데이터 내용:', mapResponse.data);
@@ -290,18 +292,18 @@ const HomeScreen: React.FC = () => {
         console.log('❌ 지도 API 실패:', mapResponse.message);
       }
 
-      if (listResponse.success) {
+      if (listResponse.success && listResponse.data) {
         setNearbyPlaces(listResponse.data);
         console.log('✅ 주변 장소 리스트 로드:', listResponse.data.length, '개');
         console.log('리스트 데이터 내용:', listResponse.data);
       } else {
         console.log('❌ 리스트 API 실패:', listResponse.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ 주변 장소 조회 실패:', error);
 
       // 401/403 오류인 경우 토큰 재발급 시도
-      if (error.toString().includes('401') || error.toString().includes('403')) {
+      if (error?.toString().includes('401') || error?.toString().includes('403')) {
         console.log('🔄 토큰 만료 감지, 재발급 시도...');
 
         try {
@@ -314,12 +316,12 @@ const HomeScreen: React.FC = () => {
             ApiService.getNearbyList(lat, lon, radius, 50, accessToken || undefined)
           ]);
 
-          if (retryMapResponse.success) {
+          if (retryMapResponse.success && retryMapResponse.data) {
             setMapLocations(retryMapResponse.data);
             console.log('✅ 재시도 - 지도 위치 데이터 로드:', retryMapResponse.data.length);
           }
 
-          if (retryListResponse.success) {
+          if (retryListResponse.success && retryListResponse.data) {
             setNearbyPlaces(retryListResponse.data);
             console.log('✅ 재시도 - 주변 장소 리스트 로드:', retryListResponse.data.length);
           }
@@ -387,20 +389,20 @@ const HomeScreen: React.FC = () => {
 
         // 리스트 API에서 content 정보 찾기
         const listPlace = nearbyPlaces.find(p => p.id === placeId);
-        const content = listPlace ? listPlace.content : response.data.content;
+        const content = listPlace ? listPlace.content : response.data?.content;
 
-        console.log(`🔍 Content 정보 비교 - List API: "${listPlace?.content}", Detail API: "${response.data.content}"`);
+        console.log(`🔍 Content 정보 비교 - List API: "${listPlace?.content}", Detail API: "${response.data?.content}"`);
 
         // 백엔드 응답을 Shelter 형태로 변환 (리스트 API의 content 사용)
         const detailShelter: Shelter = {
-          id: response.data.id.toString(),
-          name: response.data.name || '쉼터', // name을 시설명으로 사용
-          type: response.data.type,
+          id: response.data?.id?.toString() || '',
+          name: response.data?.name || '쉼터', // name을 시설명으로 사용
+          type: response.data?.type || '',
           distance: '0m', // 거리는 계산하거나 기본값
-          category: response.data.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설',
-          icon: response.data.type === 'SHELTER' ? 'medical' : 'business',
-          color: response.data.type === 'SHELTER' ? '#4A90E2' : '#7ED321',
-          address: response.data.address,
+          category: response.data?.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설',
+          icon: response.data?.type === 'SHELTER' ? 'medical' : 'business',
+          color: response.data?.type === 'SHELTER' ? '#4A90E2' : '#7ED321',
+          address: response.data?.address,
           description: content, // 리스트 API의 content 사용 (버스정류장 정보 등)
           content: content // 리스트 API의 content 사용
         };
@@ -430,7 +432,7 @@ const HomeScreen: React.FC = () => {
         const placeId = parseInt(shelter.id);
         const response = await ApiService.getPlaceDetail(placeId, accessToken || undefined);
 
-        if (response.success) {
+        if (response.success && response.data) {
           console.log('✅ 장소 상세 정보 로드:', response.data);
           // 상세 정보로 shelter 객체 업데이트
           const updatedShelter = {
@@ -544,11 +546,11 @@ const HomeScreen: React.FC = () => {
   };
 
   // 실제 API 데이터를 필터링된 쉼터 목록으로 변환
-  const filteredShelters = nearbyPlaces
+  const filteredShelters: Shelter[] = nearbyPlaces
     .map(place => ({
       id: place.id.toString(),
       name: place.name,
-      category: place.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설' as const,
+      category: (place.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설') as '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설',
       type: place.type,
       distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
       address: place.address,
@@ -887,8 +889,8 @@ const HomeScreen: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.container}>
-        <StatusBar style="dark" translucent backgroundColor="rgba(255,255,255,0.8)" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle as any} translucent backgroundColor={colors.background + '80'} />
         <View style={styles.mapContainer}>
           <WebView
             ref={webViewRef}
@@ -1029,7 +1031,7 @@ const HomeScreen: React.FC = () => {
 
                 <View style={{ backgroundColor: 'transparent' }}>
                   {/* 쉼터 목록 항상 표시 */}
-                    <FlatList
+                    <FlatList<Shelter>
                       data={filteredShelters}
                       renderItem={renderShelterCard}
                       keyExtractor={(item) => item.id}

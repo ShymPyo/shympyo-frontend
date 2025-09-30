@@ -4,7 +4,7 @@ interface ApiResponse<T> {
   success: boolean;
   code: number;
   message: string;
-  data: T;
+  data: T | null;
 }
 
 interface UserSignUpRequest {
@@ -69,6 +69,10 @@ interface RentalEnterRequest {
   placeCode: string;
 }
 
+interface QRCodeResponse {
+  placeCode: string;
+}
+
 interface RentalEnterResponse {
   rentalId: number;
   placeName: string;
@@ -86,6 +90,18 @@ interface VisitedPlace {
 interface SendLetterRequest {
   placeId: number;
   content: string;
+}
+
+interface AdminPlace {
+  id: number;
+  name: string;
+  address: string;
+  content: string;
+  openTime: string;
+  closeTime: string;
+  imageUrl?: string;
+  currentUsers?: number;
+  maxCapacity?: number;
 }
 
 interface SendLetterResponse {
@@ -312,6 +328,42 @@ class ApiService {
     }
   }
 
+  static async verifyQRCode(
+    qrUrl: string,
+    accessToken: string
+  ): Promise<ApiResponse<QRCodeResponse>> {
+    console.log('🔍 verifyQRCode API 호출:', {
+      qrUrl,
+      hasAccessToken: !!accessToken
+    });
+
+    // URL에서 c 파라미터 추출
+    const url = new URL(qrUrl);
+    const code = url.searchParams.get('c');
+
+    if (!code) {
+      return {
+        success: false,
+        code: 400,
+        message: 'QR 코드에서 코드를 찾을 수 없습니다.',
+        data: null
+      };
+    }
+
+    console.log('📡 QR 코드 API 요청:', {
+      endpoint: `/enter-code?c=${code}`,
+      method: 'GET',
+      code: code
+    });
+
+    return this.request<QRCodeResponse>(`/enter-code?c=${code}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
   static async enterPlace(
     accessToken: string,
     placeCode: string
@@ -363,6 +415,28 @@ class ApiService {
       body: JSON.stringify(requestBody),
     });
   }
+
+  // 관리자의 장소 목록 조회
+  static async getAdminPlaces(accessToken: string): Promise<ApiResponse<AdminPlace>> {
+    console.log('🏢 관리자 장소 목록 조회 API 호출');
+    return this.request<AdminPlace>('/places', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 관리자의 특정 장소 현재 사용자 목록 조회
+  static async getPlaceCurrentUsers(placeId: number, accessToken: string): Promise<ApiResponse<any[]>> {
+    console.log('👥 장소 현재 사용자 목록 조회 API 호출:', placeId);
+    return this.request<any[]>(`/admin/places/${placeId}/users`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
 }
 
 export default ApiService;
@@ -377,5 +451,6 @@ export type {
   PlaceDetail,
   VisitedPlace,
   SendLetterRequest,
-  SendLetterResponse
+  SendLetterResponse,
+  AdminPlace
 };
