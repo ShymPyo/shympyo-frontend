@@ -109,8 +109,24 @@ const AdminMainScreen: React.FC = () => {
     }
   }, [accessToken, user]);
 
+  // 화면 포커스 시 데이터 새로고침
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (accessToken && user) {
+        console.log('🔄 화면 포커스 - 데이터 새로고침');
+        loadAdminData();
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, accessToken, user]);
+
   const handleEditProfile = () => {
-    navigation.navigate('AdminSpaceEdit');
+    if (adminPlace) {
+      navigation.navigate('AdminSpaceEdit', { place: adminPlace });
+    } else {
+      Alert.alert('오류', '장소 정보를 불러올 수 없습니다.');
+    }
   };
 
   const handleLogout = async () => {

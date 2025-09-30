@@ -1,4 +1,4 @@
-import { User } from '../services/api';
+import { User, AdminPlace } from '../services/api';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -8,7 +8,7 @@ export type RootStackParamList = {
   Main: undefined;
   AdminLogin: undefined;
   AdminMain: undefined;
-  AdminSpaceEdit: undefined;
+  AdminSpaceEdit: { place: AdminPlace };
   AdminLetterList: undefined;
   GeneralLogin: undefined;
   SignUp: undefined;

@@ -13,50 +13,42 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
+import ApiService from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 type AdminSpaceEditScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminSpaceEdit'>;
+type AdminSpaceEditScreenRouteProp = RouteProp<RootStackParamList, 'AdminSpaceEdit'>;
 
 const AdminSpaceEditScreen: React.FC = () => {
   const navigation = useNavigation<AdminSpaceEditScreenNavigationProp>();
-  
+  const route = useRoute<AdminSpaceEditScreenRouteProp>();
+  const { accessToken } = useAuth();
+  const { place } = route.params;
+
   // 공간 정보 상태
-  const [spaceName, setSpaceName] = useState('카페 빈스');
-  const [openTime, setOpenTime] = useState('12:00');
-  const [closeTime, setCloseTime] = useState('22:00');
-  const [closedDays, setClosedDays] = useState('토요일 정기휴무');
-  const [location, setLocation] = useState('인하대 후문');
-  const [building, setBuilding] = useState('서곡대 빌딩 2층');
-  const [description, setDescription] = useState('다정한 카페로 우영한 카페 빈스입니다 !');
-  const [subDescription, setSubDescription] = useState('더텐디 편하게 쉬었다 가세요 ~ !');
-  
-  // 이용 시간 설정 상태
-  const [maxUsageMinutes, setMaxUsageMinutes] = useState('60');
-  const [customTime, setCustomTime] = useState('');
-  const [showTimeModal, setShowTimeModal] = useState(false);
-  
+  const [spaceName, setSpaceName] = useState(place.name);
+  const [openTime, setOpenTime] = useState(place.openTime);
+  const [closeTime, setCloseTime] = useState(place.closeTime);
+  const [closedDays, setClosedDays] = useState(place.weeklyHoliday);
+  const [location, setLocation] = useState(place.address);
+  const [description, setDescription] = useState(place.content);
+  const [imageUrl, setImageUrl] = useState(place.imageUrl);
+
   // 이용 인원 설정 상태
-  const [maxUsers, setMaxUsers] = useState('5');
+  const [maxUsers, setMaxUsers] = useState(place.maxCapacity.toString());
   const [showUserModal, setShowUserModal] = useState(false);
-  
+  const [isSaving, setIsSaving] = useState(false);
+
   const scrollViewRef = useRef<ScrollView>(null);
-  
-  // 시간 설정 옵션들 (분 단위)
-  const timeOptions = [
-    { label: '5분', value: '5' },
-    { label: '10분', value: '10' },
-    { label: '20분', value: '20' },
-    { label: '30분', value: '30' },
-    { label: '40분', value: '40' },
-    { label: '사용자 정의', value: 'custom' },
-  ];
 
   // 인원 설정 옵션들
   const userOptions = [
@@ -69,61 +61,91 @@ const AdminSpaceEditScreen: React.FC = () => {
     { label: '7명', value: '7' },
     { label: '8명', value: '8' },
     { label: '10명', value: '10' },
-    { label: '제한 없음', value: 'unlimited' },
+    { label: '12명', value: '12' },
+    { label: '15명', value: '15' },
+    { label: '20명', value: '20' },
   ];
 
-  const handleSave = () => {
-    if (!spaceName || !openTime || !closeTime || !maxUsageMinutes) {
+  // 요일 옵션들
+  const weekdayOptions = [
+    { label: '월요일', value: 'MONDAY' },
+    { label: '화요일', value: 'TUESDAY' },
+    { label: '수요일', value: 'WEDNESDAY' },
+    { label: '목요일', value: 'THURSDAY' },
+    { label: '금요일', value: 'FRIDAY' },
+    { label: '토요일', value: 'SATURDAY' },
+    { label: '일요일', value: 'SUNDAY' },
+  ];
+
+  const handleSave = async () => {
+    if (!spaceName || !openTime || !closeTime || !location || !description) {
       Alert.alert('알림', '모든 필수 정보를 입력해주세요.');
       return;
     }
 
-    Alert.alert(
-      '저장 완료',
-      '공간 프로필이 성공적으로 업데이트되었습니다.',
-      [
+    if (!accessToken) {
+      Alert.alert('오류', '인증 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      const response = await ApiService.updatePlace(
         {
-          text: '확인',
-          onPress: () => navigation.goBack(),
+          name: spaceName,
+          content: description,
+          maxCapacity: parseInt(maxUsers),
+          imageUrl: imageUrl,
+          address: location,
+          openTime: openTime,
+          closeTime: closeTime,
+          weeklyHoliday: closedDays,
         },
-      ]
-    );
+        accessToken
+      );
+
+      if (response.success) {
+        Alert.alert(
+          '저장 완료',
+          '공간 프로필이 성공적으로 업데이트되었습니다.',
+          [
+            {
+              text: '확인',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      } else {
+        Alert.alert('오류', response.message || '저장에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 쉼터 수정 오류:', error);
+      Alert.alert('오류', '저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleTimeSelection = (value: string) => {
-    if (value === 'custom') {
-      setMaxUsageMinutes('custom');
-      setCustomTime('');
-    } else {
-      setMaxUsageMinutes(value);
-      setCustomTime('');
-    }
-    setShowTimeModal(false);
-  };
+  const [showWeekdayModal, setShowWeekdayModal] = useState(false);
 
   const handleUserSelection = (value: string) => {
     setMaxUsers(value);
     setShowUserModal(false);
   };
 
-  const formatUsageTime = (minutes: string) => {
-    if (minutes === 'custom') {
-      return customTime ? `${customTime}분` : '사용자 정의';
-    }
-    const num = parseInt(minutes);
-    if (num >= 60) {
-      const hours = Math.floor(num / 60);
-      const remainingMinutes = num % 60;
-      return remainingMinutes > 0 ? `${hours}시간 ${remainingMinutes}분` : `${hours}시간`;
-    }
-    return `${minutes}분`;
+  const handleWeekdaySelection = (value: string) => {
+    setClosedDays(value);
+    setShowWeekdayModal(false);
   };
 
   const formatMaxUsers = (users: string) => {
-    if (users === 'unlimited') {
-      return '제한 없음';
-    }
     return `최대 ${users}명`;
+  };
+
+  const formatWeekday = (day: string) => {
+    const option = weekdayOptions.find(opt => opt.value === day);
+    return option ? option.label : day;
   };
 
   const handleTextInputFocus = (offsetY: number) => {
@@ -155,8 +177,16 @@ const AdminSpaceEditScreen: React.FC = () => {
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>공간 프로필 수정</Text>
         </View>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>저장</Text>
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Text style={styles.saveButtonText}>저장</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -167,8 +197,8 @@ const AdminSpaceEditScreen: React.FC = () => {
       >
         {/* 공간 이미지 */}
         <View style={styles.imageSection}>
-          <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80' }} 
+          <Image
+            source={{ uri: imageUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80' }}
             style={styles.spaceImage}
           />
           <TouchableOpacity style={styles.imageEditButton}>
@@ -214,37 +244,30 @@ const AdminSpaceEditScreen: React.FC = () => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>휴무일</Text>
-            <TextInput
-              style={styles.input}
-              value={closedDays}
-              onChangeText={setClosedDays}
-              placeholder="휴무일을 입력하세요"
-            />
+            <Text style={styles.inputLabel}>정기 휴무일</Text>
+            <TouchableOpacity
+              style={styles.timeSelector}
+              onPress={() => setShowWeekdayModal(true)}
+            >
+              <Text style={styles.timeSelectorText}>
+                {formatWeekday(closedDays)}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* 위치 정보 */}
         <View style={[styles.section, styles.sectionCard]}>
           <Text style={styles.sectionTitle}>위치 정보</Text>
-          
+
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>주요 위치</Text>
+            <Text style={styles.inputLabel}>주소 *</Text>
             <TextInput
               style={styles.input}
               value={location}
               onChangeText={setLocation}
-              placeholder="주요 위치를 입력하세요"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>상세 주소</Text>
-            <TextInput
-              style={styles.input}
-              value={building}
-              onChangeText={setBuilding}
-              placeholder="건물명, 층수 등을 입력하세요"
+              placeholder="주소를 입력하세요"
             />
           </View>
         </View>
@@ -252,57 +275,18 @@ const AdminSpaceEditScreen: React.FC = () => {
         {/* 공간 소개 */}
         <View style={[styles.section, styles.sectionCard]}>
           <Text style={styles.sectionTitle}>공간 소개</Text>
-          
+
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>소개글</Text>
+            <Text style={styles.inputLabel}>소개글 *</Text>
             <TextInput
               style={styles.textArea}
-              value={`${description}\n${subDescription}`}
-              onChangeText={(text) => {
-                const lines = text.split('\n');
-                setDescription(lines[0] || '');
-                setSubDescription(lines.slice(1).join('\n'));
-              }}
+              value={description}
+              onChangeText={setDescription}
               placeholder="공간에 대한 소개와 안내사항을 입력하세요"
               multiline
               numberOfLines={5}
             />
           </View>
-        </View>
-
-        {/* 이용 시간 설정 */}
-        <View style={[styles.section, styles.sectionCard]}>
-          <Text style={styles.sectionTitle}>이용 시간 설정</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>최대 이용 시간 *</Text>
-            <TouchableOpacity 
-              style={styles.timeSelector}
-              onPress={() => setShowTimeModal(true)}
-            >
-              <Text style={styles.timeSelectorText}>
-                {formatUsageTime(maxUsageMinutes)}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
-            </TouchableOpacity>
-            <Text style={styles.helperText}>
-              고객이 QR 스캔 후 이용할 수 있는 최대 시간을 설정하세요
-            </Text>
-          </View>
-
-          {maxUsageMinutes === 'custom' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>사용자 정의 시간 (분)</Text>
-              <TextInput
-                style={styles.input}
-                value={customTime}
-                onChangeText={setCustomTime}
-                placeholder="분 단위로 숫자를 입력하세요 (예: 15)"
-                keyboardType="numeric"
-                onFocus={() => handleTextInputFocus(800)}
-              />
-            </View>
-          )}
         </View>
 
         {/* 이용 인원 설정 */}
@@ -327,39 +311,39 @@ const AdminSpaceEditScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* 시간 선택 모달 */}
+      {/* 요일 선택 모달 */}
       <Modal
         animationType="slide"
         transparent={true}
-        visible={showTimeModal}
-        onRequestClose={() => setShowTimeModal(false)}
+        visible={showWeekdayModal}
+        onRequestClose={() => setShowWeekdayModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>최대 이용 시간 선택</Text>
-              <TouchableOpacity onPress={() => setShowTimeModal(false)}>
+              <Text style={styles.modalTitle}>정기 휴무일 선택</Text>
+              <TouchableOpacity onPress={() => setShowWeekdayModal(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.timeOptions}>
-              {timeOptions.map((option) => (
+              {weekdayOptions.map((option) => (
                 <TouchableOpacity
                   key={option.value}
                   style={[
                     styles.timeOption,
-                    maxUsageMinutes === option.value && styles.selectedTimeOption
+                    closedDays === option.value && styles.selectedTimeOption
                   ]}
-                  onPress={() => handleTimeSelection(option.value)}
+                  onPress={() => handleWeekdaySelection(option.value)}
                 >
                   <Text style={[
                     styles.timeOptionText,
-                    maxUsageMinutes === option.value && styles.selectedTimeOptionText
+                    closedDays === option.value && styles.selectedTimeOptionText
                   ]}>
                     {option.label}
                   </Text>
-                  {maxUsageMinutes === option.value && (
+                  {closedDays === option.value && (
                     <Ionicons name="checkmark" size={20} color={Colors.primary} />
                   )}
                 </TouchableOpacity>
@@ -454,6 +438,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
   saveButtonText: {
     color: 'white',

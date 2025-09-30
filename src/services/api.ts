@@ -437,6 +437,31 @@ class ApiService {
       },
     });
   }
+
+  // 쉼터 정보 수정
+  static async updatePlace(
+    placeData: {
+      name: string;
+      content: string;
+      maxCapacity: number;
+      imageUrl?: string;
+      address: string;
+      openTime: string;
+      closeTime: string;
+      weeklyHoliday: string;
+    },
+    accessToken: string
+  ): Promise<ApiResponse<AdminPlace>> {
+    console.log('🏢 쉼터 정보 수정 API 호출');
+    return this.request<AdminPlace>('/places', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(placeData),
+    });
+  }
 }
 
 export default ApiService;
