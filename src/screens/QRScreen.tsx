@@ -50,7 +50,8 @@ const QRScreen: React.FC = () => {
   const [cameraEnabled, setCameraEnabled] = useState(false); // 카메라 활성화 상태
   const [placeName, setPlaceName] = useState<string>(''); // 입장한 장소명
   const [rentalId, setRentalId] = useState<number | null>(null); // 렌탈 ID
-  
+  const [isProcessing, setIsProcessing] = useState(false); // 스캔 처리 중 상태
+
   // 원형 프로그레스 바 애니메이션을 위한 값들
   const progress = useSharedValue(0);
 
@@ -72,6 +73,54 @@ const QRScreen: React.FC = () => {
 
     return () => clearInterval(intervalId);
   }, [screenState, timeLeft]);
+
+  // 타이머 완료 후 1분 경과 시 자동 퇴장
+  useEffect(() => {
+    if (screenState !== 'timer' || timeLeft !== 0) return;
+
+    console.log('⏰ 타이머 완료, 1분 후 자동 퇴장 타이머 시작');
+
+    const autoExitTimer = setTimeout(async () => {
+      console.log('🚪 1분 경과, 자동 퇴장 처리 시작');
+
+      if (!accessToken) {
+        console.log('❌ accessToken 없음');
+        return;
+      }
+
+      try {
+        const exitResponse = await ApiService.exitPlace(accessToken);
+
+        if (exitResponse.success && exitResponse.data) {
+          console.log('✅ 자동 퇴장 완료:', exitResponse.data);
+          Alert.alert(
+            '자동 퇴장 완료',
+            `${exitResponse.data.placeName}에서 자동 퇴장되었습니다.\n이용해주셔서 감사합니다!`,
+            [
+              {
+                text: '확인',
+                onPress: () => {
+                  // 상태 초기화
+                  setScreenState('scanning');
+                  setScanned(false);
+                  setTimeLeft(10);
+                  setPlaceName('');
+                  setRentalId(null);
+                  navigation.navigate('Home' as never);
+                },
+              },
+            ]
+          );
+        } else {
+          console.log('❌ 자동 퇴장 실패:', exitResponse);
+        }
+      } catch (error) {
+        console.error('💥 자동 퇴장 오류:', error);
+      }
+    }, 60000); // 60초 = 1분
+
+    return () => clearTimeout(autoExitTimer);
+  }, [screenState, timeLeft, accessToken, navigation]);
 
   // 알림 권한 요청 및 발송 함수
   useEffect(() => {
@@ -95,6 +144,37 @@ const QRScreen: React.FC = () => {
     });
   };
 
+  const handleExit = async () => {
+    if (!accessToken) {
+      Alert.alert('오류', '인증 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      const exitResponse = await ApiService.exitPlace(accessToken);
+
+      if (exitResponse.success && exitResponse.data) {
+        console.log('✅ 퇴장 완료:', exitResponse.data);
+        Alert.alert(
+          '퇴장 완료',
+          `${exitResponse.data.placeName}에서 퇴장했습니다.\n이용해주셔서 감사합니다!`,
+          [
+            {
+              text: '확인',
+              onPress: () => navigation.navigate('Home' as never),
+            },
+          ]
+        );
+      } else {
+        console.log('❌ 퇴장 실패:', exitResponse);
+        Alert.alert('오류', exitResponse.message || '퇴장 처리에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 퇴장 오류:', error);
+      Alert.alert('오류', '퇴장 처리 중 오류가 발생했습니다.');
+    }
+  };
+
   // 타이머 시작 시 애니메이션 초기화
   useEffect(() => {
     if (screenState === 'timer') {
@@ -103,9 +183,15 @@ const QRScreen: React.FC = () => {
   }, [screenState, progress]);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    if (scanned) return;
+    if (scanned || isProcessing) return;
 
     setScanned(true);
+    setIsProcessing(true);
+
+    // 3초 후 다시 스캔 가능하도록
+    setTimeout(() => {
+      setIsProcessing(false);
+    }, 3000);
 
     if (!accessToken) {
       Alert.alert('로그인 필요', '쉼터를 이용하려면 로그인이 필요합니다.');
@@ -131,52 +217,68 @@ const QRScreen: React.FC = () => {
         // JSON이 아닌 경우 무시
       }
 
-      // QR 코드가 enter-code URL인지 확인
-      if (!qrUrl.includes('/api/enter-code')) {
-        Alert.alert('잘못된 QR 코드', 'shympyo QR 코드가 아닙니다.');
-        setScanned(false);
-        return;
-      }
+      // QR 코드에서 placeCode 추출
+      let placeCode = '';
 
-      console.log('📡 1단계: QR 코드 확인 API 호출 중...', qrUrl);
-
-      // 1단계: /enter-code API로 place code 받기
-      const enterCodeResponse = await ApiService.verifyQRCode(qrUrl, accessToken);
-
-      if (!enterCodeResponse.success || !enterCodeResponse.data) {
-        console.log('❌ QR 코드 확인 실패:', enterCodeResponse);
-
-        let errorMessage = '';
-        if (enterCodeResponse.code === 500) {
-          errorMessage = '서버에 일시적인 문제가 발생했습니다.\n잠시 후 다시 시도해주세요.';
-        } else if (enterCodeResponse.code === 404) {
-          errorMessage = '존재하지 않는 QR 코드입니다.\n올바른 쉼터 QR 코드를 스캔해주세요.';
-        } else {
-          errorMessage = enterCodeResponse.message || 'QR 코드가 유효하지 않습니다.';
+      // URL에서 c 파라미터 추출
+      if (qrUrl.includes('/api/enter-code')) {
+        try {
+          const url = new URL(qrUrl);
+          placeCode = url.searchParams.get('c') || '';
+        } catch (error) {
+          console.log('❌ URL 파싱 실패:', error);
         }
+      } else {
+        // URL이 아닌 경우 직접 placeCode로 사용
+        placeCode = qrUrl;
+      }
 
-        Alert.alert(
-          'QR 코드 오류',
-          `${errorMessage}\n\n오류 코드: ${enterCodeResponse.code}`
-        );
+      if (!placeCode) {
+        Alert.alert('잘못된 QR 코드', 'place code를 찾을 수 없습니다.');
         setScanned(false);
         return;
       }
 
-      const placeCode = enterCodeResponse.data.placeCode;
-      console.log('✅ 1단계 성공 - 장소 코드 받음:', placeCode);
-
-      console.log('📡 2단계: 쉼터 입장 API 호출 중...', {
+      console.log('📡 쉼터 입장 API 호출 중...', {
         placeCode,
-        placeCodeLength: placeCode.length,
         accessToken: accessToken ? '토큰 있음' : '토큰 없음'
       });
 
-      // 2단계: rental/enter API로 실제 입장 처리
+      // 현재 이용 중인지 확인
+      try {
+        const currentRentals = await ApiService.getCurrentRentals(accessToken);
+        if (currentRentals.success && currentRentals.data && currentRentals.data.length > 0) {
+          console.log('⚠️ 이미 이용 중인 쉼터가 있습니다:', currentRentals.data);
+
+          Alert.alert(
+            '이미 이용 중',
+            '현재 다른 쉼터를 이용 중입니다.\n먼저 퇴장 처리 후 다시 시도해주세요.',
+            [
+              {
+                text: '퇴장하기',
+                onPress: async () => {
+                  await handleExit();
+                  setScanned(false);
+                },
+              },
+              {
+                text: '취소',
+                onPress: () => setScanned(false),
+                style: 'cancel',
+              },
+            ]
+          );
+          return;
+        }
+      } catch (error) {
+        console.log('현재 이용 중인 쉼터 확인 실패:', error);
+      }
+
+      // rental/enter API로 입장 처리
       const enterResponse = await ApiService.enterPlace(accessToken, placeCode);
 
       if (enterResponse.success && enterResponse.data) {
-        console.log('✅ 2단계 성공 - 쉼터 입장 완료:', enterResponse.data);
+        console.log('✅ 쉼터 입장 완료:', enterResponse.data);
 
         // 성공 시 응답 데이터 저장
         setPlaceName(enterResponse.data.placeName);
@@ -225,20 +327,16 @@ const QRScreen: React.FC = () => {
   // 화면 포커스 관리 - 카메라 활성화/비활성화
   useFocusEffect(
     useCallback(() => {
-      // 화면 포커스 시 상태 초기화 및 카메라 활성화
-      setScreenState('scanning');
-      setScanned(false);
-      setTimeLeft(10);
-      setTotalTime(10);
-      setPlaceName('');
-      setRentalId(null);
-      setCameraEnabled(true);
+      // 화면 포커스 시 - 타이머가 진행 중이 아닐 때만 초기화
+      if (screenState === 'scanning') {
+        setCameraEnabled(true);
+      }
 
       return () => {
-        // 화면을 떠날 때 카메라 비활성화
+        // 화면을 떠날 때 카메라만 비활성화 (상태는 유지)
         setCameraEnabled(false);
       };
-    }, [])
+    }, [screenState])
   );
 
   // 스크린 상태가 스캐닝으로 변경될 때 프로그레스 리셋
@@ -383,8 +481,8 @@ const QRScreen: React.FC = () => {
             {/* 타이머 완료 후 버튼들 - 하단 고정 */}
             {timeLeft === 0 && (
               <View style={styles.fixedBottomButtons}>
-                <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('Home' as never)}>
-                  <Text style={styles.buttonText}>홈으로</Text>
+                <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
+                  <Text style={styles.buttonText}>퇴장하기</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.letterButton} onPress={() => navigation.navigate('Letter' as never)}>
                   <Text style={styles.buttonText}>감사 편지 적기</Text>
@@ -587,6 +685,12 @@ const styles = StyleSheet.create({
   },
   homeButton: {
     backgroundColor: Colors.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+  },
+  exitButton: {
+    backgroundColor: '#FF6B6B',
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 10,

@@ -79,6 +79,13 @@ interface RentalEnterResponse {
   startTime: string;
 }
 
+interface RentalExitResponse {
+  rentalId: number;
+  placeName: string;
+  startTime: string;
+  endTime: string;
+}
+
 interface VisitedPlace {
   id: number;
   placeId: number;
@@ -368,42 +375,6 @@ class ApiService {
     }
   }
 
-  static async verifyQRCode(
-    qrUrl: string,
-    accessToken: string
-  ): Promise<ApiResponse<QRCodeResponse>> {
-    console.log('🔍 verifyQRCode API 호출:', {
-      qrUrl,
-      hasAccessToken: !!accessToken
-    });
-
-    // URL에서 c 파라미터 추출
-    const url = new URL(qrUrl);
-    const code = url.searchParams.get('c');
-
-    if (!code) {
-      return {
-        success: false,
-        code: 400,
-        message: 'QR 코드에서 코드를 찾을 수 없습니다.',
-        data: null
-      };
-    }
-
-    console.log('📡 QR 코드 API 요청:', {
-      endpoint: `/enter-code?c=${code}`,
-      method: 'GET',
-      code: code
-    });
-
-    return this.request<QRCodeResponse>(`/enter-code?c=${code}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-  }
-
   static async enterPlace(
     accessToken: string,
     placeCode: string
@@ -423,6 +394,17 @@ class ApiService {
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(requestBody),
+    });
+  }
+
+  // 퇴장 처리
+  static async exitPlace(accessToken: string): Promise<ApiResponse<RentalExitResponse>> {
+    console.log('🚪 exitPlace API 호출');
+    return this.request<RentalExitResponse>('/rental/exit', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
   }
 
@@ -565,5 +547,7 @@ export type {
   ReceivedLetter,
   LetterCount,
   CurrentRental,
-  RentalHistory
+  RentalHistory,
+  RentalEnterResponse,
+  RentalExitResponse
 };
