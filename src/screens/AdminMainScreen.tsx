@@ -18,7 +18,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
-import ApiService, { AdminPlace, LetterCount } from '../services/api';
+import ApiService, { AdminPlace, LetterCount, CurrentRental } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 type AdminMainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminMain'>;
@@ -27,10 +27,10 @@ const AdminMainScreen: React.FC = () => {
   const navigation = useNavigation<AdminMainScreenNavigationProp>();
   const { accessToken, user, logout } = useAuth();
 
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<CurrentRental | null>(null);
   const [isUserModalVisible, setUserModalVisible] = useState(false);
   const [adminPlace, setAdminPlace] = useState<AdminPlace | null>(null);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<CurrentRental[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [letterCount, setLetterCount] = useState<LetterCount>({ total: 0, unRead: 0, read: 0 });
 
@@ -65,13 +65,13 @@ const AdminMainScreen: React.FC = () => {
         setAdminPlace(placesResponse.data);
         console.log('✅ 관리자 장소 정보 로드:', placesResponse.data);
 
-        // 현재 사용자 목록 조회
-        const usersResponse = await ApiService.getPlaceCurrentUsers(placesResponse.data.id, accessToken);
+        // 현재 이용자 목록 조회
+        const usersResponse = await ApiService.getCurrentRentals(accessToken);
         if (usersResponse.success && usersResponse.data) {
           setUsers(usersResponse.data);
-          console.log('✅ 현재 사용자 목록 로드:', usersResponse.data);
+          console.log('✅ 현재 이용자 목록 로드:', usersResponse.data);
         } else {
-          console.log('❌ 현재 사용자 목록 조회 실패:', usersResponse.message);
+          console.log('❌ 현재 이용자 목록 조회 실패:', usersResponse.message);
           setUsers([]);
         }
 
@@ -240,18 +240,20 @@ const AdminMainScreen: React.FC = () => {
             {/* 현재 사용자들 */}
             {users.map((user) => (
               <TouchableOpacity
-                key={user.id}
+                key={user.rentalId}
                 style={styles.userStats}
                 onPress={() => handleUserPress(user)}
               >
                 <Image
                   source={{
-                    uri: user.profileImage || user.imageUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
+                    uri: user.imageUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
                   }}
                   style={styles.userProfile}
                 />
-                <Text style={styles.userName}>{user.name || user.nickname} 님</Text>
-                <Text style={styles.userTime}>{user.time || '이용중'}</Text>
+                <Text style={styles.userName}>{user.userName} 님</Text>
+                <Text style={styles.userTime}>
+                  {new Date(user.startTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 입실
+                </Text>
               </TouchableOpacity>
             ))}
 
@@ -296,21 +298,28 @@ const AdminMainScreen: React.FC = () => {
               <TouchableOpacity onPress={() => setUserModalVisible(false)}>
                 <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
-              <Text style={styles.userModalTitle}>{selectedUser?.name} 님의 프로필</Text>
+              <Text style={styles.userModalTitle}>{selectedUser?.userName} 님의 이용 정보</Text>
               <View style={{ width: 24 }} />
             </View>
 
             <View style={styles.userModalProfile}>
               <Image
-                source={{ uri: selectedUser?.profileImage }}
+                source={{ uri: selectedUser?.imageUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face' }}
                 style={styles.userModalProfileCircle}
               />
-              <Text style={styles.userModalName}>{selectedUser?.name}</Text>
+              <Text style={styles.userModalName}>{selectedUser?.userName}</Text>
             </View>
 
             <View style={styles.userModalIntroSection}>
-              <Text style={styles.userModalLabel}>자기소개</Text>
-              <Text style={styles.userModalIntroText}>{selectedUser?.introduction}</Text>
+              <Text style={styles.userModalLabel}>입실 시간</Text>
+              <Text style={styles.userModalIntroText}>
+                {selectedUser?.startTime ? new Date(selectedUser.startTime).toLocaleString('ko-KR') : '-'}
+              </Text>
+            </View>
+
+            <View style={styles.userModalIntroSection}>
+              <Text style={styles.userModalLabel}>대여 ID</Text>
+              <Text style={styles.userModalIntroText}>{selectedUser?.rentalId}</Text>
             </View>
           </TouchableOpacity>
         </TouchableOpacity>

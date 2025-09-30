@@ -138,6 +138,24 @@ interface LetterCount {
   read: number;
 }
 
+interface CurrentRental {
+  rentalId: number;
+  userId: number;
+  userName: string;
+  imageUrl: string;
+  startTime: string;
+}
+
+interface RentalHistory {
+  rentalId: number;
+  userId: number;
+  userName: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  durationMinutes: number;
+}
+
 
 class ApiService {
   private static refreshTokenCallback?: () => Promise<string | null>;
@@ -449,17 +467,6 @@ class ApiService {
     });
   }
 
-  // 관리자의 특정 장소 현재 사용자 목록 조회
-  static async getPlaceCurrentUsers(placeId: number, accessToken: string): Promise<ApiResponse<any[]>> {
-    console.log('👥 장소 현재 사용자 목록 조회 API 호출:', placeId);
-    return this.request<any[]>(`/admin/places/${placeId}/users`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-  }
-
   // 쉼터 정보 수정
   static async updatePlace(
     placeData: {
@@ -517,6 +524,28 @@ class ApiService {
       },
     });
   }
+
+  // 현재 이용자 조회
+  static async getCurrentRentals(accessToken: string): Promise<ApiResponse<CurrentRental[]>> {
+    console.log('👥 현재 이용자 조회 API 호출');
+    return this.request<CurrentRental[]>('/rental', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 이용 내역 전체 조회
+  static async getAllRentalHistory(accessToken: string): Promise<ApiResponse<RentalHistory[]>> {
+    console.log('📋 이용 내역 전체 조회 API 호출');
+    return this.request<RentalHistory[]>('/rental/all', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
 }
 
 export default ApiService;
@@ -534,5 +563,7 @@ export type {
   SendLetterResponse,
   AdminPlace,
   ReceivedLetter,
-  LetterCount
+  LetterCount,
+  CurrentRental,
+  RentalHistory
 };
