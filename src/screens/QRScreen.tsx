@@ -22,6 +22,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
 import ApiService from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 
 type ScreenState = 'scanning' | 'timer' | 'finished';
@@ -39,6 +40,8 @@ Notifications.setNotificationHandler({
 const QRScreen: React.FC = () => {
   const navigation = useNavigation();
   const { accessToken } = useAuth();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [screenState, setScreenState] = useState<ScreenState>('scanning');
@@ -114,62 +117,88 @@ const QRScreen: React.FC = () => {
       console.log('🔍 QR 코드 스캔 데이터 타입:', typeof data);
       console.log('🔍 QR 코드 스캔 데이터 길이:', data.length);
 
-      // QR 코드에서 placeCode 추출
-      let placeCode = data.trim();
+      // QR 코드에서 URL 추출
+      let qrUrl = data.trim();
 
       // QR 코드가 JSON 형태인 경우 처리
       try {
         const qrData = JSON.parse(data);
-        if (qrData.placeCode) {
-          placeCode = qrData.placeCode;
-          console.log('📱 JSON에서 placeCode 추출:', placeCode);
+        if (qrData.url || qrData.placeCode) {
+          qrUrl = qrData.url || qrData.placeCode;
+          console.log('📱 JSON에서 URL 추출:', qrUrl);
         }
       } catch {
         // JSON이 아닌 경우 무시
       }
 
-      // QR 코드가 URL 형태인 경우 처리 (예: https://example.com/place/PL-A12F9C3D)
-      if (placeCode.includes('://')) {
-        const urlParts = placeCode.split('/');
-        const lastPart = urlParts[urlParts.length - 1];
-        if (lastPart.startsWith('PL-')) {
-          placeCode = lastPart;
-          console.log('🔗 URL에서 placeCode 추출:', placeCode);
-        }
+      // QR 코드가 enter-code URL인지 확인
+      if (!qrUrl.includes('/api/enter-code')) {
+        Alert.alert('잘못된 QR 코드', 'shympyo QR 코드가 아닙니다.');
+        setScanned(false);
+        return;
       }
 
-      console.log('📡 쉼터 입장 API 호출 중...', {
+      console.log('📡 1단계: QR 코드 확인 API 호출 중...', qrUrl);
+
+      // 1단계: /enter-code API로 place code 받기
+      const enterCodeResponse = await ApiService.verifyQRCode(qrUrl, accessToken);
+
+      if (!enterCodeResponse.success || !enterCodeResponse.data) {
+        console.log('❌ QR 코드 확인 실패:', enterCodeResponse);
+
+        let errorMessage = '';
+        if (enterCodeResponse.code === 500) {
+          errorMessage = '서버에 일시적인 문제가 발생했습니다.\n잠시 후 다시 시도해주세요.';
+        } else if (enterCodeResponse.code === 404) {
+          errorMessage = '존재하지 않는 QR 코드입니다.\n올바른 쉼터 QR 코드를 스캔해주세요.';
+        } else {
+          errorMessage = enterCodeResponse.message || 'QR 코드가 유효하지 않습니다.';
+        }
+
+        Alert.alert(
+          'QR 코드 오류',
+          `${errorMessage}\n\n오류 코드: ${enterCodeResponse.code}`
+        );
+        setScanned(false);
+        return;
+      }
+
+      const placeCode = enterCodeResponse.data.placeCode;
+      console.log('✅ 1단계 성공 - 장소 코드 받음:', placeCode);
+
+      console.log('📡 2단계: 쉼터 입장 API 호출 중...', {
         placeCode,
         placeCodeLength: placeCode.length,
         accessToken: accessToken ? '토큰 있음' : '토큰 없음'
       });
 
-      const response = await ApiService.enterPlace(accessToken, placeCode);
+      // 2단계: rental/enter API로 실제 입장 처리
+      const enterResponse = await ApiService.enterPlace(accessToken, placeCode);
 
-      if (response.success) {
-        console.log('✅ 쉼터 입장 성공:', response.data);
+      if (enterResponse.success && enterResponse.data) {
+        console.log('✅ 2단계 성공 - 쉼터 입장 완료:', enterResponse.data);
 
         // 성공 시 응답 데이터 저장
-        setPlaceName(response.data.placeName);
-        setRentalId(response.data.rentalId);
+        setPlaceName(enterResponse.data.placeName);
+        setRentalId(enterResponse.data.rentalId);
 
         // 타이머 화면으로 이동
         setScreenState('timer');
         setTimeLeft(10); // 10초로 초기화 (실제로는 API에서 받은 시간 사용 가능)
         setTotalTime(10);
 
-        console.log('🏢 입장 완료:', response.data.placeName);
+        console.log('🏢 입장 완료:', enterResponse.data.placeName);
       } else {
         console.log('❌ 쉼터 입장 실패:', {
-          success: response.success,
-          code: response.code,
-          message: response.message,
-          data: response.data
+          success: enterResponse.success,
+          code: enterResponse.code,
+          message: enterResponse.message,
+          data: enterResponse.data
         });
 
         Alert.alert(
           '입장 실패',
-          `오류 코드: ${response.code}\n${response.message || '쉼터 입장에 실패했습니다.'}`
+          `오류 코드: ${enterResponse.code}\n${enterResponse.message || '쉼터 입장에 실패했습니다.'}`
         );
         setScanned(false); // 다시 스캔할 수 있도록
       }
@@ -286,14 +315,6 @@ const QRScreen: React.FC = () => {
                 사장님의 자발적인 나눔으로 마련된 쉼터입니다.{'\n'}
                 서로를 배려하며 사용해 주세요.
               </Text>
-
-              {/* 테스트용 버튼 */}
-              <TouchableOpacity
-                style={styles.testButton}
-                onPress={() => handleBarCodeScanned({ data: 'PL-A12F9C3D' })}
-              >
-                <Text style={styles.testButtonText}>테스트 QR</Text>
-              </TouchableOpacity>
             </View>
             {scanned && (
               <TouchableOpacity
@@ -392,8 +413,8 @@ const QRScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={statusBarStyle as any} />
       <View style={styles.content}>{renderContent()}</View>
     </View>
   );
@@ -609,20 +630,6 @@ const styles = StyleSheet.create({
   permissionButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
-  },
-  testButton: {
-    position: 'absolute',
-    bottom: -100,
-    backgroundColor: Colors.success,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignSelf: 'center',
-  },
-  testButtonText: {
-    color: 'white',
-    fontSize: 14,
     fontWeight: 'bold',
   },
 });
