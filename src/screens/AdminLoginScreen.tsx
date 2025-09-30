@@ -12,6 +12,7 @@ import {
   Pressable,
   Keyboard,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,22 +21,91 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
+import { useAuth } from '../contexts/AuthContext';
+import ApiService from '../services/api';
 
 type AdminLoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminLogin'>;
 
 const AdminLoginScreen: React.FC = () => {
   const navigation = useNavigation<AdminLoginScreenNavigationProp>();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
 
-  const handleLogin = () => {
-    // 테스트용으로 바로 로그인
-    navigation.replace('AdminMain');
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('입력 오류', '이메일과 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      console.log('🔐 관리자 로그인 시도:', email);
+
+      const loginData = {
+        email: email.trim(),
+        password: password,
+      };
+
+      const response = await ApiService.login(loginData);
+
+      if (response.success) {
+        console.log('✅ 관리자 로그인 성공');
+
+        // 사용자 역할 확인
+        const userResponse = await ApiService.getMe(response.data.accessToken);
+        if (userResponse.success && userResponse.data) {
+          const userRole = userResponse.data.role;
+          console.log('👤 사용자 역할:', userRole);
+
+          // 일반 사용자는 관리자 로그인으로 접근 불가
+          if (userRole === 'USER') {
+            Alert.alert(
+              '일반 사용자 계정',
+              '일반 사용자는 일반 로그인을 이용해주세요.',
+              [
+                { text: '확인', style: 'default' }
+              ]
+            );
+            return;
+          }
+
+          // 관리자만 로그인 허용
+          if (userRole === 'PROVIDER') {
+            // AuthContext login 실행 (토큰 저장 및 사용자 정보 설정)
+            await login(response.data.accessToken, response.data.refreshToken);
+
+            console.log('🏢 관리자 역할 확인됨 - AdminMain으로 이동');
+            // 잠시 대기 후 네비게이션
+            setTimeout(() => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'AdminMain' }],
+              });
+            }, 300);
+          } else {
+            Alert.alert('접근 권한 없음', '관리자 권한이 필요합니다.');
+          }
+        } else {
+          console.error('❌ 사용자 정보 조회 실패');
+          Alert.alert('로그인 오류', '사용자 정보를 가져올 수 없습니다.');
+        }
+      } else {
+        console.log('❌ 관리자 로그인 실패');
+        Alert.alert('로그인 실패', response.message || '이메일 또는 비밀번호가 올바르지 않습니다.');
+      }
+    } catch (error: any) {
+      console.error('❌ 관리자 로그인 오류:', error);
+      Alert.alert('로그인 오류', '로그인 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = () => {
@@ -106,11 +176,16 @@ const AdminLoginScreen: React.FC = () => {
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={styles.loginButton} 
+            <TouchableOpacity
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
               onPress={handleLogin}
+              disabled={isLoading}
             >
-              <Text style={styles.loginButtonText}>로그인</Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.loginButtonText}>로그인</Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -207,6 +282,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
   signUpButton: {
     backgroundColor: 'transparent',

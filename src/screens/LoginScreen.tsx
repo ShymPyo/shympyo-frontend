@@ -18,11 +18,13 @@ import { FontAwesome, Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
   const handleSocialLogin = (provider: string) => {
     try {

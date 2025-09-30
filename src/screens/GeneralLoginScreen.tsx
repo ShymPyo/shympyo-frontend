@@ -23,12 +23,15 @@ import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
 import ApiService from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 type GeneralLoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'GeneralLogin'>;
 
 const GeneralLoginScreen: React.FC = () => {
   const navigation = useNavigation<GeneralLoginScreenNavigationProp>();
   const { login } = useAuth();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -62,12 +65,45 @@ const GeneralLoginScreen: React.FC = () => {
 
       if (response.success) {
         console.log('✅ 로그인 성공');
-        await login(response.data.accessToken, response.data.refreshToken);
-        // 네비게이션 스택을 리셋해서 뒤로가기 방지
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Main' }],
-        });
+
+        // 사용자 역할 먼저 확인
+        const userResponse = await ApiService.getMe(response.data.accessToken);
+        if (userResponse.success && userResponse.data) {
+          const userRole = userResponse.data.role;
+          console.log('👤 사용자 역할:', userRole);
+
+          // 관리자는 일반 로그인으로 접근 불가
+          if (userRole === 'PROVIDER') {
+            Alert.alert(
+              '관리자 계정',
+              '관리자 계정은 관리자 로그인을 이용해주세요.',
+              [
+                { text: '확인', style: 'default' }
+              ]
+            );
+            return;
+          }
+
+          // 일반 사용자만 로그인 허용
+          if (userRole === 'USER') {
+            // AuthContext login 실행 (토큰 저장 및 사용자 정보 설정)
+            await login(response.data.accessToken, response.data.refreshToken);
+
+            // 잠시 대기 후 네비게이션
+            setTimeout(() => {
+              console.log('👤 일반 사용자로 로그인 - Main으로 이동');
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+              });
+            }, 300);
+          } else {
+            Alert.alert('로그인 오류', '지원하지 않는 계정 유형입니다.');
+          }
+        } else {
+          console.error('❌ 사용자 정보 조회 실패');
+          Alert.alert('로그인 오류', '사용자 정보를 가져올 수 없습니다.');
+        }
       } else {
         console.log('❌ 로그인 실패');
         Alert.alert('로그인 실패', response.message || '이메일 또는 비밀번호가 올바르지 않습니다.');
@@ -86,8 +122,8 @@ const GeneralLoginScreen: React.FC = () => {
 
   return (
     <Pressable onPress={dismissKeyboard} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle as any} />
         
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

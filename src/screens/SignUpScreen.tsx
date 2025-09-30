@@ -25,12 +25,14 @@ import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
 import ApiService from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 type SignUpScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignUp'>;
 
 const SignUpScreen: React.FC = () => {
   const navigation = useNavigation<SignUpScreenNavigationProp>();
   const { login } = useAuth();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

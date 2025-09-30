@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 type SplashScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Splash'>;
 
@@ -20,14 +21,20 @@ const { width, height } = Dimensions.get('window');
 
 const SplashScreen: React.FC = () => {
   const navigation = useNavigation<SplashScreenNavigationProp>();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isLoading) {
         // 인증 상태에 따라 적절한 화면으로 이동
         if (isAuthenticated) {
-          navigation.replace('Main');
+          // 제공자(PROVIDER)인 경우 관리자 페이지로 이동
+          if (user?.role === 'PROVIDER') {
+            navigation.replace('AdminMain');
+          } else {
+            navigation.replace('Main');
+          }
         } else {
           navigation.replace('Login');
         }
@@ -35,7 +42,7 @@ const SplashScreen: React.FC = () => {
     }, 2000); // 스플래시 시간 단축
 
     return () => clearTimeout(timer);
-  }, [navigation, isAuthenticated, isLoading]);
+  }, [navigation, isAuthenticated, isLoading, user]);
 
   return (
     <View style={styles.container}>
