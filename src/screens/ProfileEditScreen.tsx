@@ -18,10 +18,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
+import { Colors } from '../constants/colors';
 import ApiService, { User } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 type ProfileEditScreenRouteProp = RouteProp<RootStackParamList, 'ProfileEdit'>;
 type ProfileEditScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -43,6 +44,7 @@ const ProfileEditScreen: React.FC = () => {
   const route = useRoute<ProfileEditScreenRouteProp>();
   const { user: initialUser } = route.params;
   const { accessToken, updateUser } = useAuth();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
   const [name, setName] = useState(initialUser.name);
   const [phone, setPhone] = useState(initialUser.phone);
