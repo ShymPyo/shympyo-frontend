@@ -98,6 +98,8 @@ interface VisitedPlace {
   startTime: string;
   endTime: string;
   letterSent?: boolean;
+  letterRead?: boolean;
+  letterId?: number;
 }
 
 interface VisitedPlacesResponse {
@@ -143,6 +145,7 @@ interface ReceivedLetter {
     name: string;
     email: string;
     phone: string;
+    bio?: string;
   };
   content: string;
   readAt?: string;
@@ -229,11 +232,18 @@ class ApiService {
       }
 
       if (!response.ok) {
-        console.error(`❌ API 실패: ${response.status} ${response.statusText} - ${url}`);
-
         try {
           const errorData = await response.json();
-          console.error('응답 내용:', errorData);
+
+          // 특정 API는 에러 로그를 완전히 숨김
+          const isSilentError = url.includes('/letters/sent') ||
+                                 url.includes('/map/user/') ||
+                                 url.includes('/map/public/');
+
+          if (!isSilentError) {
+            console.error(`❌ API 실패: ${response.status} ${response.statusText} - ${url}`);
+            console.error('응답 내용:', errorData);
+          }
 
           // 백엔드에서 보낸 에러 메시지를 그대로 반환
           return {
@@ -245,7 +255,14 @@ class ApiService {
         } catch (parseError) {
           // JSON 파싱에 실패한 경우 기본 에러 응답
           const errorText = await response.text();
-          console.error('파싱 실패, 원본 응답:', errorText);
+
+          const isSilentError = url.includes('/letters/sent') ||
+                                 url.includes('/map/user/') ||
+                                 url.includes('/map/public/');
+
+          if (!isSilentError) {
+            console.log(`⚠️ 파싱 실패: ${url}`, errorText.substring(0, 100));
+          }
 
           return {
             success: false,
@@ -365,10 +382,33 @@ class ApiService {
       headers.Authorization = `Bearer ${accessToken}`;
     }
 
-    return this.request<PlaceDetail>(`/map/${id}`, {
+    // 먼저 user(민간) API 시도 (에러 무시)
+    const userResponse = await this.request<PlaceDetail>(`/map/user/${id}`, {
       method: 'GET',
       headers,
     });
+
+    if (userResponse.success) {
+      return userResponse;
+    }
+
+    // user가 실패하면 public(공공) API 시도 (에러 무시)
+    const publicResponse = await this.request<PlaceDetail>(`/map/public/${id}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (publicResponse.success) {
+      return publicResponse;
+    }
+
+    // 둘 다 실패 시 (에러 로그는 이미 request에서 처리됨)
+    return {
+      success: false,
+      code: 404,
+      message: '장소를 찾을 수 없습니다.',
+      data: null
+    };
   }
 
   static async testConnection(): Promise<boolean> {
@@ -464,6 +504,18 @@ class ApiService {
     });
   }
 
+  // 보낸 편지 목록 조회 (현재 백엔드에 없음 - 받은 편지함으로 대체)
+  static async getSentLetters(accessToken: string): Promise<ApiResponse<SendLetterResponse[]>> {
+    console.log('📮 보낸 편지 목록 조회 API 호출');
+    // TODO: 백엔드에 /letters/sent API 추가 필요
+    return this.request<SendLetterResponse[]>('/letters/sent', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
   // 관리자의 장소 목록 조회
   static async getAdminPlaces(accessToken: string): Promise<ApiResponse<AdminPlace>> {
     console.log('🏢 관리자 장소 목록 조회 API 호출');
@@ -522,11 +574,11 @@ class ApiService {
     });
   }
 
-  // 편지 상세 조회
-  static async getLetterDetail(letterId: number, accessToken: string): Promise<ApiResponse<string>> {
-    console.log('📖 편지 상세 조회 API 호출:', letterId);
-    return this.request<string>(`/letters/${letterId}`, {
-      method: 'GET',
+  // 편지 읽음 처리
+  static async markLetterAsRead(letterId: number, accessToken: string): Promise<ApiResponse<string>> {
+    console.log('✅ 편지 읽음 처리 API 호출:', letterId);
+    return this.request<string>(`/letters/${letterId}/read`, {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
