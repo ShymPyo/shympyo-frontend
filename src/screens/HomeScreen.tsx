@@ -687,15 +687,25 @@ const HomeScreen: React.FC = () => {
       {/* 쉼터 정보 텍스트 영역 */}
       <View style={styles.shelterInfo}>
         <Text style={styles.shelterCategory}>{item.category}</Text>
-        <Text style={styles.shelterName}>{item.name}</Text>
+        <Text style={styles.shelterName}>
+          {(() => {
+            const name = item.name;
+            const description = item.description;
+            const category = item.category;
+
+            // 민간 개방 시설 && name이 "선"으로 끝남 && description이 "역"으로 안 끝남
+            if (category === '민간 개방 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
+              return description + '역';
+            }
+            return description || name;
+          })()}
+        </Text>
         {item.address && (
           <Text style={styles.shelterAddress}>{item.address}</Text>
         )}
-        {item.description && (
-          <Text style={styles.shelterDescription} numberOfLines={1}>
-            {item.description}
-          </Text>
-        )}
+        <Text style={styles.shelterDescription} numberOfLines={1}>
+          {item.name}
+        </Text>
       </View>
       {/* 거리 정보 - 오른쪽에 큰 글씨로 표시 */}
       <Text style={styles.shelterDistance}>{item.distance}</Text>

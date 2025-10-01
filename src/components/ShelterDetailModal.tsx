@@ -127,7 +127,19 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
               
               {/* 오른쪽: 시설명과 기본 정보 */}
               <View style={styles.infoContainer}>
-                <Text style={styles.shelterName} numberOfLines={2}>{shelter.name}</Text>
+                <Text style={styles.shelterName} numberOfLines={2}>
+                  {(() => {
+                    const name = shelter.name;
+                    const description = displayInfo.description;
+                    const category = shelter.category;
+
+                    // 민간 개방 시설 && name이 "선"으로 끝남 && description이 "역"으로 안 끝남
+                    if (category === '민간 개방 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
+                      return description + '역';
+                    }
+                    return displayInfo.description;
+                  })()}
+                </Text>
                 <View style={styles.infoRow}>
                   <Ionicons name="time-outline" size={16} color="#666" />
                   <Text style={styles.infoText} numberOfLines={2}>{displayInfo.hours}</Text>
@@ -139,13 +151,13 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
               </View>
             </View>
 
-            {/* 시설 소개 */}
+            {/* 쉼터 정보 */}
             <View style={styles.descriptionSection}>
               <View style={styles.descriptionHeader}>
-                <Text style={styles.descriptionTitle} numberOfLines={1}>시설 소개</Text>
+                <Text style={styles.descriptionTitle} numberOfLines={1}>쉼터 정보</Text>
               </View>
               <Text style={styles.descriptionText} numberOfLines={5}>
-                {displayInfo.description}
+                {shelter.name}
               </Text>
             </View>
           </View>
