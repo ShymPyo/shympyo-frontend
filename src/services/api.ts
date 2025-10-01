@@ -75,23 +75,34 @@ interface QRCodeResponse {
 
 interface RentalEnterResponse {
   rentalId: number;
+  placeId: number;
   placeName: string;
   startTime: string;
+  maxTime: number;
+  status: string;
 }
 
 interface RentalExitResponse {
   rentalId: number;
+  placeId: number;
   placeName: string;
   startTime: string;
   endTime: string;
+  status: string;
 }
 
 interface VisitedPlace {
-  id: number;
-  placeId: number;
-  placeName: string;
-  visitDate: string;
   rentalId: number;
+  placeId: string;
+  placeName: string;
+  startTime: string;
+  endTime: string;
+  letterSent?: boolean;
+}
+
+interface VisitedPlacesResponse {
+  content: VisitedPlace[];
+  hasNext: boolean;
 }
 
 interface SendLetterRequest {
@@ -151,6 +162,10 @@ interface CurrentRental {
   userName: string;
   imageUrl: string;
   startTime: string;
+  userEmail?: string;
+  userPhone?: string;
+  userNickname?: string;
+  userBio?: string;
 }
 
 interface RentalHistory {
@@ -398,8 +413,9 @@ class ApiService {
   }
 
   // 퇴장 처리
-  static async exitPlace(accessToken: string): Promise<ApiResponse<RentalExitResponse>> {
-    console.log('🚪 exitPlace API 호출');
+  static async exitPlace(accessToken: string, rentalId: number): Promise<ApiResponse<RentalExitResponse>> {
+    console.log('🚪 exitPlace API 호출 (rentalId:', rentalId, ')');
+
     return this.request<RentalExitResponse>('/rental/exit', {
       method: 'POST',
       headers: {
@@ -408,10 +424,20 @@ class ApiService {
     });
   }
 
-  static async getVisitedPlaces(accessToken: string): Promise<ApiResponse<VisitedPlace[]>> {
+  static async getVisitedPlaces(
+    accessToken: string,
+    size: number = 10,
+    cursorEndTime?: string,
+    cursorId?: number
+  ): Promise<ApiResponse<VisitedPlacesResponse>> {
     console.log('📋 방문한 장소 목록 API 호출');
 
-    return this.request<VisitedPlace[]>('/rental/history', {
+    let endpoint = `/rental/user/history?status=ended&size=${size}`;
+    if (cursorEndTime && cursorId) {
+      endpoint += `&cursorEndTime=${encodeURIComponent(cursorEndTime)}&cursorId=${cursorId}`;
+    }
+
+    return this.request<VisitedPlacesResponse>(endpoint, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -528,6 +554,17 @@ class ApiService {
       },
     });
   }
+
+  // 관리자가 특정 대여 취소 (퇴장 처리)
+  static async adminCancelRental(rentalId: number, accessToken: string): Promise<ApiResponse<RentalExitResponse>> {
+    console.log('🚪 관리자 대여 취소 API 호출:', rentalId);
+    return this.request<RentalExitResponse>(`/rental/${rentalId}/cancel`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
 }
 
 export default ApiService;
@@ -541,6 +578,7 @@ export type {
   NearbyPlace,
   PlaceDetail,
   VisitedPlace,
+  VisitedPlacesResponse,
   SendLetterRequest,
   SendLetterResponse,
   AdminPlace,

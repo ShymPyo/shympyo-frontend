@@ -11,6 +11,9 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  Modal,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,7 +53,11 @@ const QRScreen: React.FC = () => {
   const [cameraEnabled, setCameraEnabled] = useState(false); // 카메라 활성화 상태
   const [placeName, setPlaceName] = useState<string>(''); // 입장한 장소명
   const [rentalId, setRentalId] = useState<number | null>(null); // 렌탈 ID
+  const [placeId, setPlaceId] = useState<number | null>(null); // 장소 ID
   const [isProcessing, setIsProcessing] = useState(false); // 스캔 처리 중 상태
+  const [isLetterModalVisible, setLetterModalVisible] = useState(false); // 편지 모달
+  const [letterText, setLetterText] = useState(''); // 편지 내용
+  const [isSendingLetter, setIsSendingLetter] = useState(false); // 편지 전송 중
 
   // 원형 프로그레스 바 애니메이션을 위한 값들
   const progress = useSharedValue(0);
@@ -83,13 +90,13 @@ const QRScreen: React.FC = () => {
     const autoExitTimer = setTimeout(async () => {
       console.log('🚪 1분 경과, 자동 퇴장 처리 시작');
 
-      if (!accessToken) {
-        console.log('❌ accessToken 없음');
+      if (!accessToken || !rentalId) {
+        console.log('❌ accessToken 또는 rentalId 없음');
         return;
       }
 
       try {
-        const exitResponse = await ApiService.exitPlace(accessToken);
+        const exitResponse = await ApiService.exitPlace(accessToken, rentalId);
 
         if (exitResponse.success && exitResponse.data) {
           console.log('✅ 자동 퇴장 완료:', exitResponse.data);
@@ -100,12 +107,12 @@ const QRScreen: React.FC = () => {
               {
                 text: '확인',
                 onPress: () => {
-                  // 상태 초기화
                   setScreenState('scanning');
                   setScanned(false);
-                  setTimeLeft(10);
+                  setTimeLeft(totalTime);
                   setPlaceName('');
                   setRentalId(null);
+                  setPlaceId(null);
                   navigation.navigate('Home' as never);
                 },
               },
@@ -117,10 +124,10 @@ const QRScreen: React.FC = () => {
       } catch (error) {
         console.error('💥 자동 퇴장 오류:', error);
       }
-    }, 60000); // 60초 = 1분
+    }, 60000); // 타이머 완료 후 60초
 
     return () => clearTimeout(autoExitTimer);
-  }, [screenState, timeLeft, accessToken, navigation]);
+  }, [screenState, timeLeft, accessToken, rentalId, totalTime, placeId, navigation]);
 
   // 알림 권한 요청 및 발송 함수
   useEffect(() => {
@@ -150,8 +157,15 @@ const QRScreen: React.FC = () => {
       return;
     }
 
+    if (!rentalId) {
+      Alert.alert('오류', '현재 이용 중인 쉼터 정보를 찾을 수 없습니다.');
+      return;
+    }
+
     try {
-      const exitResponse = await ApiService.exitPlace(accessToken);
+      console.log('🚪 퇴장 처리 시작 (rentalId:', rentalId, ')');
+
+      const exitResponse = await ApiService.exitPlace(accessToken, rentalId);
 
       if (exitResponse.success && exitResponse.data) {
         console.log('✅ 퇴장 완료:', exitResponse.data);
@@ -161,7 +175,15 @@ const QRScreen: React.FC = () => {
           [
             {
               text: '확인',
-              onPress: () => navigation.navigate('Home' as never),
+              onPress: () => {
+                setScreenState('scanning');
+                setScanned(false);
+                setTimeLeft(totalTime);
+                setPlaceName('');
+                setRentalId(null);
+                setPlaceId(null);
+                navigation.navigate('Home' as never);
+              },
             },
           ]
         );
@@ -244,35 +266,8 @@ const QRScreen: React.FC = () => {
         accessToken: accessToken ? '토큰 있음' : '토큰 없음'
       });
 
-      // 현재 이용 중인지 확인
-      try {
-        const currentRentals = await ApiService.getCurrentRentals(accessToken);
-        if (currentRentals.success && currentRentals.data && currentRentals.data.length > 0) {
-          console.log('⚠️ 이미 이용 중인 쉼터가 있습니다:', currentRentals.data);
-
-          Alert.alert(
-            '이미 이용 중',
-            '현재 다른 쉼터를 이용 중입니다.\n먼저 퇴장 처리 후 다시 시도해주세요.',
-            [
-              {
-                text: '퇴장하기',
-                onPress: async () => {
-                  await handleExit();
-                  setScanned(false);
-                },
-              },
-              {
-                text: '취소',
-                onPress: () => setScanned(false),
-                style: 'cancel',
-              },
-            ]
-          );
-          return;
-        }
-      } catch (error) {
-        console.log('현재 이용 중인 쉼터 확인 실패:', error);
-      }
+      // 현재 이용 중인지 확인 - 일반 유저는 이 체크 스킵 (제공자가 아닙니다 에러 방지)
+      // 입장 시도하면 백엔드에서 중복 체크할 것
 
       // rental/enter API로 입장 처리
       const enterResponse = await ApiService.enterPlace(accessToken, placeCode);
@@ -283,13 +278,15 @@ const QRScreen: React.FC = () => {
         // 성공 시 응답 데이터 저장
         setPlaceName(enterResponse.data.placeName);
         setRentalId(enterResponse.data.rentalId);
+        setPlaceId(enterResponse.data.placeId);
 
-        // 타이머 화면으로 이동
+        // 타이머 화면으로 이동 - maxTime 사용 (초 단위)
+        const maxTimeSeconds = enterResponse.data.maxTime * 60; // 분을 초로 변환
         setScreenState('timer');
-        setTimeLeft(10); // 10초로 초기화 (실제로는 API에서 받은 시간 사용 가능)
-        setTotalTime(10);
+        setTimeLeft(maxTimeSeconds);
+        setTotalTime(maxTimeSeconds);
 
-        console.log('🏢 입장 완료:', enterResponse.data.placeName);
+        console.log('🏢 입장 완료:', enterResponse.data.placeName, 'placeId:', enterResponse.data.placeId, 'maxTime:', enterResponse.data.maxTime, '분');
       } else {
         console.log('❌ 쉼터 입장 실패:', {
           success: enterResponse.success,
@@ -433,7 +430,9 @@ const QRScreen: React.FC = () => {
         return (
           <View style={styles.timerScreenContainer}>
             <View style={styles.timerContainer}>
-              <Text style={styles.timerTopText}>따뜻한 배려로 열린 쉼표,{'\n'}최대 10초 이용 가능합니다.</Text>
+              <Text style={styles.timerTopText}>
+                따뜻한 배려로 열린 쉼표,{'\n'}최대 {Math.floor(totalTime / 60)}분 이용 가능합니다.
+              </Text>
               
               {/* 원형 프로그레스 바 */}
               <View style={styles.circularProgressContainer}>
@@ -478,17 +477,17 @@ const QRScreen: React.FC = () => {
               <Text style={styles.timerDescription}>깨끗하고 조용한 공간에서 편히 쉬어가세요</Text>
             </View>
             
-            {/* 타이머 완료 후 버튼들 - 하단 고정 */}
-            {timeLeft === 0 && (
-              <View style={styles.fixedBottomButtons}>
-                <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
-                  <Text style={styles.buttonText}>퇴장하기</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.letterButton} onPress={() => navigation.navigate('Letter' as never)}>
+            {/* 하단 고정 버튼들 */}
+            <View style={styles.fixedBottomButtons}>
+              <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
+                <Text style={styles.buttonText}>퇴장하기</Text>
+              </TouchableOpacity>
+              {timeLeft === 0 && (
+                <TouchableOpacity style={styles.letterButton} onPress={() => setLetterModalVisible(true)}>
                   <Text style={styles.buttonText}>감사 편지 적기</Text>
                 </TouchableOpacity>
-              </View>
-            )}
+              )}
+            </View>
           </View>
         );
       case 'finished':
@@ -510,10 +509,99 @@ const QRScreen: React.FC = () => {
     }
   };
 
+  const handleSendLetter = async () => {
+    if (!accessToken) {
+      Alert.alert('오류', '로그인이 필요합니다.');
+      return;
+    }
+
+    if (!letterText.trim()) {
+      Alert.alert('알림', '편지 내용을 입력해주세요.');
+      return;
+    }
+
+    if (!placeId) {
+      Alert.alert('오류', '장소 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    setIsSendingLetter(true);
+
+    try {
+      console.log('✉️ 편지 보내기:', { placeId, content: letterText.trim() });
+
+      const response = await ApiService.sendLetter(accessToken, placeId, letterText.trim());
+
+      if (response.success) {
+        console.log('✅ 편지 전송 성공:', response.data);
+        Alert.alert('전송 완료', `${placeName} 사장님에게 감사 편지를 전송했습니다.`);
+        setLetterText('');
+        setLetterModalVisible(false);
+      } else {
+        console.log('❌ 편지 전송 실패:', response.message);
+        Alert.alert('전송 실패', response.message || '편지 전송에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 편지 보내기 오류:', error);
+      Alert.alert('오류', '편지 전송 중 오류가 발생했습니다.');
+    } finally {
+      setIsSendingLetter(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={statusBarStyle as any} />
       <View style={styles.content}>{renderContent()}</View>
+
+      {/* 편지 작성 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isLetterModalVisible}
+        onRequestClose={() => setLetterModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>감사 편지 작성</Text>
+            <Text style={styles.modalRecipient}>To. {placeName} 사장님</Text>
+            <TextInput
+              style={styles.textInput}
+              value={letterText}
+              onChangeText={setLetterText}
+              placeholder="감사한 마음을 담아 편지를 작성해보세요..."
+              placeholderTextColor={Colors.text.light}
+              multiline
+            />
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setLetterModalVisible(false);
+                  setLetterText('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.sendButton,
+                  (isSendingLetter || !letterText.trim()) && styles.disabledButton,
+                ]}
+                onPress={handleSendLetter}
+                disabled={isSendingLetter || !letterText.trim()}
+              >
+                {isSendingLetter ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.sendButtonText}>전송</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -735,6 +823,74 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    alignItems: 'stretch',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+    color: Colors.text.primary,
+  },
+  modalRecipient: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  textInput: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    height: 150,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+    color: Colors.text.primary,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    borderRadius: 8,
+    padding: 15,
+    flex: 1,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: Colors.surface,
+    marginRight: 10,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
+  sendButton: {
+    backgroundColor: Colors.primary,
+  },
+  sendButtonText: {
+    color: Colors.text.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
 
