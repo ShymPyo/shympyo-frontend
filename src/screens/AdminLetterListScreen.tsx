@@ -32,7 +32,6 @@ const AdminLetterListScreen: React.FC = () => {
   const [letters, setLetters] = useState<ReceivedLetter[]>([]);
   const [letterCount, setLetterCount] = useState<LetterCount>({ total: 0, unRead: 0, read: 0 });
   const [isLoading, setIsLoading] = useState(true);
-  const [letterDetail, setLetterDetail] = useState<string>('');
 
   useEffect(() => {
     loadLetters();
@@ -47,6 +46,7 @@ const AdminLetterListScreen: React.FC = () => {
       // 편지 목록 조회
       const lettersResponse = await ApiService.getReceivedLetters(accessToken);
       if (lettersResponse.success && lettersResponse.data) {
+        console.log('📬 받은 편지 목록:', JSON.stringify(lettersResponse.data, null, 2));
         setLetters(lettersResponse.data);
       }
 
@@ -72,16 +72,32 @@ const AdminLetterListScreen: React.FC = () => {
   const handleLetterPress = async (letter: ReceivedLetter) => {
     if (!accessToken) return;
 
-    try {
-      // 편지 상세 조회
-      const detailResponse = await ApiService.getLetterDetail(letter.id, accessToken);
-      if (detailResponse.success && detailResponse.data) {
-        setLetterDetail(detailResponse.data);
-        setSelectedLetter(letter);
-        setModalVisible(true);
+    // 편지 모달 열기
+    setSelectedLetter(letter);
+    setModalVisible(true);
+
+    // 읽지 않은 편지면 읽음 처리
+    if (!letter.read) {
+      try {
+        const readResponse = await ApiService.markLetterAsRead(letter.id, accessToken);
+        if (readResponse.success) {
+          console.log('✅ 편지 읽음 처리 완료:', letter.id);
+
+          // 목록에서 해당 편지를 읽음 상태로 업데이트
+          setLetters(prev => prev.map(l =>
+            l.id === letter.id ? { ...l, read: true, readAt: new Date().toISOString() } : l
+          ));
+
+          // 카운트 업데이트
+          setLetterCount(prev => ({
+            ...prev,
+            unRead: Math.max(0, prev.unRead - 1),
+            read: prev.read + 1
+          }));
+        }
+      } catch (error) {
+        console.error('편지 읽음 처리 오류:', error);
       }
-    } catch (error) {
-      console.error('편지 상세 조회 오류:', error);
     }
   };
 
@@ -224,18 +240,18 @@ const AdminLetterListScreen: React.FC = () => {
                 <Text style={styles.modalProfileText}>😊</Text>
               </View>
               <View style={styles.modalTextSection}>
-                <Text style={styles.modalLabel}>작성자 정보</Text>
-                <Text style={styles.modalText}>
-                  {selectedLetter?.writerInfo.name}{'\n'}
-                  {selectedLetter?.writerInfo.email}
-                </Text>
+                <Text style={styles.modalLabel}>작성자</Text>
+                <Text style={styles.modalName}>{selectedLetter?.writerInfo.name}</Text>
+                {selectedLetter?.writerInfo.bio && (
+                  <Text style={styles.modalBio}>{selectedLetter.writerInfo.bio}</Text>
+                )}
               </View>
             </View>
 
             <View style={styles.modalLetterSection}>
               <Text style={styles.modalLabel}>편지 내용</Text>
               <Text style={styles.modalLetterText}>
-                {letterDetail || selectedLetter?.content}
+                {selectedLetter?.content}
               </Text>
             </View>
           </TouchableOpacity>
@@ -464,6 +480,18 @@ const styles = StyleSheet.create({
   modalText: {
     fontSize: 16,
     color: Colors.text.primary,
+  },
+  modalName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: 5,
+  },
+  modalBio: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
   modalLetterSection: {
     marginTop: 20,

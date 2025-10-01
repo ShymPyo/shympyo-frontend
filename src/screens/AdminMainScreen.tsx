@@ -141,6 +141,42 @@ const AdminMainScreen: React.FC = () => {
     setUserModalVisible(true);
   };
 
+  const handleAdminExitUser = async () => {
+    if (!selectedUser || !accessToken) return;
+
+    Alert.alert(
+      '퇴장 처리',
+      `${selectedUser.userName} 님을 퇴장 처리하시겠습니까?`,
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '퇴장',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const cancelResponse = await ApiService.adminCancelRental(selectedUser.rentalId, accessToken);
+
+              if (cancelResponse.success) {
+                Alert.alert('퇴장 완료', `${selectedUser.userName} 님이 퇴장 처리되었습니다.`);
+                setUserModalVisible(false);
+                // 데이터 새로고침
+                loadAdminData();
+              } else {
+                Alert.alert('오류', cancelResponse.message || '퇴장 처리에 실패했습니다.');
+              }
+            } catch (error) {
+              console.error('💥 퇴장 처리 오류:', error);
+              Alert.alert('오류', '퇴장 처리 중 오류가 발생했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -254,6 +290,15 @@ const AdminMainScreen: React.FC = () => {
                 <Text style={styles.userTime}>
                   {new Date(user.startTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 입실
                 </Text>
+                <Text style={styles.userTimeLeft}>
+                  {(() => {
+                    const elapsed = Math.floor((Date.now() - new Date(user.startTime).getTime()) / 1000);
+                    const remaining = Math.max(0, 600 - elapsed); // 10분 = 600초
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = remaining % 60;
+                    return `${minutes}:${seconds.toString().padStart(2, '0')} 남음`;
+                  })()}
+                </Text>
               </TouchableOpacity>
             ))}
 
@@ -308,19 +353,58 @@ const AdminMainScreen: React.FC = () => {
                 style={styles.userModalProfileCircle}
               />
               <Text style={styles.userModalName}>{selectedUser?.userName}</Text>
+              {selectedUser?.userNickname && (
+                <Text style={styles.userModalNickname}>@{selectedUser.userNickname}</Text>
+              )}
             </View>
 
-            <View style={styles.userModalIntroSection}>
-              <Text style={styles.userModalLabel}>입실 시간</Text>
-              <Text style={styles.userModalIntroText}>
-                {selectedUser?.startTime ? new Date(selectedUser.startTime).toLocaleString('ko-KR') : '-'}
-              </Text>
+            <View style={styles.userModalInfoSection}>
+              <View style={styles.userModalInfoRow}>
+                <Text style={styles.userModalLabel}>입실 시간</Text>
+                <Text style={styles.userModalInfoText}>
+                  {selectedUser?.startTime ? new Date(selectedUser.startTime).toLocaleString('ko-KR') : '-'}
+                </Text>
+              </View>
+
+              <View style={styles.userModalInfoRow}>
+                <Text style={styles.userModalLabel}>남은 시간</Text>
+                <Text style={styles.userModalInfoText}>
+                  {selectedUser?.startTime ? (() => {
+                    const elapsed = Math.floor((Date.now() - new Date(selectedUser.startTime).getTime()) / 1000);
+                    const remaining = Math.max(0, 600 - elapsed);
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = remaining % 60;
+                    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                  })() : '-'}
+                </Text>
+              </View>
+
+              {selectedUser?.userEmail && (
+                <View style={styles.userModalInfoRow}>
+                  <Text style={styles.userModalLabel}>이메일</Text>
+                  <Text style={styles.userModalInfoText}>{selectedUser.userEmail}</Text>
+                </View>
+              )}
+
+              {selectedUser?.userPhone && (
+                <View style={styles.userModalInfoRow}>
+                  <Text style={styles.userModalLabel}>전화번호</Text>
+                  <Text style={styles.userModalInfoText}>{selectedUser.userPhone}</Text>
+                </View>
+              )}
             </View>
 
-            <View style={styles.userModalIntroSection}>
-              <Text style={styles.userModalLabel}>대여 ID</Text>
-              <Text style={styles.userModalIntroText}>{selectedUser?.rentalId}</Text>
-            </View>
+            {selectedUser?.userBio && (
+              <View style={styles.userModalBioSection}>
+                <Text style={styles.userModalLabel}>자기소개</Text>
+                <Text style={styles.userModalBioText}>{selectedUser.userBio}</Text>
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.exitUserButton} onPress={handleAdminExitUser}>
+              <Ionicons name="log-out-outline" size={24} color="white" />
+              <Text style={styles.exitUserButtonText}>퇴장 시키기</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -560,7 +644,12 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   userTime: {
-    fontSize: 18,
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginBottom: 2,
+  },
+  userTimeLeft: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: Colors.primary,
   },
@@ -631,21 +720,58 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text.primary,
   },
-  userModalIntroSection: {
+  userModalNickname: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginTop: 5,
+  },
+  userModalInfoSection: {
     backgroundColor: Colors.surface,
     padding: 20,
     borderRadius: 15,
+    marginBottom: 15,
+  },
+  userModalInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   userModalLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.text.light,
-    marginBottom: 10,
   },
-  userModalIntroText: {
+  userModalInfoText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    fontWeight: '500',
+  },
+  userModalBioSection: {
+    backgroundColor: Colors.surface,
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 15,
+  },
+  userModalBioText: {
     fontSize: 16,
     color: Colors.text.primary,
     lineHeight: 24,
+    marginTop: 10,
+  },
+  exitUserButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF4444',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 10,
+  },
+  exitUserButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
   },
   noDataText: {
     fontSize: 16,
