@@ -133,8 +133,8 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
                     const description = displayInfo.description;
                     const category = shelter.category;
 
-                    // 민간 개방 시설 && name이 "선"으로 끝남 && description이 "역"으로 안 끝남
-                    if (category === '민간 개방 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
+                    // 교통 시설 && name이 "선"으로 끝남 && description이 "역"으로 안 끝남
+                    if (category === '교통 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
                       return description + '역';
                     }
                     return displayInfo.description;
