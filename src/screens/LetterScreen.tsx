@@ -16,6 +16,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 // Shadow 스타일 헬퍼 함수
 const getShadowStyle = (shadowConfig: {
@@ -42,25 +43,29 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../constants/colors';
-import ApiService, { VisitedPlace } from '../services/api';
+import ApiService, { VisitedPlace, VisitedPlacesResponse } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemedStyles } from '../hooks/useThemedStyles';
 
 
 const LetterScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { accessToken } = useAuth();
   const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
   const [places, setPlaces] = useState<VisitedPlace[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasNext, setHasNext] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState<{ placeId: number; placeName: string } | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<{ placeId: number; placeName: string; rentalId: number } | null>(null);
   const [letterText, setLetterText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [sentLetters, setSentLetters] = useState<Set<number>>(new Set());
 
   // 방문한 장소 목록 가져오기
-  const fetchVisitedPlaces = async () => {
+  const fetchVisitedPlaces = async (loadMore: boolean = false) => {
     if (!accessToken) {
       console.log('❌ 로그인되지 않음');
       setIsLoading(false);
@@ -68,16 +73,40 @@ const LetterScreen: React.FC = () => {
     }
 
     try {
+      if (!loadMore) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
       console.log('📋 방문한 장소 목록 가져오기...');
 
-      const response = await ApiService.getVisitedPlaces(accessToken);
+      let cursorEndTime: string | undefined;
+      let cursorId: number | undefined;
 
-      if (response.success) {
+      if (loadMore && places.length > 0) {
+        const lastPlace = places[places.length - 1];
+        cursorEndTime = lastPlace.endTime;
+        cursorId = lastPlace.rentalId;
+      }
+
+      const response = await ApiService.getVisitedPlaces(accessToken, 10, cursorEndTime, cursorId);
+
+      if (response.success && response.data) {
         console.log('✅ 방문한 장소 목록 가져오기 성공:', response.data);
-        setPlaces(response.data);
+
+        if (loadMore) {
+          setPlaces([...places, ...response.data.content]);
+        } else {
+          setPlaces(response.data.content);
+        }
+
+        setHasNext(response.data.hasNext);
       } else {
         console.log('❌ 방문한 장소 목록 가져오기 실패:', response.message);
-        Alert.alert('오류', '방문한 장소 목록을 불러올 수 없습니다.');
+        if (!loadMore) {
+          setPlaces([]);
+        }
       }
     } catch (error: any) {
       console.error('💥 방문한 장소 목록 오류:', error);
@@ -85,17 +114,25 @@ const LetterScreen: React.FC = () => {
     } finally {
       setIsLoading(false);
       setRefreshing(false);
+      setIsLoadingMore(false);
     }
   };
 
   // 새로고침
   const onRefresh = () => {
     setRefreshing(true);
-    fetchVisitedPlaces();
+    fetchVisitedPlaces(false);
+  };
+
+  // 더 불러오기
+  const loadMore = () => {
+    if (hasNext && !isLoadingMore) {
+      fetchVisitedPlaces(true);
+    }
   };
 
   // 편지 작성하기
-  const handleWriteLetter = (place: { placeId: number; placeName: string }) => {
+  const handleWriteLetter = (place: { placeId: number; placeName: string; rentalId: number }) => {
     setSelectedPlace(place);
     setModalVisible(true);
   };
@@ -130,14 +167,14 @@ const LetterScreen: React.FC = () => {
       if (response.success) {
         console.log('✅ 편지 보내기 성공:', response.data);
 
+        // 편지 전송 성공 시 해당 rental을 전송 완료 처리
+        setSentLetters(prev => new Set(prev).add(selectedPlace.rentalId));
+
         Alert.alert(
           '전송 완료',
           `${selectedPlace.placeName} 사장님에게 감사 편지를 전송했습니다.`,
           [{ text: '확인' }]
         );
-
-        // 편지 전송 성공 시 목록 새로고침
-        fetchVisitedPlaces();
       } else {
         console.log('❌ 편지 보내기 실패:', response.message);
         Alert.alert('전송 실패', response.message || '편지 전송에 실패했습니다.');
@@ -158,6 +195,18 @@ const LetterScreen: React.FC = () => {
     fetchVisitedPlaces();
   }, [accessToken]);
 
+  // 화면 포커스 시 목록 새로고침 (퇴장 후 바로 반영)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (accessToken) {
+        console.log('📋 편지 화면 포커스 - 목록 새로고침');
+        fetchVisitedPlaces(false);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, accessToken]);
+
   // 날짜 포맷팅 함수
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -169,31 +218,49 @@ const LetterScreen: React.FC = () => {
     return `${year}-${month}-${day} ${hour}:${minute}`;
   };
 
-  const renderItem = ({ item }: { item: VisitedPlace }) => (
-    <View style={styles.card}>
-      <View style={styles.cardContent}>
-        <Text style={styles.date}>{formatDate(item.visitDate)}</Text>
-        <Text style={styles.placeName}>{item.placeName}</Text>
-        <Text style={styles.rentalInfo}>렌탈 ID: {item.rentalId}</Text>
+  const renderItem = ({ item }: { item: VisitedPlace }) => {
+    const isLetterSent = sentLetters.has(item.rentalId);
+
+    return (
+      <View style={[styles.card, isLetterSent && styles.sentCard]}>
+        <View style={styles.cardContent}>
+          <Text style={[styles.date, isLetterSent && styles.sentText]}>
+            {formatDate(item.endTime)}
+          </Text>
+          <Text style={[styles.placeName, isLetterSent && styles.sentText]}>
+            {item.placeName}
+          </Text>
+          <Text style={[styles.rentalInfo, isLetterSent && styles.sentText]}>
+            {formatDate(item.startTime)} ~ {formatDate(item.endTime)}
+          </Text>
+          {isLetterSent && (
+            <View style={styles.sentBadge}>
+              <Ionicons name="checkmark-circle" size={16} color={Colors.text.light} />
+              <Text style={styles.sentBadgeText}>편지 전송 완료</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[styles.button, isLetterSent && styles.sentButton]}
+          onPress={() => !isLetterSent && handleWriteLetter({
+            placeId: Number(item.placeId),
+            placeName: item.placeName,
+            rentalId: item.rentalId
+          })}
+          disabled={isLetterSent}
+        >
+          <Ionicons
+            name={isLetterSent ? "checkmark" : "pencil"}
+            size={20}
+            color={isLetterSent ? Colors.text.secondary : Colors.text.white}
+          />
+          <Text style={[styles.buttonText, isLetterSent && styles.sentButtonText]}>
+            {isLetterSent ? '전송 완료' : '고마운 마음 전하기'}
+          </Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => handleWriteLetter({
-          placeId: item.placeId,
-          placeName: item.placeName
-        })}
-      >
-        <Ionicons
-          name="pencil"
-          size={20}
-          color={Colors.text.white}
-        />
-        <Text style={styles.buttonText}>
-          고마운 마음 전하기
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -221,7 +288,7 @@ const LetterScreen: React.FC = () => {
         <FlatList
           data={places}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.rentalId.toString()}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -230,6 +297,15 @@ const LetterScreen: React.FC = () => {
               colors={[colors.primary]}
               tintColor={colors.primary}
             />
+          }
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={styles.loadingMore}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : null
           }
         />
       )}
@@ -324,6 +400,10 @@ const styles = StyleSheet.create({
       elevation: 2,
     }),
   },
+  sentCard: {
+    backgroundColor: '#F5F5F5',
+    opacity: 0.8,
+  },
   cardContent: {
     marginBottom: 15,
   },
@@ -341,6 +421,25 @@ const styles = StyleSheet.create({
   rentalInfo: {
     fontSize: 12,
     color: Colors.text.light,
+  },
+  sentText: {
+    color: Colors.text.light,
+  },
+  sentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  sentBadgeText: {
+    fontSize: 12,
+    color: Colors.text.light,
+    marginLeft: 4,
+    fontWeight: '600',
   },
   button: {
     flexDirection: 'row',
@@ -460,6 +559,13 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  loadingMore: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  sentButtonText: {
+    color: Colors.text.secondary,
   },
 });
 
