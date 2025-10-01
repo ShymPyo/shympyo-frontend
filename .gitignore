@@ -42,3 +42,5 @@ CORS_SOLUTION.md
 BACKEND_INTEGRATION.md
 .env
 metro.config.js
+backend_requirements.md
+.gitignore
