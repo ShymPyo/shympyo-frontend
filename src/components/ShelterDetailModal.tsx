@@ -133,10 +133,15 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
                     const description = displayInfo.description;
                     const category = shelter.category;
 
-                    // 교통 시설 && name이 "선"으로 끝남 && description이 "역"으로 안 끝남
+                    // 교통 시설: description에 "역" 붙이기
                     if (category === '교통 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
                       return description + '역';
                     }
+                    // 민간 개방 시설: name 표시
+                    if (category === '민간 개방 시설') {
+                      return name;
+                    }
+                    // 그 외: description 표시
                     return displayInfo.description;
                   })()}
                 </Text>
@@ -157,7 +162,15 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
                 <Text style={styles.descriptionTitle} numberOfLines={1}>쉼터 정보</Text>
               </View>
               <Text style={styles.descriptionText} numberOfLines={5}>
-                {shelter.name}
+                {(() => {
+                  const category = shelter.category;
+                  // 민간 개방 시설: description 표시
+                  if (category === '민간 개방 시설') {
+                    return displayInfo.description;
+                  }
+                  // 그 외: name 표시
+                  return shelter.name;
+                })()}
               </Text>
             </View>
           </View>

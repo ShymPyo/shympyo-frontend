@@ -244,11 +244,11 @@ const HomeScreen: React.FC = () => {
     try {
       setIsLoadingLocation(true);
 
-      // 테스트용으로 그린스마트쉼터 위치 사용
+      // 테스트용으로 중구형 스마트쉼터 위치 사용
       const testLocation = {
         coords: {
-          latitude: 37.5016667,
-          longitude: 127.0385582,
+          latitude: 37.5652927,
+          longitude: 126.9789266,
           altitude: 0,
           accuracy: 10,
           altitudeAccuracy: 0,
@@ -259,7 +259,7 @@ const HomeScreen: React.FC = () => {
       };
 
       setCurrentLocation(testLocation);
-      console.log('✅ 테스트 위치 (그린스마트쉼터):', testLocation.coords.latitude, testLocation.coords.longitude);
+      console.log('✅ 테스트 위치 (중구형 스마트쉼터):', testLocation.coords.latitude, testLocation.coords.longitude);
 
       // 주변 장소 조회
       await loadNearbyPlaces(testLocation.coords.latitude, testLocation.coords.longitude);
@@ -364,11 +364,11 @@ const HomeScreen: React.FC = () => {
     // 현재 위치 갱신 및 지도 이동
     getCurrentLocation();
 
-    // WebView의 지도를 현재 위치(그린스마트쉼터)로 이동하고 줌 레벨 초기화
+    // WebView의 지도를 현재 위치(중구형 스마트쉼터)로 이동하고 줌 레벨 초기화
     if (webViewRef.current) {
       const moveScript = `
         if (typeof map !== 'undefined') {
-          var moveLatLon = new kakao.maps.LatLng(37.5016667, 127.0385582);
+          var moveLatLon = new kakao.maps.LatLng(37.5652927, 126.9789266);
           map.setCenter(moveLatLon);
           map.setLevel(3);
         }
@@ -393,15 +393,37 @@ const HomeScreen: React.FC = () => {
 
         console.log(`🔍 Content 정보 비교 - List API: "${listPlace?.content}", Detail API: "${response.data?.content}"`);
 
+        // 타입에 따른 카테고리 분류
+        const getCategory = (type: string) => {
+          if (type === 'SHELTER') return '스마트 쉼터';
+          if (type === 'USER_SHELTER') return '민간 개방 시설';
+          if (type === 'STATION') return '교통 시설';
+          return '민간 개방 시설';
+        };
+
+        const getIcon = (type: string) => {
+          if (type === 'SHELTER') return 'medical';
+          if (type === 'USER_SHELTER') return 'business';
+          if (type === 'STATION') return 'train';
+          return 'business';
+        };
+
+        const getColor = (type: string) => {
+          if (type === 'SHELTER') return '#4A90E2';
+          if (type === 'USER_SHELTER') return '#FFA500';
+          if (type === 'STATION') return '#27AE60';
+          return '#7ED321';
+        };
+
         // 백엔드 응답을 Shelter 형태로 변환 (리스트 API의 content 사용)
         const detailShelter: Shelter = {
           id: response.data?.id?.toString() || '',
           name: response.data?.name || '쉼터', // name을 시설명으로 사용
           type: response.data?.type || '',
           distance: '0m', // 거리는 계산하거나 기본값
-          category: response.data?.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설',
-          icon: response.data?.type === 'SHELTER' ? 'medical' : 'business',
-          color: response.data?.type === 'SHELTER' ? '#4A90E2' : '#7ED321',
+          category: getCategory(response.data?.type || ''),
+          icon: getIcon(response.data?.type || ''),
+          color: getColor(response.data?.type || ''),
           address: response.data?.address,
           description: content, // 리스트 API의 content 사용 (버스정류장 정보 등)
           content: content // 리스트 API의 content 사용
@@ -545,19 +567,41 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  // 타입에 따른 카테고리/아이콘/색상 매핑 함수
+  const getCategoryFromType = (type: string): '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설' => {
+    if (type === 'SHELTER') return '스마트 쉼터';
+    if (type === 'USER_SHELTER') return '민간 개방 시설';
+    if (type === 'STATION') return '교통 시설';
+    return '민간 개방 시설';
+  };
+
+  const getIconFromType = (type: string): string => {
+    if (type === 'SHELTER') return 'medical';
+    if (type === 'USER_SHELTER') return 'business';
+    if (type === 'STATION') return 'train';
+    return 'business';
+  };
+
+  const getColorFromType = (type: string): string => {
+    if (type === 'SHELTER') return '#4A90E2';
+    if (type === 'USER_SHELTER') return '#FFA500';
+    if (type === 'STATION') return '#27AE60';
+    return '#7ED321';
+  };
+
   // 실제 API 데이터를 필터링된 쉼터 목록으로 변환
   const filteredShelters: Shelter[] = nearbyPlaces
     .map(place => ({
       id: place.id.toString(),
       name: place.name,
-      category: (place.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설') as '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설',
+      category: getCategoryFromType(place.type),
       type: place.type,
       distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
       address: place.address,
       description: place.content,
       content: place.content,
-      icon: place.type === 'SHELTER' ? 'medical' : 'business',
-      color: place.type === 'SHELTER' ? '#4A90E2' : '#7ED321'
+      icon: getIconFromType(place.type),
+      color: getColorFromType(place.type)
     }))
     .filter(shelter => selectedCategories.includes(shelter.category));
 
@@ -565,7 +609,7 @@ const HomeScreen: React.FC = () => {
   const filteredMapLocations = mapLocations.filter(location => {
     const matchingPlace = nearbyPlaces.find(place => place.id === location.id);
     if (!matchingPlace) return false;
-    const category = matchingPlace.type === 'SHELTER' ? '스마트 쉼터' : '민간 개방 시설';
+    const category = getCategoryFromType(matchingPlace.type);
     return selectedCategories.includes(category);
   });
 
@@ -608,8 +652,12 @@ const HomeScreen: React.FC = () => {
           var markerPosition = new kakao.maps.LatLng(position.latlng[0], position.latlng[1]);
 
           // 쉼터 타입에 따른 마커 이미지 설정
-          var markerColor = position.type === 'SHELTER' ? '#4A90E2' : '#7ED321';
-          var markerIcon = position.type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' : 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
+          var markerColor = position.type === 'SHELTER' ? '#4A90E2' :
+                           position.type === 'USER_SHELTER' ? '#FFA500' :
+                           position.type === 'STATION' ? '#27AE60' : '#7ED321';
+          var markerIcon = position.type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' :
+                          position.type === 'STATION' ? 'M12 2l-2 6-6 2 6 2 2 6 2-6 6-2-6-2z' :
+                          'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
 
           var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -693,10 +741,15 @@ const HomeScreen: React.FC = () => {
             const description = item.description;
             const category = item.category;
 
-            // 민간 개방 시설 && name이 "선"으로 끝남 && description이 "역"으로 안 끝남
-            if (category === '민간 개방 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
+            // 교통 시설: description에 "역" 붙이기
+            if (category === '교통 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
               return description + '역';
             }
+            // 민간 개방 시설: name 표시
+            if (category === '민간 개방 시설') {
+              return name;
+            }
+            // 그 외: description 표시
             return description || name;
           })()}
         </Text>
@@ -704,7 +757,15 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.shelterAddress}>{item.address}</Text>
         )}
         <Text style={styles.shelterDescription} numberOfLines={1}>
-          {item.name}
+          {(() => {
+            const category = item.category;
+            // 민간 개방 시설: description 표시
+            if (category === '민간 개방 시설') {
+              return item.description;
+            }
+            // 그 외: name 표시
+            return item.name;
+          })()}
         </Text>
       </View>
       {/* 거리 정보 - 오른쪽에 큰 글씨로 표시 */}
@@ -746,9 +807,9 @@ const HomeScreen: React.FC = () => {
       <script>
           var container = document.getElementById('map');
 
-          // 현재 위치가 있으면 해당 위치를 중심으로, 없으면 그린스마트쉼터 위치 사용
-          var centerLat = ${currentLocation?.coords.latitude || 37.5016667};
-          var centerLng = ${currentLocation?.coords.longitude || 127.0385582};
+          // 현재 위치가 있으면 해당 위치를 중심으로, 없으면 중구형 스마트쉼터 위치 사용
+          var centerLat = ${currentLocation?.coords.latitude || 37.5652927};
+          var centerLng = ${currentLocation?.coords.longitude || 126.9789266};
 
           var options = {
               center: new kakao.maps.LatLng(centerLat, centerLng),
@@ -830,8 +891,12 @@ const HomeScreen: React.FC = () => {
           if (positions.length > 0) {
               for (var i = 0; i < positions.length; i ++) {
                   // 쉼터 타입에 따른 마커 이미지 설정
-                  var markerColor = positions[i].type === 'SHELTER' ? '#4A90E2' : '#7ED321';
-                  var markerIcon = positions[i].type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' : 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
+                  var markerColor = positions[i].type === 'SHELTER' ? '#4A90E2' :
+                                   positions[i].type === 'USER_SHELTER' ? '#FFA500' :
+                                   positions[i].type === 'STATION' ? '#27AE60' : '#7ED321';
+                  var markerIcon = positions[i].type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' :
+                                  positions[i].type === 'STATION' ? 'M12 2l-2 6-6 2 6 2 2 6 2-6 6-2-6-2z' :
+                                  'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
 
                   var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
                     <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
