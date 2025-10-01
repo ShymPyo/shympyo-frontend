@@ -17,6 +17,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Shadow 스타일 헬퍼 함수
 const getShadowStyle = (shadowConfig: {
@@ -63,6 +64,34 @@ const LetterScreen: React.FC = () => {
   const [letterText, setLetterText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sentLetters, setSentLetters] = useState<Set<number>>(new Set());
+  const [letterStatus, setLetterStatus] = useState<Map<number, { letterId: number; read: boolean; content?: string }>>(new Map());
+  const [selectedLetterDetail, setSelectedLetterDetail] = useState<{ placeName: string; content: string; read: boolean; sentAt: string } | null>(null);
+  const [isDetailModalVisible, setDetailModalVisible] = useState(false);
+
+  // AsyncStorage에서 보낸 편지 목록 및 상태 불러오기
+  useEffect(() => {
+    const loadSentLetters = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('sentLetters');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setSentLetters(new Set(parsed));
+          console.log('📋 저장된 편지 전송 기록 로드:', parsed);
+        }
+
+        const statusStored = await AsyncStorage.getItem('letterStatus');
+        if (statusStored) {
+          const parsed = JSON.parse(statusStored);
+          setLetterStatus(new Map(Object.entries(parsed).map(([k, v]: [string, any]) => [Number(k), v])));
+          console.log('📋 저장된 편지 상태 로드:', parsed);
+        }
+      } catch (error) {
+        console.error('💥 편지 전송 기록 로드 오류:', error);
+      }
+    };
+
+    loadSentLetters();
+  }, []);
 
   // 방문한 장소 목록 가져오기
   const fetchVisitedPlaces = async (loadMore: boolean = false) => {
@@ -164,11 +193,30 @@ const LetterScreen: React.FC = () => {
         letterText.trim()
       );
 
-      if (response.success) {
+      if (response.success && response.data) {
         console.log('✅ 편지 보내기 성공:', response.data);
 
         // 편지 전송 성공 시 해당 rental을 전송 완료 처리
-        setSentLetters(prev => new Set(prev).add(selectedPlace.rentalId));
+        const updatedSet = new Set(sentLetters).add(selectedPlace.rentalId);
+        setSentLetters(updatedSet);
+
+        // 편지 상태 저장 (letterId, 읽음 여부, 내용)
+        const updatedStatus = new Map(letterStatus);
+        updatedStatus.set(selectedPlace.rentalId, {
+          letterId: response.data.id,
+          read: response.data.read,
+          content: letterText.trim()
+        });
+        setLetterStatus(updatedStatus);
+
+        // AsyncStorage에 저장
+        try {
+          await AsyncStorage.setItem('sentLetters', JSON.stringify(Array.from(updatedSet)));
+          await AsyncStorage.setItem('letterStatus', JSON.stringify(Object.fromEntries(updatedStatus)));
+          console.log('💾 편지 전송 기록 저장:', selectedPlace.rentalId, '편지 ID:', response.data.id);
+        } catch (error) {
+          console.error('💥 편지 전송 기록 저장 오류:', error);
+        }
 
         Alert.alert(
           '전송 완료',
@@ -195,17 +243,70 @@ const LetterScreen: React.FC = () => {
     fetchVisitedPlaces();
   }, [accessToken]);
 
-  // 화면 포커스 시 목록 새로고침 (퇴장 후 바로 반영)
+  // 화면 포커스 시 목록 새로고침 및 읽음 상태 확인
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener('focus', async () => {
       if (accessToken) {
         console.log('📋 편지 화면 포커스 - 목록 새로고침');
         fetchVisitedPlaces(false);
+
+        // 보낸 편지 읽음 상태 확인
+        await checkLetterReadStatus();
       }
     });
 
     return unsubscribe;
   }, [navigation, accessToken]);
+
+  // 보낸 편지의 읽음 상태 확인
+  const checkLetterReadStatus = async () => {
+    if (!accessToken || sentLetters.size === 0) return;
+
+    try {
+      console.log('📮 보낸 편지 읽음 상태 확인 시작...');
+
+      // 보낸 편지함 API 호출
+      const response = await ApiService.getSentLetters(accessToken);
+
+      if (response.success && response.data) {
+        console.log('✅ 보낸 편지 목록:', response.data);
+
+        const updatedStatus = new Map(letterStatus);
+        let hasChanges = false;
+
+        // 보낸 편지 목록에서 읽음 상태 업데이트
+        response.data.forEach(letter => {
+          // letterId로 rentalId 찾기
+          for (const [rentalId, status] of letterStatus.entries()) {
+            if (status.letterId === letter.id) {
+              // 읽음 상태가 변경된 경우만 업데이트
+              if (status.read !== letter.read) {
+                updatedStatus.set(rentalId, {
+                  letterId: letter.id,
+                  read: letter.read,
+                  content: status.content // 기존 내용 유지
+                });
+                hasChanges = true;
+                console.log(`✅ 편지 ${letter.id} 읽음 상태 업데이트: ${status.read} → ${letter.read}`);
+              }
+            }
+          }
+        });
+
+        // 변경사항이 있으면 저장
+        if (hasChanges) {
+          setLetterStatus(updatedStatus);
+          await AsyncStorage.setItem('letterStatus', JSON.stringify(Object.fromEntries(updatedStatus)));
+          console.log('💾 편지 읽음 상태 저장 완료');
+        }
+      } else {
+        console.log('⚠️ 보낸 편지함 API 응답:', response.message);
+      }
+    } catch (error: any) {
+      // API가 없거나 에러 발생 시 무시 (백엔드 준비 안됨)
+      console.log('⚠️ 보낸 편지함 API가 아직 준비되지 않았습니다. (에러 무시)');
+    }
+  };
 
   // 날짜 포맷팅 함수
   const formatDate = (dateString: string) => {
@@ -218,11 +319,30 @@ const LetterScreen: React.FC = () => {
     return `${year}-${month}-${day} ${hour}:${minute}`;
   };
 
+  const handleLetterPress = (item: VisitedPlace) => {
+    const status = letterStatus.get(item.rentalId);
+    if (!status || !status.content) return;
+
+    setSelectedLetterDetail({
+      placeName: item.placeName,
+      content: status.content,
+      read: status.read,
+      sentAt: item.endTime
+    });
+    setDetailModalVisible(true);
+  };
+
   const renderItem = ({ item }: { item: VisitedPlace }) => {
     const isLetterSent = sentLetters.has(item.rentalId);
+    const status = letterStatus.get(item.rentalId);
+    const isLetterRead = status?.read || false;
 
     return (
-      <View style={[styles.card, isLetterSent && styles.sentCard]}>
+      <TouchableOpacity
+        style={[styles.card, isLetterSent && styles.sentCard]}
+        onPress={() => isLetterSent && handleLetterPress(item)}
+        disabled={!isLetterSent}
+      >
         <View style={styles.cardContent}>
           <Text style={[styles.date, isLetterSent && styles.sentText]}>
             {formatDate(item.endTime)}
@@ -235,18 +355,29 @@ const LetterScreen: React.FC = () => {
           </Text>
           {isLetterSent && (
             <View style={styles.sentBadge}>
-              <Ionicons name="checkmark-circle" size={16} color={Colors.text.light} />
-              <Text style={styles.sentBadgeText}>편지 전송 완료</Text>
+              <Ionicons
+                name={isLetterRead ? "mail-open" : "mail"}
+                size={16}
+                color={isLetterRead ? Colors.success : Colors.text.light}
+              />
+              <Text style={[styles.sentBadgeText, isLetterRead && styles.readBadgeText]}>
+                {isLetterRead ? '편지 읽음' : '편지 전송 완료'}
+              </Text>
             </View>
           )}
         </View>
         <TouchableOpacity
           style={[styles.button, isLetterSent && styles.sentButton]}
-          onPress={() => !isLetterSent && handleWriteLetter({
-            placeId: Number(item.placeId),
-            placeName: item.placeName,
-            rentalId: item.rentalId
-          })}
+          onPress={(e) => {
+            e.stopPropagation();
+            if (!isLetterSent) {
+              handleWriteLetter({
+                placeId: Number(item.placeId),
+                placeName: item.placeName,
+                rentalId: item.rentalId
+              });
+            }
+          }}
           disabled={isLetterSent}
         >
           <Ionicons
@@ -258,7 +389,7 @@ const LetterScreen: React.FC = () => {
             {isLetterSent ? '전송 완료' : '고마운 마음 전하기'}
           </Text>
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -310,6 +441,7 @@ const LetterScreen: React.FC = () => {
         />
       )}
 
+      {/* 편지 작성 모달 */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -317,7 +449,7 @@ const LetterScreen: React.FC = () => {
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable onPress={dismissKeyboard} style={{ flex: 1 }}>
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalContainer}
             keyboardVerticalOffset={-50}
@@ -333,8 +465,8 @@ const LetterScreen: React.FC = () => {
                 multiline
               />
               <View style={styles.modalButtonContainer}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton]} 
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => setModalVisible(false)}
                 >
                   <Text style={styles.cancelButtonText}>취소</Text>
@@ -358,6 +490,72 @@ const LetterScreen: React.FC = () => {
             </View>
           </KeyboardAvoidingView>
         </Pressable>
+      </Modal>
+
+      {/* 편지 상세 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isDetailModalVisible}
+        onRequestClose={() => setDetailModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalContainer}
+          activeOpacity={1}
+          onPress={() => setDetailModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.detailModalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.detailModalHeader}>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+              <Text style={styles.detailModalTitle}>보낸 편지</Text>
+              <View style={{ width: 24 }} />
+            </View>
+
+            <View style={styles.detailModalInfo}>
+              <Text style={styles.detailModalLabel}>받는 사람</Text>
+              <Text style={styles.detailModalText}>{selectedLetterDetail?.placeName} 사장님</Text>
+            </View>
+
+            <View style={styles.detailModalInfo}>
+              <Text style={styles.detailModalLabel}>전송 일시</Text>
+              <Text style={styles.detailModalText}>
+                {selectedLetterDetail?.sentAt ? formatDate(selectedLetterDetail.sentAt) : '-'}
+              </Text>
+            </View>
+
+            <View style={styles.detailModalInfo}>
+              <Text style={styles.detailModalLabel}>읽음 상태</Text>
+              <View style={styles.detailModalStatus}>
+                <Ionicons
+                  name={selectedLetterDetail?.read ? "checkmark-circle" : "time"}
+                  size={20}
+                  color={selectedLetterDetail?.read ? Colors.success : Colors.text.light}
+                />
+                <Text style={[
+                  styles.detailModalStatusText,
+                  selectedLetterDetail?.read && styles.detailModalReadText
+                ]}>
+                  {selectedLetterDetail?.read ? '사장님이 읽었습니다' : '읽지 않음'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.detailModalContentSection}>
+              <Text style={styles.detailModalLabel}>편지 내용</Text>
+              <View style={styles.detailModalLetterBox}>
+                <Text style={styles.detailModalLetterText}>
+                  {selectedLetterDetail?.content}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -440,6 +638,9 @@ const styles = StyleSheet.create({
     color: Colors.text.light,
     marginLeft: 4,
     fontWeight: '600',
+  },
+  readBadgeText: {
+    color: Colors.success,
   },
   button: {
     flexDirection: 'row',
@@ -566,6 +767,67 @@ const styles = StyleSheet.create({
   },
   sentButtonText: {
     color: Colors.text.secondary,
+  },
+  detailModalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+  },
+  detailModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  detailModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  detailModalInfo: {
+    marginBottom: 15,
+  },
+  detailModalLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text.light,
+    marginBottom: 5,
+  },
+  detailModalText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    fontWeight: '500',
+  },
+  detailModalStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailModalStatusText: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+    fontWeight: '500',
+  },
+  detailModalReadText: {
+    color: Colors.success,
+  },
+  detailModalContentSection: {
+    marginTop: 10,
+  },
+  detailModalLetterBox: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    minHeight: 150,
+  },
+  detailModalLetterText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    lineHeight: 24,
   },
 });
 
