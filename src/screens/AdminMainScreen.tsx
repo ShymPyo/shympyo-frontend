@@ -146,6 +146,14 @@ const AdminMainScreen: React.FC = () => {
     if (accessToken && user) {
       console.log('🔍 useEffect 트리거됨 - accessToken과 user 모두 준비됨');
       loadAdminData();
+
+      // 5초마다 자동 새로고침
+      const interval = setInterval(() => {
+        console.log('🔄 자동 새로고침 - 현재 이용자 업데이트');
+        loadAdminData();
+      }, 5000);
+
+      return () => clearInterval(interval);
     } else {
       console.log('🔍 useEffect - 아직 준비되지 않음:', {
         accessToken: accessToken ? '있음' : '없음',
