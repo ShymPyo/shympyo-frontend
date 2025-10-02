@@ -36,9 +36,6 @@ const AdminSpaceEditScreen: React.FC = () => {
 
   // 공간 정보 상태
   const [spaceName, setSpaceName] = useState(place.name);
-  const [openTime, setOpenTime] = useState(place.openTime);
-  const [closeTime, setCloseTime] = useState(place.closeTime);
-  const [closedDays, setClosedDays] = useState(place.weeklyHoliday);
   const [location, setLocation] = useState(place.address);
   const [description, setDescription] = useState(place.content);
   const [imageUrl, setImageUrl] = useState(place.imageUrl);
@@ -66,19 +63,8 @@ const AdminSpaceEditScreen: React.FC = () => {
     { label: '20명', value: '20' },
   ];
 
-  // 요일 옵션들
-  const weekdayOptions = [
-    { label: '월요일', value: 'MONDAY' },
-    { label: '화요일', value: 'TUESDAY' },
-    { label: '수요일', value: 'WEDNESDAY' },
-    { label: '목요일', value: 'THURSDAY' },
-    { label: '금요일', value: 'FRIDAY' },
-    { label: '토요일', value: 'SATURDAY' },
-    { label: '일요일', value: 'SUNDAY' },
-  ];
-
   const handleSave = async () => {
-    if (!spaceName || !openTime || !closeTime || !location || !description) {
+    if (!spaceName || !location || !description) {
       Alert.alert('알림', '모든 필수 정보를 입력해주세요.');
       return;
     }
@@ -98,9 +84,6 @@ const AdminSpaceEditScreen: React.FC = () => {
           maxCapacity: parseInt(maxUsers),
           imageUrl: imageUrl,
           address: location,
-          openTime: openTime,
-          closeTime: closeTime,
-          weeklyHoliday: closedDays,
         },
         accessToken
       );
@@ -127,25 +110,13 @@ const AdminSpaceEditScreen: React.FC = () => {
     }
   };
 
-  const [showWeekdayModal, setShowWeekdayModal] = useState(false);
-
   const handleUserSelection = (value: string) => {
     setMaxUsers(value);
     setShowUserModal(false);
   };
 
-  const handleWeekdaySelection = (value: string) => {
-    setClosedDays(value);
-    setShowWeekdayModal(false);
-  };
-
   const formatMaxUsers = (users: string) => {
     return `최대 ${users}명`;
-  };
-
-  const formatWeekday = (day: string) => {
-    const option = weekdayOptions.find(opt => opt.value === day);
-    return option ? option.label : day;
   };
 
   const handleTextInputFocus = (offsetY: number) => {
@@ -210,7 +181,7 @@ const AdminSpaceEditScreen: React.FC = () => {
         {/* 기본 정보 */}
         <View style={[styles.section, styles.sectionCard]}>
           <Text style={styles.sectionTitle}>기본 정보</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>공간 이름 *</Text>
             <TextInput
@@ -220,40 +191,6 @@ const AdminSpaceEditScreen: React.FC = () => {
               placeholder="공간 이름을 입력하세요"
               onFocus={() => handleTextInputFocus(200)}
             />
-          </View>
-
-          <View style={styles.inputRow}>
-            <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>영업 시작 *</Text>
-              <TextInput
-                style={styles.input}
-                value={openTime}
-                onChangeText={setOpenTime}
-                placeholder="12:00"
-              />
-            </View>
-            <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>영업 종료 *</Text>
-              <TextInput
-                style={styles.input}
-                value={closeTime}
-                onChangeText={setCloseTime}
-                placeholder="22:00"
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>정기 휴무일</Text>
-            <TouchableOpacity
-              style={styles.timeSelector}
-              onPress={() => setShowWeekdayModal(true)}
-            >
-              <Text style={styles.timeSelectorText}>
-                {formatWeekday(closedDays)}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -310,48 +247,6 @@ const AdminSpaceEditScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* 요일 선택 모달 */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showWeekdayModal}
-        onRequestClose={() => setShowWeekdayModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>정기 휴무일 선택</Text>
-              <TouchableOpacity onPress={() => setShowWeekdayModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.timeOptions}>
-              {weekdayOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.timeOption,
-                    closedDays === option.value && styles.selectedTimeOption
-                  ]}
-                  onPress={() => handleWeekdaySelection(option.value)}
-                >
-                  <Text style={[
-                    styles.timeOptionText,
-                    closedDays === option.value && styles.selectedTimeOptionText
-                  ]}>
-                    {option.label}
-                  </Text>
-                  {closedDays === option.value && (
-                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* 인원 선택 모달 */}
       <Modal

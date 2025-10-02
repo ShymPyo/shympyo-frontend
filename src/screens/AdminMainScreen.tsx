@@ -10,7 +10,10 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
+import { Picker } from '@react-native-picker/picker';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -18,7 +21,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
-import ApiService, { AdminPlace, LetterCount, CurrentRental } from '../services/api';
+import ApiService, { AdminPlace, LetterCount, CurrentRental, BusinessHours, DayOfWeek } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 type AdminMainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminMain'>;
@@ -33,6 +36,21 @@ const AdminMainScreen: React.FC = () => {
   const [users, setUsers] = useState<CurrentRental[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [letterCount, setLetterCount] = useState<LetterCount>({ total: 0, unRead: 0, read: 0 });
+  const [isStatusModalVisible, setStatusModalVisible] = useState(false);
+  const [isTimeModalVisible, setTimeModalVisible] = useState(false);
+  const [maxUsageMinutes, setMaxUsageMinutes] = useState<number>(10);
+  const [tempMaxUsageMinutes, setTempMaxUsageMinutes] = useState<number>(10);
+  const [isBusinessHoursModalVisible, setBusinessHoursModalVisible] = useState(false);
+  const [businessHours, setBusinessHours] = useState<DayOfWeek[]>([]);
+  const [tempBusinessHours, setTempBusinessHours] = useState<DayOfWeek[]>([]);
+  const [isCapacityModalVisible, setCapacityModalVisible] = useState(false);
+  const [maxCapacity, setMaxCapacity] = useState<number>(6);
+  const [tempMaxCapacity, setTempMaxCapacity] = useState<number>(6);
+  const [defaultOpenTime, setDefaultOpenTime] = useState<string>('09:00');
+  const [defaultCloseTime, setDefaultCloseTime] = useState<string>('18:00');
+  const [isDefaultTimeModalVisible, setDefaultTimeModalVisible] = useState(false);
+  const [tempDefaultOpenTime, setTempDefaultOpenTime] = useState<string>('09:00');
+  const [tempDefaultCloseTime, setTempDefaultCloseTime] = useState<string>('18:00');
 
   // accessToken이나 user가 없으면 로딩 상태 유지
   useEffect(() => {
@@ -63,7 +81,36 @@ const AdminMainScreen: React.FC = () => {
 
       if (placesResponse.success && placesResponse.data) {
         setAdminPlace(placesResponse.data);
+        setMaxUsageMinutes(placesResponse.data.maxUsageMinutes || 10);
+        setMaxCapacity(placesResponse.data.maxCapacity || 6);
         console.log('✅ 관리자 장소 정보 로드:', placesResponse.data);
+
+        // 영업시간 조회
+        const businessHoursResponse = await ApiService.getBusinessHours(placesResponse.data.id, accessToken);
+        if (businessHoursResponse.success && businessHoursResponse.data) {
+          // 시간 형식 변환 (HH:MM:SS -> HH:MM)
+          const normalizedHours = businessHoursResponse.data.items.map(item => ({
+            ...item,
+            // closed가 true면 기본값 사용, false면 실제 시간 사용
+            openTime: item.closed ? '09:00' : (item.openTime ? item.openTime.substring(0, 5) : '09:00'),
+            closeTime: item.closed ? '18:00' : (item.closeTime ? item.closeTime.substring(0, 5) : '18:00'),
+            breakStart: item.breakStart ? item.breakStart.substring(0, 5) : undefined,
+            breakEnd: item.breakEnd ? item.breakEnd.substring(0, 5) : undefined,
+          }));
+          setBusinessHours(normalizedHours);
+          console.log('✅ 영업시간 정보 로드:', normalizedHours);
+        } else {
+          // 기본 영업시간 설정 (모든 요일 09:00-18:00)
+          const defaultHours: DayOfWeek[] = [
+            'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'
+          ].map(day => ({
+            dayOfWeek: day as DayOfWeek['dayOfWeek'],
+            openTime: '09:00',
+            closeTime: '18:00',
+            closed: false
+          }));
+          setBusinessHours(defaultHours);
+        }
 
         // 현재 이용자 목록 조회
         const usersResponse = await ApiService.getCurrentRentals(accessToken);
@@ -177,6 +224,299 @@ const AdminMainScreen: React.FC = () => {
     );
   };
 
+  const handleStatusChange = async (status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE') => {
+    if (!accessToken) return;
+
+    const statusText = status === 'ACTIVE' ? '운영 중' : status === 'INACTIVE' ? '운영 중지' : '점검 중';
+
+    Alert.alert(
+      '상태 변경',
+      `쉼터를 "${statusText}"으로 변경하시겠습니까?`,
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '변경',
+          onPress: async () => {
+            try {
+              const response = await ApiService.updatePlaceStatus(status, accessToken);
+
+              if (response.success) {
+                Alert.alert('변경 완료', `쉼터 상태가 "${statusText}"으로 변경되었습니다.`);
+                setStatusModalVisible(false);
+                loadAdminData();
+              } else {
+                Alert.alert('오류', response.message || '상태 변경에 실패했습니다.');
+              }
+            } catch (error) {
+              console.error('💥 상태 변경 오류:', error);
+              Alert.alert('오류', '상태 변경 중 오류가 발생했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+
+  const getStatusText = (status?: string) => {
+    switch (status) {
+      case 'ACTIVE': return '운영 중';
+      case 'INACTIVE': return '운영 중지';
+      case 'MAINTENANCE': return '점검 중';
+      default: return '운영 중';
+    }
+  };
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'ACTIVE': return Colors.primary;
+      case 'INACTIVE': return '#FF4444';
+      case 'MAINTENANCE': return '#FFA500';
+      default: return Colors.primary;
+    }
+  };
+
+  const getDayName = (day: string) => {
+    const names: Record<string, string> = {
+      MONDAY: '월',
+      TUESDAY: '화',
+      WEDNESDAY: '수',
+      THURSDAY: '목',
+      FRIDAY: '금',
+      SATURDAY: '토',
+      SUNDAY: '일'
+    };
+    return names[day] || day;
+  };
+
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const minutesToTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+
+  const handleEditDay = (day: DayOfWeek) => {
+    console.log('🖊️ 요일 편집 시작:', day);
+
+    const dayName = getDayName(day.dayOfWeek);
+    const isClosed = day.closed;
+
+    Alert.alert(
+      `${dayName}요일 설정`,
+      isClosed ? '현재 휴무일입니다' : `영업시간: ${day.openTime} - ${day.closeTime}`,
+      [
+        {
+          text: '취소',
+          style: 'cancel'
+        },
+        {
+          text: isClosed ? '영업일로 변경' : '휴무일로 변경',
+          onPress: () => {
+            // 휴무일 -> 영업일: 기본 영업시간 사용
+            // 영업일 -> 휴무일: 기존 시간 유지
+            const updatedDay = isClosed
+              ? { ...day, closed: false, openTime: defaultOpenTime, closeTime: defaultCloseTime }
+              : { ...day, closed: true };
+            const updatedHours = tempBusinessHours.map(d =>
+              d.dayOfWeek === day.dayOfWeek ? updatedDay : d
+            );
+            setTempBusinessHours(updatedHours);
+          }
+        },
+        ...(!isClosed ? [{
+          text: '시간 변경',
+          onPress: () => showTimeChangeAlert(day)
+        }] : [])
+      ]
+    );
+  };
+
+  const showTimeChangeAlert = (day: DayOfWeek) => {
+    // 30분 단위 시간 옵션 생성
+    const timeOptions = Array.from({ length: 48 }, (_, i) => {
+      const hours = Math.floor(i / 2);
+      const minutes = (i % 2) * 30;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    });
+
+    Alert.alert(
+      `${getDayName(day.dayOfWeek)}요일 시간 변경`,
+      '오픈 시간을 선택하세요',
+      timeOptions.map(time => ({
+        text: time,
+        onPress: () => {
+          // 오픈 시간 선택 후 마감 시간 선택
+          Alert.alert(
+            `${getDayName(day.dayOfWeek)}요일 시간 변경`,
+            '마감 시간을 선택하세요',
+            timeOptions.map(closeTime => ({
+              text: closeTime,
+              onPress: () => {
+                const updatedDay = { ...day, openTime: time, closeTime: closeTime };
+                const updatedHours = tempBusinessHours.map(d =>
+                  d.dayOfWeek === day.dayOfWeek ? updatedDay : d
+                );
+                setTempBusinessHours(updatedHours);
+                Alert.alert('변경 완료', `${getDayName(day.dayOfWeek)}요일: ${time} - ${closeTime}\n\n저장 버튼을 눌러 적용하세요.`);
+              }
+            })).concat([{ text: '취소', style: 'cancel' }]),
+            { cancelable: true }
+          );
+        }
+      })).concat([{ text: '취소', style: 'cancel' }]),
+      { cancelable: true }
+    );
+  };
+
+
+  const handleOpenTimeModal = () => {
+    setTempMaxUsageMinutes(maxUsageMinutes);
+    setTimeModalVisible(true);
+  };
+
+  const handleCloseTimeModal = () => {
+    setTimeModalVisible(false);
+  };
+
+  const handleMaxTimeUpdate = async () => {
+    if (!accessToken || !adminPlace) return;
+
+    if (tempMaxUsageMinutes < 1) {
+      Alert.alert('오류', '최소 1분 이상 입력해주세요.');
+      return;
+    }
+
+    try {
+      const response = await ApiService.updatePlace(
+        {
+          name: adminPlace.name,
+          content: adminPlace.content,
+          maxCapacity: adminPlace.maxCapacity,
+          maxUsageMinutes: tempMaxUsageMinutes,
+          address: adminPlace.address,
+        },
+        accessToken
+      );
+
+      if (response.success) {
+        setMaxUsageMinutes(tempMaxUsageMinutes);
+        Alert.alert('수정 완료', `최대 이용 시간이 ${tempMaxUsageMinutes}분으로 변경되었습니다.`);
+        setTimeModalVisible(false);
+        loadAdminData();
+      } else {
+        Alert.alert('오류', response.message || '수정에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 최대 시간 수정 오류:', error);
+      Alert.alert('오류', '수정 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleOpenCapacityModal = () => {
+    setTempMaxCapacity(maxCapacity);
+    setCapacityModalVisible(true);
+  };
+
+  const handleCloseCapacityModal = () => {
+    setCapacityModalVisible(false);
+  };
+
+  const handleMaxCapacityUpdate = async () => {
+    if (!accessToken || !adminPlace) return;
+
+    if (tempMaxCapacity < 1) {
+      Alert.alert('오류', '최소 1명 이상 입력해주세요.');
+      return;
+    }
+
+    try {
+      const response = await ApiService.updatePlace(
+        {
+          name: adminPlace.name,
+          content: adminPlace.content,
+          maxCapacity: tempMaxCapacity,
+          maxUsageMinutes: adminPlace.maxUsageMinutes,
+          address: adminPlace.address,
+        },
+        accessToken
+      );
+
+      if (response.success) {
+        setMaxCapacity(tempMaxCapacity);
+        Alert.alert('수정 완료', `최대 인원수가 ${tempMaxCapacity}명으로 변경되었습니다.`);
+        setCapacityModalVisible(false);
+        loadAdminData();
+      } else {
+        Alert.alert('오류', response.message || '수정에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 최대 인원수 수정 오류:', error);
+      Alert.alert('오류', '수정 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSaveBusinessHours = async () => {
+    if (!accessToken || !adminPlace) return;
+
+    const formattedHours = tempBusinessHours.map(item => ({
+      ...item,
+      openTime: item.closed ? null : (item.openTime + ':00'),
+      closeTime: item.closed ? null : (item.closeTime + ':00'),
+      breakStart: item.breakStart ? (item.breakStart + ':00') : null,
+      breakEnd: item.breakEnd ? (item.breakEnd + ':00') : null,
+    }));
+
+    try {
+      const response = await ApiService.updateBusinessHours(
+        adminPlace.id,
+        { items: formattedHours },
+        accessToken
+      );
+
+      if (response.success) {
+        setBusinessHours(tempBusinessHours);
+        Alert.alert('저장 완료', '영업시간이 저장되었습니다.');
+        setBusinessHoursModalVisible(false);
+        loadAdminData();
+      } else {
+        Alert.alert('오류', response.message || '저장에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 영업시간 저장 오류:', error);
+      Alert.alert('오류', '저장 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleCloseBusinessHoursModal = () => {
+    console.log('❌ 영업시간 모달 닫기');
+    setBusinessHoursModalVisible(false);
+  };
+
+  const handleOpenDefaultTimeModal = () => {
+    setTempDefaultOpenTime(defaultOpenTime);
+    setTempDefaultCloseTime(defaultCloseTime);
+    setDefaultTimeModalVisible(true);
+  };
+
+  const handleCloseDefaultTimeModal = () => {
+    setDefaultTimeModalVisible(false);
+  };
+
+  const handleSaveDefaultTime = () => {
+    setDefaultOpenTime(tempDefaultOpenTime);
+    setDefaultCloseTime(tempDefaultCloseTime);
+    Alert.alert('변경 완료', `영업시간: ${tempDefaultOpenTime} - ${tempDefaultCloseTime}`);
+    setDefaultTimeModalVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -226,12 +566,6 @@ const AdminMainScreen: React.FC = () => {
                 />
                 <View style={styles.shopInfo}>
                   <Text style={styles.shopName}>{adminPlace.name}</Text>
-                  <View style={styles.shopDetails}>
-                    <Ionicons name="time" size={16} color={Colors.text.secondary} />
-                    <Text style={styles.shopTime}>
-                      {adminPlace.openTime} ~ {adminPlace.closeTime}
-                    </Text>
-                  </View>
                   <View style={styles.shopLocation}>
                     <Ionicons name="location" size={16} color={Colors.text.secondary} />
                     <Text style={styles.shopAddress}>{adminPlace.address}</Text>
@@ -240,6 +574,88 @@ const AdminMainScreen: React.FC = () => {
               </View>
 
               <Text style={styles.shopDescription}>{adminPlace.content}</Text>
+
+              {/* 운영 상태 및 설정 */}
+              <View style={styles.settingsSection}>
+                <View style={styles.settingRow}>
+                  <View style={styles.settingLabel}>
+                    <Ionicons name="radio-button-on" size={20} color={getStatusColor(adminPlace.status)} />
+                    <Text style={styles.settingText}>운영 상태</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.settingButton}
+                    onPress={() => setStatusModalVisible(true)}
+                  >
+                    <Text style={[styles.settingValue, { color: getStatusColor(adminPlace.status) }]}>
+                      {getStatusText(adminPlace.status)}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.text.light} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.settingRow}>
+                  <View style={styles.settingLabel}>
+                    <Ionicons name="people-outline" size={20} color={Colors.primary} />
+                    <Text style={styles.settingText}>최대 인원수</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.settingButton}
+                    onPress={handleOpenCapacityModal}
+                  >
+                    <Text style={styles.settingValue}>{maxCapacity}명</Text>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.text.light} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.settingRow}>
+                  <View style={styles.settingLabel}>
+                    <Ionicons name="time-outline" size={20} color={Colors.primary} />
+                    <Text style={styles.settingText}>최대 이용 시간</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.settingButton}
+                    onPress={handleOpenTimeModal}
+                  >
+                    <Text style={styles.settingValue}>{maxUsageMinutes}분</Text>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.text.light} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.settingRow}>
+                  <View style={styles.settingLabel}>
+                    <Ionicons name="time-outline" size={20} color={Colors.primary} />
+                    <Text style={styles.settingText}>영업시간</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.settingButton}
+                    onPress={handleOpenDefaultTimeModal}
+                  >
+                    <Text style={styles.settingValue}>{defaultOpenTime} - {defaultCloseTime}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.text.light} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+                  <View style={styles.settingLabel}>
+                    <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
+                    <Text style={styles.settingText}>정기 휴무</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.settingButton}
+                    onPress={() => {
+                      setTempBusinessHours(JSON.parse(JSON.stringify(businessHours)));
+                      setBusinessHoursModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.settingValue}>
+                      {businessHours.filter(d => d.closed).length > 0
+                        ? `${businessHours.filter(d => d.closed).map(d => getDayName(d.dayOfWeek)).join(', ')} 휴무`
+                        : '설정'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.text.light} />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </>
           ) : (
             <Text style={styles.noDataText}>장소 정보를 불러올 수 없습니다.</Text>
@@ -408,6 +824,282 @@ const AdminMainScreen: React.FC = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* 상태 변경 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isStatusModalVisible}
+        onRequestClose={() => setStatusModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setStatusModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.statusModalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>운영 상태 변경</Text>
+              <TouchableOpacity onPress={() => setStatusModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.statusOption, adminPlace?.status === 'ACTIVE' && styles.statusOptionSelected]}
+              onPress={() => handleStatusChange('ACTIVE')}
+            >
+              <Ionicons name="radio-button-on" size={24} color={Colors.primary} />
+              <View style={styles.statusOptionText}>
+                <Text style={styles.statusOptionTitle}>운영 중</Text>
+                <Text style={styles.statusOptionDescription}>정상 운영 중입니다</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusOption, adminPlace?.status === 'INACTIVE' && styles.statusOptionSelected]}
+              onPress={() => handleStatusChange('INACTIVE')}
+            >
+              <Ionicons name="radio-button-on" size={24} color="#FF4444" />
+              <View style={styles.statusOptionText}>
+                <Text style={styles.statusOptionTitle}>운영 중지</Text>
+                <Text style={styles.statusOptionDescription}>일시적으로 운영을 중지합니다</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusOption, adminPlace?.status === 'MAINTENANCE' && styles.statusOptionSelected]}
+              onPress={() => handleStatusChange('MAINTENANCE')}
+            >
+              <Ionicons name="radio-button-on" size={24} color="#FFA500" />
+              <View style={styles.statusOptionText}>
+                <Text style={styles.statusOptionTitle}>점검 중</Text>
+                <Text style={styles.statusOptionDescription}>시설 점검 중입니다</Text>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 최대 이용 시간 설정 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isTimeModalVisible}
+        onRequestClose={handleCloseTimeModal}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handleCloseTimeModal}
+        >
+          <TouchableOpacity
+            style={styles.timeModalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>최대 이용 시간 설정</Text>
+              <TouchableOpacity onPress={handleCloseTimeModal}>
+                <Ionicons name="close" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.timeInputSection}>
+              <Text style={styles.pickerTitle}>현재 설정: {tempMaxUsageMinutes}분</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={tempMaxUsageMinutes}
+                  onValueChange={(value) => setTempMaxUsageMinutes(value)}
+                  style={styles.picker}
+                  itemStyle={{ color: Colors.text.primary, fontSize: 20 }}
+                >
+                  {[...Array(24)].map((_, i) => {
+                    const minutes = (i + 1) * 5;
+                    return <Picker.Item key={minutes} label={`${minutes}분`} value={minutes} color={Colors.text.primary} />;
+                  })}
+                </Picker>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleMaxTimeUpdate}>
+              <Text style={styles.saveButtonText}>저장</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 최대 인원수 설정 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isCapacityModalVisible}
+        onRequestClose={handleCloseCapacityModal}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handleCloseCapacityModal}
+        >
+          <TouchableOpacity
+            style={styles.timeModalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>최대 인원수 설정</Text>
+              <TouchableOpacity onPress={handleCloseCapacityModal}>
+                <Ionicons name="close" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.timeInputSection}>
+              <Text style={styles.pickerTitle}>현재 설정: {tempMaxCapacity}명</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={tempMaxCapacity}
+                  onValueChange={(value) => setTempMaxCapacity(value)}
+                  style={styles.picker}
+                  itemStyle={{ color: Colors.text.primary, fontSize: 20 }}
+                >
+                  {[...Array(20)].map((_, i) => {
+                    const capacity = i + 1;
+                    return <Picker.Item key={capacity} label={`${capacity}명`} value={capacity} color={Colors.text.primary} />;
+                  })}
+                </Picker>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleMaxCapacityUpdate}>
+              <Text style={styles.saveButtonText}>저장</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 영업시간 설정 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isBusinessHoursModalVisible}
+        onRequestClose={handleCloseBusinessHoursModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.businessHoursModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>정기휴무</Text>
+              <TouchableOpacity onPress={handleCloseBusinessHoursModal}>
+                <Ionicons name="close" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.daysList} showsVerticalScrollIndicator={false}>
+              {tempBusinessHours.map((day) => (
+                <TouchableOpacity
+                  key={day.dayOfWeek}
+                  style={styles.dayItem}
+                  onPress={() => handleEditDay(day)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.dayName}>{getDayName(day.dayOfWeek)}</Text>
+
+                  <View style={styles.dayContent}>
+                    {day.closed ? (
+                      <Text style={styles.closedText}>휴무</Text>
+                    ) : (
+                      <Text style={styles.hoursText}>
+                        {day.openTime} - {day.closeTime}
+                      </Text>
+                    )}
+                    <Ionicons name="chevron-forward" size={18} color={Colors.text.light} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveBusinessHours}>
+              <Text style={styles.saveButtonText}>저장</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 영업시간 설정 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isDefaultTimeModalVisible}
+        onRequestClose={handleCloseDefaultTimeModal}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handleCloseDefaultTimeModal}
+        >
+          <TouchableOpacity
+            style={styles.timeModalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>영업시간 설정</Text>
+              <TouchableOpacity onPress={handleCloseDefaultTimeModal}>
+                <Ionicons name="close" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.timePickerRow}>
+              <View style={styles.timePickerHalf}>
+                <Text style={styles.timeInputLabel}>오픈 시간</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={tempDefaultOpenTime}
+                    onValueChange={(value) => setTempDefaultOpenTime(value)}
+                    style={styles.picker}
+                    itemStyle={{ color: Colors.text.primary, fontSize: 18 }}
+                  >
+                    {Array.from({ length: 48 }, (_, i) => {
+                      const hours = Math.floor(i / 2);
+                      const minutes = (i % 2) * 30;
+                      const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                      return <Picker.Item key={time} label={time} value={time} color={Colors.text.primary} />;
+                    })}
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.timePickerHalf}>
+                <Text style={styles.timeInputLabel}>마감 시간</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={tempDefaultCloseTime}
+                    onValueChange={(value) => setTempDefaultCloseTime(value)}
+                    style={styles.picker}
+                    itemStyle={{ color: Colors.text.primary, fontSize: 18 }}
+                  >
+                    {Array.from({ length: 49 }, (_, i) => {
+                      const hours = Math.floor(i / 2);
+                      const minutes = (i % 2) * 30;
+                      const time = i === 48 ? '24:00' : `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                      return <Picker.Item key={time} label={time} value={time} color={Colors.text.primary} />;
+                    })}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveDefaultTime}>
+              <Text style={styles.saveButtonText}>저장</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+
     </SafeAreaView>
   );
 };
@@ -778,6 +1470,254 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
     marginVertical: 20,
+  },
+  settingsSection: {
+    marginTop: 15,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  settingLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  settingText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  settingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  settingValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  statusModalContent: {
+    width: '85%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+  },
+  statusOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    marginBottom: 10,
+    gap: 15,
+  },
+  statusOptionSelected: {
+    backgroundColor: '#E8F4FD',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  statusOptionText: {
+    flex: 1,
+  },
+  statusOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 3,
+  },
+  statusOptionDescription: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+  },
+  timeModalContent: {
+    width: '85%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+  },
+  timeInputSection: {
+    marginBottom: 20,
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+    marginBottom: 20,
+  },
+  timePickerHalf: {
+    flex: 1,
+  },
+  timeInputRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+    marginBottom: 20,
+  },
+  timeInputHalf: {
+    flex: 1,
+  },
+  timeInput: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    textAlign: 'center',
+  },
+  timeInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  helperText: {
+    fontSize: 12,
+    color: Colors.text.light,
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  pickerContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 200,
+    width: '100%',
+  },
+  saveButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  businessHoursModalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    alignSelf: 'center',
+    marginTop: 'auto',
+    marginBottom: 'auto',
+  },
+  daysList: {
+    maxHeight: 400,
+    marginBottom: 20,
+  },
+  dayItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  dayName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    width: 40,
+  },
+  dayContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginLeft: 15,
+  },
+  hoursText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
+  closedText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FF4444',
+  },
+  editDayModalContent: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    alignSelf: 'center',
+    marginTop: 'auto',
+    marginBottom: 'auto',
+  },
+  closedToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  closedToggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  timeSliderSection: {
+    marginBottom: 25,
+  },
+  timeSliderLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+    marginBottom: 8,
+  },
+  timeSliderValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 10,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
   },
 });
 

@@ -244,11 +244,11 @@ const HomeScreen: React.FC = () => {
     try {
       setIsLoadingLocation(true);
 
-      // 테스트용으로 중구형 스마트쉼터 위치 사용
+      // 테스트용으로 그린스마트쉼터 위치 사용
       const testLocation = {
         coords: {
-          latitude: 37.5652927,
-          longitude: 126.9789266,
+          latitude: 37.5016667,
+          longitude: 127.0385582,
           altitude: 0,
           accuracy: 10,
           altitudeAccuracy: 0,
@@ -259,7 +259,7 @@ const HomeScreen: React.FC = () => {
       };
 
       setCurrentLocation(testLocation);
-      console.log('✅ 테스트 위치 (중구형 스마트쉼터):', testLocation.coords.latitude, testLocation.coords.longitude);
+      console.log('✅ 테스트 위치 (그린스마트쉼터):', testLocation.coords.latitude, testLocation.coords.longitude);
 
       // 주변 장소 조회
       await loadNearbyPlaces(testLocation.coords.latitude, testLocation.coords.longitude);
@@ -364,11 +364,11 @@ const HomeScreen: React.FC = () => {
     // 현재 위치 갱신 및 지도 이동
     getCurrentLocation();
 
-    // WebView의 지도를 현재 위치(중구형 스마트쉼터)로 이동하고 줌 레벨 초기화
+    // WebView의 지도를 현재 위치(그린스마트쉼터)로 이동하고 줌 레벨 초기화
     if (webViewRef.current) {
       const moveScript = `
         if (typeof map !== 'undefined') {
-          var moveLatLon = new kakao.maps.LatLng(37.5652927, 126.9789266);
+          var moveLatLon = new kakao.maps.LatLng(37.5016667, 127.0385582);
           map.setCenter(moveLatLon);
           map.setLevel(3);
         }
@@ -807,9 +807,9 @@ const HomeScreen: React.FC = () => {
       <script>
           var container = document.getElementById('map');
 
-          // 현재 위치가 있으면 해당 위치를 중심으로, 없으면 중구형 스마트쉼터 위치 사용
-          var centerLat = ${currentLocation?.coords.latitude || 37.5652927};
-          var centerLng = ${currentLocation?.coords.longitude || 126.9789266};
+          // 현재 위치가 있으면 해당 위치를 중심으로, 없으면 그린스마트쉼터 위치 사용
+          var centerLat = ${currentLocation?.coords.latitude || 37.5016667};
+          var centerLng = ${currentLocation?.coords.longitude || 127.0385582};
 
           var options = {
               center: new kakao.maps.LatLng(centerLat, centerLng),

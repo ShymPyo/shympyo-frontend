@@ -122,6 +122,22 @@ interface AdminPlace {
   imageUrl?: string;
   currentUsers?: number;
   maxCapacity?: number;
+  maxUsageMinutes?: number;
+  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DELETED';
+}
+
+interface DayOfWeek {
+  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+  openTime: string;
+  closeTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+  closed: boolean;
+}
+
+interface BusinessHours {
+  placeId: number;
+  items: DayOfWeek[];
 }
 
 interface SendLetterResponse {
@@ -533,22 +549,65 @@ class ApiService {
       name: string;
       content: string;
       maxCapacity: number;
+      maxUsageMinutes?: number;
       imageUrl?: string;
       address: string;
-      openTime: string;
-      closeTime: string;
-      weeklyHoliday: string;
     },
     accessToken: string
-  ): Promise<ApiResponse<AdminPlace>> {
+  ): Promise<ApiResponse<string>> {
     console.log('🏢 쉼터 정보 수정 API 호출');
-    return this.request<AdminPlace>('/places', {
+    return this.request<string>('/places', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(placeData),
+    });
+  }
+
+  // 쉼터 상태 변경
+  static async updatePlaceStatus(
+    status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DELETED',
+    accessToken: string
+  ): Promise<ApiResponse<string>> {
+    console.log('🔄 쉼터 상태 변경 API 호출:', status);
+    return this.request<string>(`/places/status?status=${status}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 영업시간 조회
+  static async getBusinessHours(
+    placeId: number,
+    accessToken: string
+  ): Promise<ApiResponse<BusinessHours>> {
+    console.log('🕐 영업시간 조회 API 호출');
+    return this.request<BusinessHours>(`/places/${placeId}/business-hours`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 영업시간 수정
+  static async updateBusinessHours(
+    placeId: number,
+    businessHours: { items: DayOfWeek[] },
+    accessToken: string
+  ): Promise<ApiResponse<string>> {
+    console.log('🕐 영업시간 수정 API 호출');
+    return this.request<string>(`/places/${placeId}/business-hours`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(businessHours),
     });
   }
 
@@ -639,5 +698,7 @@ export type {
   CurrentRental,
   RentalHistory,
   RentalEnterResponse,
-  RentalExitResponse
+  RentalExitResponse,
+  BusinessHours,
+  DayOfWeek
 };
