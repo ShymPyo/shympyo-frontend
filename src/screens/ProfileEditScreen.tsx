@@ -175,17 +175,17 @@ const ProfileEditScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={statusBarStyle as any} />
 
       {/* 헤더 */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.title}>프로필 편집</Text>
+        <Text style={[styles.title, { fontSize: getFontSize(18), color: colors.text.primary }]}>프로필 편집</Text>
         <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveButton}>
-          <Text style={[styles.saveButtonText, loading && styles.saveButtonTextDisabled]}>
+          <Text style={[styles.saveButtonText, { fontSize: getFontSize(16), color: colors.primary }, loading && styles.saveButtonTextDisabled]}>
             {loading ? '저장 중...' : '저장'}
           </Text>
         </TouchableOpacity>
@@ -200,41 +200,41 @@ const ProfileEditScreen: React.FC = () => {
               <Ionicons name="camera" size={20} color="white" />
             </View>
           </TouchableOpacity>
-          <Text style={styles.profileImageText}>프로필 사진</Text>
+          <Text style={[styles.profileImageText, { fontSize: getFontSize(14), color: colors.text.secondary }]}>프로필 사진</Text>
         </View>
 
         {/* 정보 입력 섹션 */}
         <View style={styles.formSection}>
           {/* 이메일 (읽기 전용) */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>이메일</Text>
-            <View style={styles.readOnlyInput}>
-              <Text style={styles.readOnlyText}>{initialUser.email}</Text>
+            <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>이메일</Text>
+            <View style={[styles.readOnlyInput, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.readOnlyText, { fontSize: getFontSize(16), color: colors.text.light }]}>{initialUser.email}</Text>
             </View>
           </View>
 
           {/* 이름 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>이름</Text>
+            <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>이름</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
               value={name}
               onChangeText={setName}
               placeholder="이름을 입력하세요"
-              placeholderTextColor={Colors.text.light}
+              placeholderTextColor={colors.text.light}
               editable={!loading}
             />
           </View>
 
           {/* 전화번호 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>전화번호</Text>
+            <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>전화번호</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
               value={phone}
               onChangeText={setPhone}
               placeholder="전화번호를 입력하세요"
-              placeholderTextColor={Colors.text.light}
+              placeholderTextColor={colors.text.light}
               keyboardType="phone-pad"
               editable={!loading}
             />
@@ -242,26 +242,26 @@ const ProfileEditScreen: React.FC = () => {
 
           {/* 닉네임 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>닉네임</Text>
+            <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>닉네임</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
               value={nickname}
               onChangeText={setNickname}
               placeholder="닉네임을 입력하세요"
-              placeholderTextColor={Colors.text.light}
+              placeholderTextColor={colors.text.light}
               editable={!loading}
             />
           </View>
 
           {/* 자기소개 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>자기소개</Text>
+            <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>자기소개</Text>
             <TextInput
-              style={[styles.input, styles.bioInput]}
+              style={[styles.input, styles.bioInput, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
               value={bio}
               onChangeText={setBio}
               placeholder="자기소개를 입력하세요"
-              placeholderTextColor={Colors.text.light}
+              placeholderTextColor={colors.text.light}
               multiline={true}
               numberOfLines={3}
               textAlignVertical="top"
@@ -282,8 +282,8 @@ const ProfileEditScreen: React.FC = () => {
         presentationStyle="overFullScreen"
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>프로필 이미지 선택</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>프로필 이미지 선택</Text>
             <FlatList
               data={profileImages}
               renderItem={({ item, index }) => (
@@ -296,8 +296,8 @@ const ProfileEditScreen: React.FC = () => {
               contentContainerStyle={styles.imageList}
               scrollEnabled={false}
             />
-            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.closeButtonText}>취소</Text>
+            <TouchableOpacity style={[styles.closeButton, { backgroundColor: colors.background }]} onPress={() => setModalVisible(false)}>
+              <Text style={[styles.closeButtonText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>취소</Text>
             </TouchableOpacity>
           </View>
         </View>

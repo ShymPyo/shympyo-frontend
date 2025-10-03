@@ -360,35 +360,35 @@ const LetterScreen: React.FC = () => {
 
     return (
       <TouchableOpacity
-        style={[styles.card, isLetterSent && styles.sentCard]}
+        style={[styles.card, { backgroundColor: colors.surface }, isLetterSent && [styles.sentCard, { backgroundColor: colors.surface, opacity: 0.7 }]]}
         onPress={() => isLetterSent && handleLetterPress(item)}
         disabled={!isLetterSent}
       >
         <View style={styles.cardContent}>
-          <Text style={[styles.date, isLetterSent && styles.sentText]}>
+          <Text style={[styles.date, { fontSize: getFontSize(12), color: colors.text.light }, isLetterSent && styles.sentText]}>
             {formatDate(item.endTime)}
           </Text>
-          <Text style={[styles.placeName, isLetterSent && styles.sentText]}>
+          <Text style={[styles.placeName, { fontSize: getFontSize(18), color: colors.text.primary }, isLetterSent && [styles.sentText, { color: colors.text.light }]]}>
             {item.placeName}
           </Text>
-          <Text style={[styles.rentalInfo, isLetterSent && styles.sentText]}>
+          <Text style={[styles.rentalInfo, { fontSize: getFontSize(12), color: colors.text.light }, isLetterSent && styles.sentText]}>
             {formatDate(item.startTime)} ~ {formatDate(item.endTime)}
           </Text>
           {isLetterSent && (
-            <View style={styles.sentBadge}>
+            <View style={[styles.sentBadge, { backgroundColor: colors.background }]}>
               <Ionicons
                 name={isLetterRead ? "mail-open" : "mail"}
                 size={16}
-                color={isLetterRead ? Colors.success : Colors.text.light}
+                color={isLetterRead ? Colors.success : colors.text.light}
               />
-              <Text style={[styles.sentBadgeText, isLetterRead && styles.readBadgeText]}>
+              <Text style={[styles.sentBadgeText, { fontSize: getFontSize(12), color: colors.text.light }, isLetterRead && [styles.readBadgeText, { color: Colors.success }]]}>
                 {isLetterRead ? '편지 읽음' : '편지 전송 완료'}
               </Text>
             </View>
           )}
         </View>
         <TouchableOpacity
-          style={[styles.button, isLetterSent && styles.sentButton]}
+          style={[styles.button, { backgroundColor: colors.primary }, isLetterSent && [styles.sentButton, { backgroundColor: colors.surface, borderColor: colors.text.light + '40' }]]}
           onPress={(e) => {
             e.stopPropagation();
             if (!isLetterSent) {
@@ -475,27 +475,29 @@ const LetterScreen: React.FC = () => {
             style={styles.modalContainer}
             keyboardVerticalOffset={-50}
           >
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>감사 편지 작성</Text>
-              <Text style={styles.modalRecipient}>To. {selectedPlace?.placeName} 사장님</Text>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.modalTitle, { fontSize: getFontSize(20), color: colors.text.primary }]}>감사 편지 작성</Text>
+              <Text style={[styles.modalRecipient, { fontSize: getFontSize(16), color: colors.text.secondary }]}>To. {selectedPlace?.placeName} 사장님</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { fontSize: getFontSize(14), color: colors.text.primary, backgroundColor: colors.background, borderColor: colors.text.light + '40' }]}
                 value={letterText}
                 onChangeText={setLetterText}
                 placeholder="감사한 마음을 담아 편지를 작성해보세요..."
+                placeholderTextColor={colors.text.light}
                 multiline
               />
               <View style={styles.modalButtonContainer}>
                 <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
+                  style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.background }]}
                   onPress={() => setModalVisible(false)}
                 >
-                  <Text style={styles.cancelButtonText}>취소</Text>
+                  <Text style={[styles.cancelButtonText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>취소</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.modalButton,
                     styles.sendButton,
+                    { backgroundColor: colors.primary },
                     (isSending || !letterText.trim()) && styles.disabledButton
                   ]}
                   onPress={handleSendLetter}
@@ -504,7 +506,7 @@ const LetterScreen: React.FC = () => {
                   {isSending ? (
                     <ActivityIndicator color="white" size="small" />
                   ) : (
-                    <Text style={styles.sendButtonText}>전송</Text>
+                    <Text style={[styles.sendButtonText, { fontSize: getFontSize(16) }]}>전송</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -526,34 +528,34 @@ const LetterScreen: React.FC = () => {
           onPress={() => setDetailModalVisible(false)}
         >
           <TouchableOpacity
-            style={styles.detailModalContent}
+            style={[styles.detailModalContent, { backgroundColor: colors.surface }]}
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.detailModalHeader}>
               <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.primary} />
+                <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
-              <Text style={styles.detailModalTitle}>보낸 편지</Text>
+              <Text style={[styles.detailModalTitle, { fontSize: getFontSize(20), color: colors.text.primary }]}>보낸 편지</Text>
               <View style={{ width: 24 }} />
             </View>
 
             <View style={styles.detailModalInfo}>
-              <Text style={styles.detailModalLabel}>받는 사람</Text>
-              <Text style={styles.detailModalText}>{selectedLetterDetail?.placeName} 사장님</Text>
+              <Text style={[styles.detailModalLabel, { fontSize: getFontSize(12), color: colors.text.light }]}>받는 사람</Text>
+              <Text style={[styles.detailModalText, { fontSize: getFontSize(16), color: colors.text.primary }]}>{selectedLetterDetail?.placeName} 사장님</Text>
             </View>
 
             <View style={styles.detailModalInfo}>
-              <Text style={styles.detailModalLabel}>전송 일시</Text>
-              <Text style={styles.detailModalText}>
+              <Text style={[styles.detailModalLabel, { fontSize: getFontSize(12), color: colors.text.light }]}>전송 일시</Text>
+              <Text style={[styles.detailModalText, { fontSize: getFontSize(16), color: colors.text.primary }]}>
                 {selectedLetterDetail?.sentAt ? formatDate(selectedLetterDetail.sentAt) : '-'}
               </Text>
             </View>
 
             <View style={styles.detailModalContentSection}>
-              <Text style={styles.detailModalLabel}>편지 내용</Text>
-              <View style={styles.detailModalLetterBox}>
-                <Text style={styles.detailModalLetterText}>
+              <Text style={[styles.detailModalLabel, { fontSize: getFontSize(12), color: colors.text.light }]}>편지 내용</Text>
+              <View style={[styles.detailModalLetterBox, { backgroundColor: colors.background, borderColor: colors.text.light + '40' }]}>
+                <Text style={[styles.detailModalLetterText, { fontSize: getFontSize(16), color: colors.text.primary }]}>
                   {selectedLetterDetail?.content}
                 </Text>
               </View>

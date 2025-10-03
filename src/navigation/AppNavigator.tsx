@@ -5,7 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList, MainTabParamList } from '../types';
-import { Colors } from '../constants/colors';
+import { Colors, getColors } from '../constants/colors';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -26,6 +27,8 @@ const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabNavigator = () => {
+  const { colors, getFontSize } = useThemedStyles();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -49,38 +52,39 @@ const MainTabNavigator = () => {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.text.light,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.text.light,
         tabBarStyle: {
-          backgroundColor: Colors.background,
-          borderTopColor: '#E5E5E5',
+          backgroundColor: colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: colors.text.light + '20',
           paddingTop: 10,
           paddingBottom: 25,
           height: 70,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: getFontSize(12),
           fontWeight: '500',
         },
         headerShown: false,
       })}>
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{ tabBarLabel: '' }}
       />
-      <Tab.Screen 
-        name="QR" 
+      <Tab.Screen
+        name="QR"
         component={QRScreen}
         options={{ tabBarLabel: '' }}
       />
-      <Tab.Screen 
-        name="Letter" 
+      <Tab.Screen
+        name="Letter"
         component={LetterScreen}
         options={{ tabBarLabel: '' }}
       />
-      <Tab.Screen 
-        name="Settings" 
+      <Tab.Screen
+        name="Settings"
         component={SettingsScreen}
         options={{ tabBarLabel: '' }}
       />

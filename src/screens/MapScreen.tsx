@@ -4,8 +4,11 @@ import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { StatusBar } from 'expo-status-bar';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 const MapScreen: React.FC = () => {
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
   const [htmlUri, setHtmlUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,47 +78,50 @@ const MapScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <Text>맵 로딩 중...</Text>
+      <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle as any} />
+        <Text style={[styles.loadingText, { fontSize: getFontSize(16), color: colors.text.primary }]}>맵 로딩 중...</Text>
       </View>
     );
   }
 
   if (error || !htmlUri) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <Text style={styles.errorText}>{error || '맵을 불러올 수 없습니다.'}</Text>
+      <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle as any} />
+        <Text style={[styles.errorText, { fontSize: getFontSize(16), color: colors.text.error }]}>{error || '맵을 불러올 수 없습니다.'}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={statusBarStyle as any} />
       {/* 핀 카테고리 */}
-      <View style={styles.categoryContainer}>
+      <View style={[styles.categoryContainer, { backgroundColor: colors.surface }]}>
         <View style={styles.categoryItem}>
           <View style={[styles.categoryPin, { backgroundColor: '#7B7BF7' }]}>
             <Ionicons name="medical" size={16} color="#FFFFFF" />
           </View>
-          <Text style={styles.categoryText}>쉘터</Text>
+          <Text style={[styles.categoryText, { fontSize: getFontSize(12), color: colors.text.primary }]}>쉘터</Text>
         </View>
         <View style={styles.categoryItem}>
           <View style={[styles.categoryPin, { backgroundColor: '#A5A5E8' }]}>
             <Ionicons name="business" size={16} color="#FFFFFF" />
           </View>
-          <Text style={styles.categoryText}>민간</Text>
+          <Text style={[styles.categoryText, { fontSize: getFontSize(12), color: colors.text.primary }]}>민간</Text>
         </View>
         <View style={styles.categoryItem}>
           <View style={[styles.categoryPin, { backgroundColor: '#4A90E2' }]}>
             <Ionicons name="car" size={16} color="#FFFFFF" />
           </View>
-          <Text style={styles.categoryText}>교통</Text>
+          <Text style={[styles.categoryText, { fontSize: getFontSize(12), color: colors.text.primary }]}>교통</Text>
         </View>
         <View style={styles.categoryItem}>
           <View style={[styles.categoryPin, { backgroundColor: '#8A8A8A' }]}>
             <Ionicons name="library" size={16} color="#FFFFFF" />
           </View>
-          <Text style={styles.categoryText}>공공</Text>
+          <Text style={[styles.categoryText, { fontSize: getFontSize(12), color: colors.text.primary }]}>공공</Text>
         </View>
       </View>
       

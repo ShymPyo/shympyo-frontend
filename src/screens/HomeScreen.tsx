@@ -715,10 +715,11 @@ const HomeScreen: React.FC = () => {
 
   // 쉼터 정보 카드 렌더링 함수 - 선택 가능한 카드 리스트 형태
   const renderShelterCard = ({ item }: { item: Shelter }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
-        styles.shelterCard, 
-        selectedShelter.id === item.id && styles.selectedCard // 선택된 카드는 다른 스타일 적용
+        styles.shelterCard,
+        { backgroundColor: colors.background },
+        selectedShelter.id === item.id && [styles.selectedCard, { borderColor: colors.primary }] // 선택된 카드는 다른 스타일 적용
       ]}
       onPress={() => handleShelterPress(item)} // 카드 선택 시 상세 정보 로드 후 모달 열기
     >
@@ -728,8 +729,8 @@ const HomeScreen: React.FC = () => {
       </View>
       {/* 쉼터 정보 텍스트 영역 */}
       <View style={styles.shelterInfo}>
-        <Text style={styles.shelterCategory}>{item.category}</Text>
-        <Text style={styles.shelterName}>
+        <Text style={[styles.shelterCategory, { fontSize: getFontSize(11), color: colors.text.light }]}>{item.category}</Text>
+        <Text style={[styles.shelterName, { fontSize: getFontSize(15), color: colors.text.primary }]}>
           {(() => {
             const name = item.name;
             const description = item.description;
@@ -748,9 +749,9 @@ const HomeScreen: React.FC = () => {
           })()}
         </Text>
         {item.address && (
-          <Text style={styles.shelterAddress}>{item.address}</Text>
+          <Text style={[styles.shelterAddress, { fontSize: getFontSize(12), color: colors.text.secondary }]}>{item.address}</Text>
         )}
-        <Text style={styles.shelterDescription} numberOfLines={1}>
+        <Text style={[styles.shelterDescription, { fontSize: getFontSize(12), color: colors.text.light }]} numberOfLines={1}>
           {(() => {
             const category = item.category;
             // 민간 개방 시설: description 표시
@@ -763,7 +764,7 @@ const HomeScreen: React.FC = () => {
         </Text>
       </View>
       {/* 거리 정보 - 오른쪽에 큰 글씨로 표시 */}
-      <Text style={styles.shelterDistance}>{item.distance}</Text>
+      <Text style={[styles.shelterDistance, { fontSize: getFontSize(18), color: colors.primary }]}>{item.distance}</Text>
     </TouchableOpacity>
   );
 
@@ -1011,16 +1012,17 @@ const HomeScreen: React.FC = () => {
           </View>
           
           {/* 쉼터 종류 범례 - 상단 가로 배치 */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.shelterCategoryContainer,
+              { backgroundColor: colors.surface },
               selectedCategories.length === 0 && styles.shelterCategoryContainerSquare
             ]}
             onPress={() => setFilterModalVisible(true)}
           >
             {selectedCategories.length === 0 ? (
               <View style={styles.filterIconContainer}>
-                <Ionicons name="options" size={18} color={Colors.text.secondary} />
+                <Ionicons name="options" size={18} color={colors.text.secondary} />
                 <Text style={styles.filterText}></Text>
               </View>
             ) : (
@@ -1030,7 +1032,7 @@ const HomeScreen: React.FC = () => {
                     <View style={[styles.categoryPin, { backgroundColor: '#4A90E2' }]}>
                       <Ionicons name="medical" size={12} color="white" />
                     </View>
-                    <Text style={styles.categoryText}>쉘터</Text>
+                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>쉘터</Text>
                   </View>
                 )}
                 {selectedCategories.includes('민간 개방 시설') && (
@@ -1038,7 +1040,7 @@ const HomeScreen: React.FC = () => {
                     <View style={[styles.categoryPin, { backgroundColor: '#FFA500' }]}>
                       <Ionicons name="business" size={12} color="white" />
                     </View>
-                    <Text style={styles.categoryText}>민간</Text>
+                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>민간</Text>
                   </View>
                 )}
                 {selectedCategories.includes('교통 시설') && (
@@ -1046,7 +1048,7 @@ const HomeScreen: React.FC = () => {
                     <View style={[styles.categoryPin, { backgroundColor: '#27AE60' }]}>
                       <Ionicons name="car" size={12} color="white" />
                     </View>
-                    <Text style={styles.categoryText}>교통</Text>
+                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>교통</Text>
                   </View>
                 )}
                 {selectedCategories.includes('공공 시설') && (
@@ -1054,7 +1056,7 @@ const HomeScreen: React.FC = () => {
                     <View style={[styles.categoryPin, { backgroundColor: '#E74C3C' }]}>
                       <Ionicons name="library" size={12} color="white" />
                     </View>
-                    <Text style={styles.categoryText}>공공</Text>
+                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>공공</Text>
                   </View>
                 )}
               </>
@@ -1066,6 +1068,7 @@ const HomeScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.locationButton,
+                { backgroundColor: colors.surface },
                 isLoadingLocation && styles.locationButtonLoading
               ]}
               onPress={handleMyLocationPress}
@@ -1074,19 +1077,19 @@ const HomeScreen: React.FC = () => {
               <Ionicons
                 name={isLoadingLocation ? "refresh" : "locate"}
                 size={20}
-                color={isLoadingLocation ? Colors.primary : Colors.text.primary}
+                color={isLoadingLocation ? colors.primary : colors.text.primary}
               />
             </TouchableOpacity>
           </Animated.View>
           
           <GestureDetector gesture={panGesture}>
-            <Animated.View style={[styles.overlayBottom, bottomSheetStyle]}>
+            <Animated.View style={[styles.overlayBottom, { backgroundColor: colors.surface }, bottomSheetStyle]}>
               {/* 드래그 핸들 - 미니멀한 회색 바 */}
-              <View style={styles.dragHandle} />
+              <View style={[styles.dragHandle, { backgroundColor: colors.text.light }]} />
 
               {/* 헤더 부분 - 터치 시 리스트 토글 */}
-              <TouchableOpacity style={styles.bottomHeader} onPress={handleHeaderPress}>
-                <Text style={styles.headerTitle}>반경 1km 내 쉼터</Text>
+              <TouchableOpacity style={[styles.bottomHeader, { borderBottomColor: colors.text.light + '20' }]} onPress={handleHeaderPress}>
+                <Text style={[styles.headerTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>반경 1km 내 쉼터</Text>
               </TouchableOpacity>
 
               {/* 쉼터 목록 - 스크롤 가능한 영역 */}
@@ -1096,7 +1099,7 @@ const HomeScreen: React.FC = () => {
                 contentContainerStyle={styles.scrollContentContainer}
               >
                 {/* 실시간 업데이트 안내 - 리스트 내부 */}
-                <Text style={styles.topNote}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
+                <Text style={[styles.topNote, { fontSize: getFontSize(12), color: colors.text.light }]}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
 
                 <View style={{ backgroundColor: 'transparent' }}>
                   {/* 쉼터 목록 항상 표시 */}
@@ -1132,15 +1135,15 @@ const HomeScreen: React.FC = () => {
             activeOpacity={1}
             onPress={() => setFilterModalVisible(false)}
           >
-            <TouchableOpacity 
-              style={styles.filterModalContent}
+            <TouchableOpacity
+              style={[styles.filterModalContent, { backgroundColor: colors.surface }]}
               activeOpacity={1}
               onPress={(e) => e.stopPropagation()}
             >
-              <View style={styles.filterModalHeader}>
-                <Text style={styles.filterModalTitle}>쉼터 종류 선택</Text>
+              <View style={[styles.filterModalHeader, { borderBottomColor: colors.text.light + '20' }]}>
+                <Text style={[styles.filterModalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>쉼터 종류 선택</Text>
                 <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
-                  <Ionicons name="close" size={24} color={Colors.text.primary} />
+                  <Ionicons name="close" size={24} color={colors.text.primary} />
                 </TouchableOpacity>
               </View>
               
@@ -1148,7 +1151,8 @@ const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.filterOption,
-                    selectedCategories.includes('스마트 쉼터') && styles.filterOptionSelected
+                    { backgroundColor: colors.background },
+                    selectedCategories.includes('스마트 쉼터') && [styles.filterOptionSelected, { borderColor: colors.primary }]
                   ]}
                   onPress={() => toggleCategory('스마트 쉼터')}
                 >
@@ -1157,17 +1161,19 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterOptionText,
+                    { fontSize: getFontSize(16), color: colors.text.primary },
                     selectedCategories.includes('스마트 쉼터') && styles.filterOptionTextSelected
                   ]}>스마트 쉼터</Text>
                   {selectedCategories.includes('스마트 쉼터') && (
-                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
                     styles.filterOption,
-                    selectedCategories.includes('민간 개방 시설') && styles.filterOptionSelected
+                    { backgroundColor: colors.background },
+                    selectedCategories.includes('민간 개방 시설') && [styles.filterOptionSelected, { borderColor: colors.primary }]
                   ]}
                   onPress={() => toggleCategory('민간 개방 시설')}
                 >
@@ -1176,17 +1182,19 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterOptionText,
+                    { fontSize: getFontSize(16), color: colors.text.primary },
                     selectedCategories.includes('민간 개방 시설') && styles.filterOptionTextSelected
                   ]}>민간 개방 시설</Text>
                   {selectedCategories.includes('민간 개방 시설') && (
-                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
                     styles.filterOption,
-                    selectedCategories.includes('교통 시설') && styles.filterOptionSelected
+                    { backgroundColor: colors.background },
+                    selectedCategories.includes('교통 시설') && [styles.filterOptionSelected, { borderColor: colors.primary }]
                   ]}
                   onPress={() => toggleCategory('교통 시설')}
                 >
@@ -1195,17 +1203,19 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterOptionText,
+                    { fontSize: getFontSize(16), color: colors.text.primary },
                     selectedCategories.includes('교통 시설') && styles.filterOptionTextSelected
                   ]}>교통 시설</Text>
                   {selectedCategories.includes('교통 시설') && (
-                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
                     styles.filterOption,
-                    selectedCategories.includes('공공 시설') && styles.filterOptionSelected
+                    { backgroundColor: colors.background },
+                    selectedCategories.includes('공공 시설') && [styles.filterOptionSelected, { borderColor: colors.primary }]
                   ]}
                   onPress={() => toggleCategory('공공 시설')}
                 >
@@ -1214,10 +1224,11 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterOptionText,
+                    { fontSize: getFontSize(16), color: colors.text.primary },
                     selectedCategories.includes('공공 시설') && styles.filterOptionTextSelected
                   ]}>공공 시설</Text>
                   {selectedCategories.includes('공공 시설') && (
-                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               </View>

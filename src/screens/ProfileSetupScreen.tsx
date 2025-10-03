@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 type ProfileSetupNavigationProp = StackNavigationProp<RootStackParamList, 'ProfileSetup'>;
 
@@ -39,6 +40,7 @@ const profileImages = [
 
 const ProfileSetupScreen: React.FC = () => {
   const navigation = useNavigation<ProfileSetupNavigationProp>();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
   const [nickname, setNickname] = useState('');
   const [bio, setBio] = useState('');
   const [profileImage, setProfileImage] = useState(profileImages[0].image); // 첫 번째 로컬 이미지로 초기화
@@ -61,13 +63,13 @@ const ProfileSetupScreen: React.FC = () => {
 
   return (
     <Pressable onPress={dismissKeyboard} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle as any} />
+        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.title}>프로필 편집</Text>
+          <Text style={[styles.title, { fontSize: getFontSize(18), color: colors.text.primary }]}>프로필 편집</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -86,30 +88,32 @@ const ProfileSetupScreen: React.FC = () => {
             </TouchableOpacity>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>닉네임</Text>
+              <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>닉네임</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
                 value={nickname}
                 onChangeText={setNickname}
                 placeholder="닉네임을 입력하세요"
+                placeholderTextColor={colors.text.light}
                 returnKeyType="next"
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>자기소개</Text>
+              <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>자기소개</Text>
               <TextInput
-                style={[styles.input, styles.bioInput]}
+                style={[styles.input, styles.bioInput, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
                 value={bio}
                 onChangeText={setBio}
                 placeholder="자기소개를 입력하세요"
+                placeholderTextColor={colors.text.light}
                 multiline
                 returnKeyType="done"
               />
             </View>
 
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>저장</Text>
+            <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSave}>
+              <Text style={[styles.saveButtonText, { fontSize: getFontSize(16) }]}>저장</Text>
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -124,8 +128,8 @@ const ProfileSetupScreen: React.FC = () => {
         statusBarTranslucent={true}
       >
         <View style={styles.fixedModalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>프로필 이미지 선택</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>프로필 이미지 선택</Text>
             <FlatList
               data={profileImages}
               renderItem={({ item }) => (
@@ -140,8 +144,8 @@ const ProfileSetupScreen: React.FC = () => {
               showsVerticalScrollIndicator={false}
               showsHorizontalScrollIndicator={false}
             />
-            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.closeButtonText}>취소</Text>
+            <TouchableOpacity style={[styles.closeButton, { backgroundColor: colors.surface }]} onPress={() => setModalVisible(false)}>
+              <Text style={[styles.closeButtonText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>취소</Text>
             </TouchableOpacity>
           </View>
         </View>
