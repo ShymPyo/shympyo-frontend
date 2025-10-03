@@ -710,17 +710,13 @@ const AdminMainScreen: React.FC = () => {
                   }}
                   style={styles.userProfile}
                 />
-                <Text style={styles.userName}>{user.userName} 님</Text>
-                <Text style={styles.userTime}>
-                  {new Date(user.startTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 입실
-                </Text>
+                <Text style={styles.userName}>{user.nickname || user.userName}</Text>
                 <Text style={styles.userTimeLeft}>
                   {(() => {
-                    const elapsed = Math.floor((Date.now() - new Date(user.startTime).getTime()) / 1000);
-                    const remaining = Math.max(0, 600 - elapsed); // 10분 = 600초
-                    const minutes = Math.floor(remaining / 60);
-                    const seconds = remaining % 60;
-                    return `${minutes}:${seconds.toString().padStart(2, '0')} 남음`;
+                    const startTime = new Date(user.startTime);
+                    const maxMinutes = maxUsageMinutes || 10;
+                    const endTime = new Date(startTime.getTime() + maxMinutes * 60 * 1000);
+                    return `${endTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 종료 예정`;
                   })()}
                 </Text>
               </TouchableOpacity>
@@ -767,7 +763,7 @@ const AdminMainScreen: React.FC = () => {
               <TouchableOpacity onPress={() => setUserModalVisible(false)}>
                 <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
-              <Text style={styles.userModalTitle}>{selectedUser?.userName} 님의 이용 정보</Text>
+              <Text style={styles.userModalTitle}>사용자 프로필</Text>
               <View style={{ width: 24 }} />
             </View>
 
@@ -776,9 +772,9 @@ const AdminMainScreen: React.FC = () => {
                 source={{ uri: selectedUser?.imageUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face' }}
                 style={styles.userModalProfileCircle}
               />
-              <Text style={styles.userModalName}>{selectedUser?.userName}</Text>
-              {selectedUser?.userNickname && (
-                <Text style={styles.userModalNickname}>@{selectedUser.userNickname}</Text>
+              <Text style={styles.userModalName}>{selectedUser?.nickname || selectedUser?.userName}</Text>
+              {selectedUser?.bio && (
+                <Text style={styles.userModalBio}>{selectedUser.bio}</Text>
               )}
             </View>
 
@@ -791,14 +787,13 @@ const AdminMainScreen: React.FC = () => {
               </View>
 
               <View style={styles.userModalInfoRow}>
-                <Text style={styles.userModalLabel}>남은 시간</Text>
+                <Text style={styles.userModalLabel}>종료 시간</Text>
                 <Text style={styles.userModalInfoText}>
                   {selectedUser?.startTime ? (() => {
-                    const elapsed = Math.floor((Date.now() - new Date(selectedUser.startTime).getTime()) / 1000);
-                    const remaining = Math.max(0, 600 - elapsed);
-                    const minutes = Math.floor(remaining / 60);
-                    const seconds = remaining % 60;
-                    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    const startTime = new Date(selectedUser.startTime);
+                    const maxMinutes = maxUsageMinutes || 10;
+                    const endTime = new Date(startTime.getTime() + maxMinutes * 60 * 1000);
+                    return endTime.toLocaleString('ko-KR');
                   })() : '-'}
                 </Text>
               </View>
@@ -817,13 +812,6 @@ const AdminMainScreen: React.FC = () => {
                 </View>
               )}
             </View>
-
-            {selectedUser?.userBio && (
-              <View style={styles.userModalBioSection}>
-                <Text style={styles.userModalLabel}>자기소개</Text>
-                <Text style={styles.userModalBioText}>{selectedUser.userBio}</Text>
-              </View>
-            )}
 
             <TouchableOpacity style={styles.exitUserButton} onPress={handleAdminExitUser}>
               <Ionicons name="log-out-outline" size={24} color="white" />
@@ -1343,6 +1331,12 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     marginBottom: 3,
   },
+  userBio: {
+    fontSize: 12,
+    color: Colors.text.light,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
   userTime: {
     fontSize: 12,
     color: Colors.text.secondary,
@@ -1424,6 +1418,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text.secondary,
     marginTop: 5,
+  },
+  userModalBio: {
+    fontSize: 14,
+    color: Colors.text.light,
+    marginTop: 8,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   userModalInfoSection: {
     backgroundColor: Colors.surface,

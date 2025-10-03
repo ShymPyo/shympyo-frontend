@@ -193,13 +193,13 @@ interface LetterCount {
 interface CurrentRental {
   rentalId: number;
   userId: number;
-  userName: string;
+  userName?: string;
+  nickname: string;
+  bio?: string;
   imageUrl: string;
   startTime: string;
   userEmail?: string;
   userPhone?: string;
-  userNickname?: string;
-  userBio?: string;
 }
 
 interface RentalHistory {
