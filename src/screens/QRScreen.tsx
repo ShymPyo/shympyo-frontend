@@ -58,6 +58,7 @@ const QRScreen: React.FC = () => {
   const [isLetterModalVisible, setLetterModalVisible] = useState(false); // 편지 모달
   const [letterText, setLetterText] = useState(''); // 편지 내용
   const [isSendingLetter, setIsSendingLetter] = useState(false); // 편지 전송 중
+  const [lastScannedData, setLastScannedData] = useState<string>(''); // 마지막 스캔 데이터
 
   // 원형 프로그레스 바 애니메이션을 위한 값들
   const progress = useSharedValue(0);
@@ -205,14 +206,16 @@ const QRScreen: React.FC = () => {
   }, [screenState, progress]);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    if (scanned || isProcessing) {
-      console.log('🚫 중복 스캔 방지:', { scanned, isProcessing });
+    // 중복 스캔 방지 - 상태와 데이터 모두 체크
+    if (scanned || isProcessing || data === lastScannedData) {
+      console.log('🚫 중복 스캔 방지:', { scanned, isProcessing, sameData: data === lastScannedData });
       return;
     }
 
     console.log('✅ QR 스캔 시작');
     setScanned(true);
     setIsProcessing(true);
+    setLastScannedData(data);
 
     if (!accessToken) {
       Alert.alert('로그인 필요', '쉼터를 이용하려면 로그인이 필요합니다.');
@@ -287,19 +290,23 @@ const QRScreen: React.FC = () => {
 
         console.log('🏢 입장 완료:', enterResponse.data.placeName, 'placeId:', enterResponse.data.placeId, 'maxTime:', enterResponse.data.maxTime, '분');
       } else {
-        console.log('❌ 쉼터 입장 실패:', {
-          success: enterResponse.success,
-          code: enterResponse.code,
-          message: enterResponse.message,
-          data: enterResponse.data
-        });
+        // "이미 진행 중인 대여" 에러는 무시 (중복 스캔으로 인한 것)
+        if (!enterResponse.message?.includes('이미 진행 중인 대여')) {
+          console.log('❌ 쉼터 입장 실패:', {
+            success: enterResponse.success,
+            code: enterResponse.code,
+            message: enterResponse.message,
+            data: enterResponse.data
+          });
 
-        Alert.alert(
-          '입장 실패',
-          `오류 코드: ${enterResponse.code}\n${enterResponse.message || '쉼터 입장에 실패했습니다.'}`
-        );
+          Alert.alert(
+            '입장 실패',
+            `오류 코드: ${enterResponse.code}\n${enterResponse.message || '쉼터 입장에 실패했습니다.'}`
+          );
+        }
         setScanned(false);
-        setIsProcessing(false); // 처리 중 상태 해제
+        setIsProcessing(false);
+        setLastScannedData(''); // 데이터 초기화
       }
     } catch (error: any) {
       console.error('💥 쉼터 입장 오류:', error);
@@ -311,11 +318,13 @@ const QRScreen: React.FC = () => {
         `네트워크 오류: ${error.message}\n쉼터 입장 중 오류가 발생했습니다.`
       );
       setScanned(false);
-      setIsProcessing(false); // 처리 중 상태 해제
+      setIsProcessing(false);
+      setLastScannedData(''); // 데이터 초기화
     } finally {
       // 성공/실패 여부와 관계없이 3초 후 다시 스캔 가능
       setTimeout(() => {
         setIsProcessing(false);
+        setLastScannedData(''); // 3초 후 데이터 초기화
       }, 3000);
     }
   };

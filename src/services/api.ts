@@ -270,7 +270,8 @@ class ApiService {
           const isSilentError = url.includes('/letters/sent') ||
                                  url.includes('/map/user/') ||
                                  url.includes('/map/public/') ||
-                                 (url.includes('/letters/') && url.includes('/read') && errorData.message?.includes('이미 읽은'));
+                                 (url.includes('/letters/') && url.includes('/read') && errorData.message?.includes('이미 읽은')) ||
+                                 (url.includes('/rental/enter') && errorData.message?.includes('이미 진행 중인 대여'));
 
           if (!isSilentError) {
             console.error(`❌ API 실패: ${response.status} ${response.statusText} - ${url}`);
