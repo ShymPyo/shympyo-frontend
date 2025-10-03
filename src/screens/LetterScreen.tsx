@@ -249,6 +249,26 @@ const LetterScreen: React.FC = () => {
     const unsubscribe = navigation.addListener('focus', async () => {
       if (accessToken) {
         console.log('📋 편지 화면 포커스 - 목록 새로고침');
+
+        // AsyncStorage에서 편지 전송 기록 다시 로드
+        try {
+          const stored = await AsyncStorage.getItem('sentLetters');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setSentLetters(new Set(parsed));
+            console.log('📋 편지 전송 기록 재로드:', parsed);
+          }
+
+          const statusStored = await AsyncStorage.getItem('letterStatus');
+          if (statusStored) {
+            const parsed = JSON.parse(statusStored);
+            setLetterStatus(new Map(Object.entries(parsed).map(([k, v]: [string, any]) => [Number(k), v])));
+            console.log('📋 편지 상태 재로드:', parsed);
+          }
+        } catch (error) {
+          console.error('💥 편지 전송 기록 재로드 오류:', error);
+        }
+
         fetchVisitedPlaces(false);
 
         // 보낸 편지 읽음 상태 확인

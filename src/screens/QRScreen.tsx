@@ -21,6 +21,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import Svg, { Defs, Mask, Rect, Circle } from 'react-native-svg';
 import * as Notifications from 'expo-notifications';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Colors } from '../constants/colors';
 import ApiService from '../services/api';
@@ -59,6 +60,7 @@ const QRScreen: React.FC = () => {
   const [letterText, setLetterText] = useState(''); // 편지 내용
   const [isSendingLetter, setIsSendingLetter] = useState(false); // 편지 전송 중
   const [lastScannedData, setLastScannedData] = useState<string>(''); // 마지막 스캔 데이터
+  const [hasExited, setHasExited] = useState(false); // 퇴장 처리 완료 상태
 
   // 원형 프로그레스 바 애니메이션을 위한 값들
   const progress = useSharedValue(0);
@@ -66,11 +68,14 @@ const QRScreen: React.FC = () => {
   useEffect(() => {
     if (screenState !== 'timer') return;
 
-    if (timeLeft === 0) {
-      // 타이머 완료 시 알림 발송
-      sendNotification();
+    if (timeLeft === 0 && !hasExited) {
+      // 타이머 완료 시 자동 퇴장 처리
+      handleAutoExit();
       return;
     }
+
+    // 퇴장했으면 타이머 멈춤
+    if (hasExited) return;
 
     const intervalId = setInterval(() => {
       setTimeLeft(prev => {
@@ -80,55 +85,30 @@ const QRScreen: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [screenState, timeLeft]);
+  }, [screenState, timeLeft, hasExited]);
 
-  // 타이머 완료 후 1분 경과 시 자동 퇴장
-  useEffect(() => {
-    if (screenState !== 'timer' || timeLeft !== 0) return;
+  // 자동 퇴장 처리 함수
+  const handleAutoExit = async () => {
+    if (!accessToken || !rentalId) {
+      console.log('❌ accessToken 또는 rentalId 없음');
+      return;
+    }
 
-    console.log('⏰ 타이머 완료, 1분 후 자동 퇴장 타이머 시작');
+    try {
+      console.log('🚪 타이머 완료, 자동 퇴장 처리 시작');
+      const exitResponse = await ApiService.exitPlace(accessToken, rentalId);
 
-    const autoExitTimer = setTimeout(async () => {
-      console.log('🚪 1분 경과, 자동 퇴장 처리 시작');
-
-      if (!accessToken || !rentalId) {
-        console.log('❌ accessToken 또는 rentalId 없음');
-        return;
+      if (exitResponse.success && exitResponse.data) {
+        console.log('✅ 자동 퇴장 완료:', exitResponse.data);
+        setHasExited(true);
+        sendNotification();
+      } else {
+        console.log('❌ 자동 퇴장 실패:', exitResponse);
       }
-
-      try {
-        const exitResponse = await ApiService.exitPlace(accessToken, rentalId);
-
-        if (exitResponse.success && exitResponse.data) {
-          console.log('✅ 자동 퇴장 완료:', exitResponse.data);
-          Alert.alert(
-            '자동 퇴장 완료',
-            `${exitResponse.data.placeName}에서 자동 퇴장되었습니다.\n이용해주셔서 감사합니다!`,
-            [
-              {
-                text: '확인',
-                onPress: () => {
-                  setScreenState('scanning');
-                  setScanned(false);
-                  setTimeLeft(totalTime);
-                  setPlaceName('');
-                  setRentalId(null);
-                  setPlaceId(null);
-                  navigation.navigate('Home' as never);
-                },
-              },
-            ]
-          );
-        } else {
-          console.log('❌ 자동 퇴장 실패:', exitResponse);
-        }
-      } catch (error) {
-        console.error('💥 자동 퇴장 오류:', error);
-      }
-    }, 60000); // 타이머 완료 후 60초
-
-    return () => clearTimeout(autoExitTimer);
-  }, [screenState, timeLeft, accessToken, rentalId, totalTime, placeId, navigation]);
+    } catch (error) {
+      console.error('💥 자동 퇴장 오류:', error);
+    }
+  };
 
   // 알림 권한 요청 및 발송 함수
   useEffect(() => {
@@ -170,24 +150,7 @@ const QRScreen: React.FC = () => {
 
       if (exitResponse.success && exitResponse.data) {
         console.log('✅ 퇴장 완료:', exitResponse.data);
-        Alert.alert(
-          '퇴장 완료',
-          `${exitResponse.data.placeName}에서 퇴장했습니다.\n이용해주셔서 감사합니다!`,
-          [
-            {
-              text: '확인',
-              onPress: () => {
-                setScreenState('scanning');
-                setScanned(false);
-                setTimeLeft(totalTime);
-                setPlaceName('');
-                setRentalId(null);
-                setPlaceId(null);
-                navigation.navigate('Home' as never);
-              },
-            },
-          ]
-        );
+        setHasExited(true);
       } else {
         console.log('❌ 퇴장 실패:', exitResponse);
         Alert.alert('오류', exitResponse.message || '퇴장 처리에 실패했습니다.');
@@ -196,6 +159,17 @@ const QRScreen: React.FC = () => {
       console.error('💥 퇴장 오류:', error);
       Alert.alert('오류', '퇴장 처리 중 오류가 발생했습니다.');
     }
+  };
+
+  const handleGoHome = () => {
+    setScreenState('scanning');
+    setScanned(false);
+    setTimeLeft(totalTime);
+    setPlaceName('');
+    setRentalId(null);
+    setPlaceId(null);
+    setHasExited(false);
+    navigation.navigate('Home' as never);
   };
 
   // 타이머 시작 시 애니메이션 초기화
@@ -441,14 +415,14 @@ const QRScreen: React.FC = () => {
         const timeFraction = Math.min(elapsedTime / totalTime, 1);
         const strokeLength = timeFraction * FULL_DASH_ARRAY;
         const dashArray = `${strokeLength.toFixed(1)} ${FULL_DASH_ARRAY}`;
-        
+
         return (
           <View style={styles.timerScreenContainer}>
             <View style={styles.timerContainer}>
               <Text style={styles.timerTopText}>
-                따뜻한 배려로 열린 쉼표,{'\n'}최대 {Math.floor(totalTime / 60)}분 이용 가능합니다.
+                {hasExited ? '이용해주셔서 감사합니다!' : `따뜻한 배려로 열린 쉼표,${'\n'}최대 ${Math.floor(totalTime / 60)}분 이용 가능합니다.`}
               </Text>
-              
+
               {/* 원형 프로그레스 바 */}
               <View style={styles.circularProgressContainer}>
                 <Svg width="280" height="280" viewBox="0 0 200 200" style={styles.circularProgress}>
@@ -466,7 +440,7 @@ const QRScreen: React.FC = () => {
                     cx="100"
                     cy="100"
                     r="85"
-                    stroke={timeLeft === 0 ? Colors.success : Colors.primary}
+                    stroke={hasExited ? Colors.success : Colors.primary}
                     strokeWidth="15"
                     fill="transparent"
                     strokeDasharray={dashArray}
@@ -474,10 +448,10 @@ const QRScreen: React.FC = () => {
                     transform="rotate(-90 100 100)"
                   />
                 </Svg>
-                
+
                 {/* 중앙 내용 */}
                 <View style={styles.timerCenter}>
-                  {timeLeft === 0 ? (
+                  {hasExited ? (
                     <>
                       <Ionicons name="checkmark-circle" size={70} color={Colors.success} />
                       <Text style={styles.timerCompletedText}>쉼표에서, 마침표로.</Text>
@@ -487,19 +461,27 @@ const QRScreen: React.FC = () => {
                   )}
                 </View>
               </View>
-              
+
               <Text style={styles.timerSubtitle}>{placeName || '쉼터'}</Text>
-              <Text style={styles.timerDescription}>깨끗하고 조용한 공간에서 편히 쉬어가세요</Text>
+              <Text style={styles.timerDescription}>
+                {hasExited ? '감사 편지를 남기고 싶으시다면 아래 버튼을 눌러주세요' : '깨끗하고 조용한 공간에서 편히 쉬어가세요'}
+              </Text>
             </View>
-            
+
             {/* 하단 고정 버튼들 */}
             <View style={styles.fixedBottomButtons}>
-              <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
-                <Text style={styles.buttonText}>퇴장하기</Text>
-              </TouchableOpacity>
-              {timeLeft === 0 && (
-                <TouchableOpacity style={styles.letterButton} onPress={() => setLetterModalVisible(true)}>
-                  <Text style={styles.buttonText}>감사 편지 적기</Text>
+              {hasExited ? (
+                <>
+                  <TouchableOpacity style={styles.homeButton} onPress={handleGoHome}>
+                    <Text style={styles.buttonText}>홈으로</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.letterButton} onPress={() => setLetterModalVisible(true)}>
+                    <Text style={styles.buttonText}>감사 편지 적기</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
+                  <Text style={styles.buttonText}>퇴장하기</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -535,7 +517,7 @@ const QRScreen: React.FC = () => {
       return;
     }
 
-    if (!placeId) {
+    if (!rentalId || !placeId) {
       Alert.alert('오류', '장소 정보를 찾을 수 없습니다.');
       return;
     }
@@ -543,12 +525,33 @@ const QRScreen: React.FC = () => {
     setIsSendingLetter(true);
 
     try {
-      console.log('✉️ 편지 보내기:', { placeId, content: letterText.trim() });
+      console.log('✉️ 편지 보내기:', { rentalId, placeId, content: letterText.trim() });
 
-      const response = await ApiService.sendLetter(accessToken, placeId, letterText.trim());
+      const response = await ApiService.sendLetter(accessToken, rentalId, letterText.trim(), placeId);
 
-      if (response.success) {
+      if (response.success && response.data) {
         console.log('✅ 편지 전송 성공:', response.data);
+
+        // AsyncStorage에 편지 전송 기록 저장
+        try {
+          const stored = await AsyncStorage.getItem('sentLetters');
+          const sentLetters = stored ? JSON.parse(stored) : [];
+          const updatedSet = new Set(sentLetters).add(rentalId);
+          await AsyncStorage.setItem('sentLetters', JSON.stringify(Array.from(updatedSet)));
+
+          const statusStored = await AsyncStorage.getItem('letterStatus');
+          const letterStatus = statusStored ? JSON.parse(statusStored) : {};
+          letterStatus[rentalId] = {
+            letterId: response.data.id,
+            read: response.data.read || false,
+            content: letterText.trim()
+          };
+          await AsyncStorage.setItem('letterStatus', JSON.stringify(letterStatus));
+          console.log('💾 편지 전송 기록 저장 완료:', rentalId);
+        } catch (error) {
+          console.error('💥 편지 전송 기록 저장 오류:', error);
+        }
+
         Alert.alert('전송 완료', `${placeName} 사장님에게 감사 편지를 전송했습니다.`);
         setLetterText('');
         setLetterModalVisible(false);
