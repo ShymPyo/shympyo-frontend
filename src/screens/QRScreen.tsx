@@ -205,15 +205,14 @@ const QRScreen: React.FC = () => {
   }, [screenState, progress]);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    if (scanned || isProcessing) return;
+    if (scanned || isProcessing) {
+      console.log('🚫 중복 스캔 방지:', { scanned, isProcessing });
+      return;
+    }
 
+    console.log('✅ QR 스캔 시작');
     setScanned(true);
     setIsProcessing(true);
-
-    // 3초 후 다시 스캔 가능하도록
-    setTimeout(() => {
-      setIsProcessing(false);
-    }, 3000);
 
     if (!accessToken) {
       Alert.alert('로그인 필요', '쉼터를 이용하려면 로그인이 필요합니다.');
@@ -299,7 +298,8 @@ const QRScreen: React.FC = () => {
           '입장 실패',
           `오류 코드: ${enterResponse.code}\n${enterResponse.message || '쉼터 입장에 실패했습니다.'}`
         );
-        setScanned(false); // 다시 스캔할 수 있도록
+        setScanned(false);
+        setIsProcessing(false); // 처리 중 상태 해제
       }
     } catch (error: any) {
       console.error('💥 쉼터 입장 오류:', error);
@@ -310,7 +310,13 @@ const QRScreen: React.FC = () => {
         '오류',
         `네트워크 오류: ${error.message}\n쉼터 입장 중 오류가 발생했습니다.`
       );
-      setScanned(false); // 다시 스캔할 수 있도록
+      setScanned(false);
+      setIsProcessing(false); // 처리 중 상태 해제
+    } finally {
+      // 성공/실패 여부와 관계없이 3초 후 다시 스캔 가능
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 3000);
     }
   };
 

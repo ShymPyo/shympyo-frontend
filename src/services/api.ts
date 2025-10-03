@@ -156,16 +156,13 @@ interface SendLetterResponse {
 }
 
 interface ReceivedLetter {
-  id: number;
-  placeId: number;
-  placeName: string;
+  letterId: number;  // id → letterId 변경 (백엔드 스펙)
   writerInfo: {
     id: number;
-    nickname: string;  // name → nickname 변경
+    nickname: string;
     bio?: string;
+    imageUrl?: string;
   };
-  content: string;
-  readAt?: string;
   createdAt: string;
   read: boolean;
 }
@@ -176,18 +173,15 @@ interface ReceivedLettersResponse {
 }
 
 interface LetterDetail {
-  id: number;
-  placeId: number;
-  placeName: string;
+  letterId: number;  // id → letterId 변경
+  content: string;
   writerInfo: {
     id: number;
     nickname: string;
     bio?: string;
+    imageUrl?: string;
   };
-  content: string;
-  readAt?: string;
   createdAt: string;
-  read: boolean;
 }
 
 interface LetterCount {
