@@ -550,23 +550,6 @@ const LetterScreen: React.FC = () => {
               </Text>
             </View>
 
-            <View style={styles.detailModalInfo}>
-              <Text style={styles.detailModalLabel}>읽음 상태</Text>
-              <View style={styles.detailModalStatus}>
-                <Ionicons
-                  name={selectedLetterDetail?.read ? "checkmark-circle" : "time"}
-                  size={20}
-                  color={selectedLetterDetail?.read ? Colors.success : Colors.text.light}
-                />
-                <Text style={[
-                  styles.detailModalStatusText,
-                  selectedLetterDetail?.read && styles.detailModalReadText
-                ]}>
-                  {selectedLetterDetail?.read ? '사장님이 읽었습니다' : '읽지 않음'}
-                </Text>
-              </View>
-            </View>
-
             <View style={styles.detailModalContentSection}>
               <Text style={styles.detailModalLabel}>편지 내용</Text>
               <View style={styles.detailModalLetterBox}>

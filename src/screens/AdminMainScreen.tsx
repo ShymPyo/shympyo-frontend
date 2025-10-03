@@ -201,7 +201,7 @@ const AdminMainScreen: React.FC = () => {
 
     Alert.alert(
       '퇴장 처리',
-      `${selectedUser.userName} 님을 퇴장 처리하시겠습니까?`,
+      '해당 사용자를 퇴장 처리하시겠습니까?',
       [
         {
           text: '취소',
@@ -215,7 +215,7 @@ const AdminMainScreen: React.FC = () => {
               const cancelResponse = await ApiService.adminCancelRental(selectedUser.rentalId, accessToken);
 
               if (cancelResponse.success) {
-                Alert.alert('퇴장 완료', `${selectedUser.userName} 님이 퇴장 처리되었습니다.`);
+                Alert.alert('퇴장 완료', '사용자가 퇴장 처리되었습니다.');
                 setUserModalVisible(false);
                 // 데이터 새로고침
                 loadAdminData();
