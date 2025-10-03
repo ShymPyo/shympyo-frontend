@@ -269,7 +269,8 @@ class ApiService {
           // 특정 API는 에러 로그를 완전히 숨김
           const isSilentError = url.includes('/letters/sent') ||
                                  url.includes('/map/user/') ||
-                                 url.includes('/map/public/');
+                                 url.includes('/map/public/') ||
+                                 (url.includes('/letters/') && url.includes('/read') && errorData.message?.includes('이미 읽은'));
 
           if (!isSilentError) {
             console.error(`❌ API 실패: ${response.status} ${response.statusText} - ${url}`);
@@ -289,7 +290,8 @@ class ApiService {
 
           const isSilentError = url.includes('/letters/sent') ||
                                  url.includes('/map/user/') ||
-                                 url.includes('/map/public/');
+                                 url.includes('/map/public/') ||
+                                 (url.includes('/letters/') && url.includes('/read'));
 
           if (!isSilentError) {
             console.log(`⚠️ 파싱 실패: ${url}`, errorText.substring(0, 100));

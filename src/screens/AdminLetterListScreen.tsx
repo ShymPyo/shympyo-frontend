@@ -103,38 +103,76 @@ const AdminLetterListScreen: React.FC = () => {
   const handleLetterPress = async (letter: ReceivedLetter) => {
     if (!accessToken) return;
 
-    // 편지 모달 열기
-    setSelectedLetter(letter);
-    setModalVisible(true);
+    // 편지 상세 조회
+    try {
+      const detailResponse = await ApiService.getLetterDetail(letter.letterId, accessToken);
+      if (detailResponse.success && detailResponse.data) {
+        // 상세 정보를 포함한 편지 객체 생성
+        const letterWithDetail = {
+          ...letter,
+          content: detailResponse.data.content,
+        };
+        setSelectedLetter(letterWithDetail as any);
+        setModalVisible(true);
+      }
+    } catch (error) {
+      console.error('편지 상세 조회 오류:', error);
+    }
+  };
 
-    // 읽지 않은 편지면 읽음 처리
-    if (!letter.read) {
-      try {
-        const readResponse = await ApiService.markLetterAsRead(letter.id, accessToken);
-        if (readResponse.success) {
-          console.log('✅ 편지 읽음 처리 완료:', letter.id);
+  // 모달 닫을 때 읽음 처리
+  const handleCloseModal = async () => {
+    setModalVisible(false);
 
-          // 목록에서 해당 편지를 읽음 상태로 업데이트
-          setLetters(prev => prev.map(l =>
-            l.id === letter.id ? { ...l, read: true, readAt: new Date().toISOString() } : l
-          ));
+    // 읽지 않은 편지였으면 읽음 처리 (목록에서 현재 상태 확인)
+    if (selectedLetter && accessToken) {
+      const currentLetter = letters.find(l => l.letterId === selectedLetter.letterId);
 
-          // 카운트 업데이트
-          setLetterCount(prev => ({
-            ...prev,
-            unRead: Math.max(0, prev.unRead - 1),
-            read: prev.read + 1
-          }));
+      // 목록에서 아직 읽지 않은 상태인 경우만 처리
+      if (currentLetter && !currentLetter.read) {
+        // UI 먼저 업데이트 (즉시 반영)
+        setLetters(prev => prev.map(l =>
+          l.letterId === selectedLetter.letterId ? { ...l, read: true } : l
+        ));
+
+        // 카운트 업데이트
+        setLetterCount(prev => ({
+          ...prev,
+          unRead: Math.max(0, prev.unRead - 1),
+          read: prev.read + 1
+        }));
+
+        // 백엔드에 읽음 처리 요청
+        try {
+          const readResponse = await ApiService.markLetterAsRead(selectedLetter.letterId, accessToken);
+          if (readResponse.success) {
+            console.log('✅ 편지 읽음 처리 완료:', selectedLetter.letterId);
+          } else {
+            // 실패 시 롤백 (이미 읽음 에러는 무시)
+            if (!readResponse.message?.includes('이미 읽은')) {
+              console.error('❌ 편지 읽음 처리 실패:', readResponse.message);
+              setLetters(prev => prev.map(l =>
+                l.letterId === selectedLetter.letterId ? { ...l, read: false } : l
+              ));
+              setLetterCount(prev => ({
+                ...prev,
+                unRead: prev.unRead + 1,
+                read: Math.max(0, prev.read - 1)
+              }));
+            }
+          }
+        } catch (error) {
+          console.error('편지 읽음 처리 오류:', error);
         }
-      } catch (error) {
-        console.error('편지 읽음 처리 오류:', error);
       }
     }
+
+    setSelectedLetter(null);
   };
 
   const renderLetter = (letter: ReceivedLetter) => (
     <TouchableOpacity
-      key={letter.id}
+      key={letter.letterId}
       style={styles.letterCard}
       onPress={() => handleLetterPress(letter)}
     >
@@ -149,7 +187,9 @@ const AdminLetterListScreen: React.FC = () => {
           </View>
           <View style={styles.letterTextContainer}>
             <Text style={styles.customerName}>{letter.writerInfo.nickname}</Text>
-            <Text style={styles.letterPreview} numberOfLines={1}>{letter.content}</Text>
+            {letter.writerInfo.bio && (
+              <Text style={styles.letterBio} numberOfLines={1}>{letter.writerInfo.bio}</Text>
+            )}
           </View>
           <Ionicons
             name={letter.read ? "mail-open" : "mail"}
@@ -260,20 +300,20 @@ const AdminLetterListScreen: React.FC = () => {
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={handleCloseModal}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setModalVisible(false)}
+          onPress={handleCloseModal}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalContent}
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={handleCloseModal}>
                 <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>{selectedLetter?.writerInfo.nickname} 님의 감사 편지</Text>
@@ -468,6 +508,12 @@ const styles = StyleSheet.create({
   letterPreview: {
     fontSize: 14,
     color: Colors.text.secondary,
+  },
+  letterBio: {
+    fontSize: 12,
+    color: Colors.text.light,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,
