@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { getColors } from '../constants/colors';
@@ -41,8 +41,16 @@ const SettingsScreen: React.FC = () => {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showContrastModal, setShowContrastModal] = useState(false);
   const [showFontModal, setShowFontModal] = useState(false);
+  const [statusBarKey, setStatusBarKey] = useState(0);
 
   const colors = getColors(themeMode, contrastMode);
+
+  // 화면 포커스 시 StatusBar 재설정
+  useFocusEffect(
+    React.useCallback(() => {
+      setStatusBarKey(prev => prev + 1);
+    }, [])
+  );
 
   const getThemeDisplayName = () => {
     return themeMode === 'dark' ? '다크 모드' : '라이트 모드';
@@ -250,7 +258,7 @@ const SettingsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
+      <StatusBar key={statusBarKey} style={themeMode === 'dark' ? 'light' : 'dark'} />
 
       <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
         <Text style={[styles.title, { fontSize: getFontSize(20), color: colors.text.primary }]}>설정</Text>

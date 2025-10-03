@@ -15,7 +15,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { RootStackParamList } from '../types';
@@ -56,6 +56,13 @@ const ProfileEditScreen: React.FC = () => {
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [isModalVisible, setModalVisible] = useState(false);
   const [isImageSourceModalVisible, setImageSourceModalVisible] = useState(false);
+  const [statusBarKey, setStatusBarKey] = useState(0);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setStatusBarKey(prev => prev + 1);
+    }, [])
+  );
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -176,7 +183,7 @@ const ProfileEditScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar style={statusBarStyle as any} />
+      <StatusBar key={statusBarKey} style={statusBarStyle as any} />
 
       {/* 헤더 */}
       <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>

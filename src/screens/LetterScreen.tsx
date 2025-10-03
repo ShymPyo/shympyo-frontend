@@ -16,7 +16,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Shadow 스타일 헬퍼 함수
@@ -67,6 +67,14 @@ const LetterScreen: React.FC = () => {
   const [letterStatus, setLetterStatus] = useState<Map<number, { letterId: number; read: boolean; content?: string }>>(new Map());
   const [selectedLetterDetail, setSelectedLetterDetail] = useState<{ placeName: string; content: string; read: boolean; sentAt: string } | null>(null);
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
+  const [statusBarKey, setStatusBarKey] = useState(0);
+
+  // 화면 포커스 시 StatusBar 재설정
+  useFocusEffect(
+    React.useCallback(() => {
+      setStatusBarKey(prev => prev + 1);
+    }, [])
+  );
 
   // AsyncStorage에서 보낸 편지 목록 및 상태 불러오기
   useEffect(() => {
@@ -416,7 +424,7 @@ const LetterScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar style={statusBarStyle as any} />
+      <StatusBar key={statusBarKey} style={statusBarStyle as any} />
       <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
         <Text style={[styles.title, { fontSize: getFontSize(22), color: colors.text.primary }]}>나의 쉼표 기록</Text>
         <Text style={[styles.subtitle, { fontSize: getFontSize(14), color: colors.text.secondary }]}>한 줄의 편지가 쉼표의 따스함을 이어갑니다.</Text>

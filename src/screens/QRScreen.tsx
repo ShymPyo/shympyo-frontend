@@ -61,6 +61,7 @@ const QRScreen: React.FC = () => {
   const [isSendingLetter, setIsSendingLetter] = useState(false); // 편지 전송 중
   const [lastScannedData, setLastScannedData] = useState<string>(''); // 마지막 스캔 데이터
   const [hasExited, setHasExited] = useState(false); // 퇴장 처리 완료 상태
+  const [statusBarKey, setStatusBarKey] = useState(0);
 
   // 원형 프로그레스 바 애니메이션을 위한 값들
   const progress = useSharedValue(0);
@@ -317,6 +318,8 @@ const QRScreen: React.FC = () => {
       if (screenState === 'scanning') {
         setCameraEnabled(true);
       }
+      // StatusBar 재설정
+      setStatusBarKey(prev => prev + 1);
 
       return () => {
         // 화면을 떠날 때 카메라만 비활성화 (상태는 유지)
@@ -569,7 +572,7 @@ const QRScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar style={statusBarStyle as any} />
+      <StatusBar key={statusBarKey} style={statusBarStyle as any} />
       <View style={styles.content}>{renderContent()}</View>
 
       {/* 편지 작성 모달 */}

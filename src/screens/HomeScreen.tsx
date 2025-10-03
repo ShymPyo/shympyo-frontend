@@ -32,7 +32,7 @@ import ShelterDetailModal from '../components/ShelterDetailModal';
 import ApiService, { MapLocation, NearbyPlace } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemedStyles } from '../hooks/useThemedStyles';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MainTabParamList } from '../types';
 
@@ -713,6 +713,16 @@ const HomeScreen: React.FC = () => {
     return () => backHandler.remove();
   }, []);
 
+  // 화면 포커스 시 StatusBar 스타일 설정
+  const [statusBarKey, setStatusBarKey] = useState(0);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // StatusBar를 강제로 리렌더링하여 dark 스타일 적용
+      setStatusBarKey(prev => prev + 1);
+    }, [])
+  );
+
   // 쉼터 정보 카드 렌더링 함수 - 선택 가능한 카드 리스트 형태
   const renderShelterCard = ({ item }: { item: Shelter }) => (
     <TouchableOpacity
@@ -960,7 +970,7 @@ const HomeScreen: React.FC = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <StatusBar style={statusBarStyle as any} translucent backgroundColor={colors.background + '80'} />
+        <StatusBar key={statusBarKey} style="dark" translucent backgroundColor="transparent" />
         <View style={styles.mapContainer}>
           <WebView
             ref={webViewRef}
