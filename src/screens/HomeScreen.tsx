@@ -244,25 +244,16 @@ const HomeScreen: React.FC = () => {
     try {
       setIsLoadingLocation(true);
 
-      // 테스트용으로 그린스마트쉼터 위치 사용
-      const testLocation = {
-        coords: {
-          latitude: 37.5016667,
-          longitude: 127.0385582,
-          altitude: 0,
-          accuracy: 10,
-          altitudeAccuracy: 0,
-          heading: 0,
-          speed: 0,
-        },
-        timestamp: Date.now(),
-      };
+      // 실제 GPS 위치 사용
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
 
-      setCurrentLocation(testLocation);
-      console.log('✅ 테스트 위치 (그린스마트쉼터):', testLocation.coords.latitude, testLocation.coords.longitude);
+      setCurrentLocation(location);
+      console.log('✅ 실제 GPS 위치:', location.coords.latitude, location.coords.longitude);
 
       // 주변 장소 조회
-      await loadNearbyPlaces(testLocation.coords.latitude, testLocation.coords.longitude);
+      await loadNearbyPlaces(location.coords.latitude, location.coords.longitude);
     } catch (error) {
       console.error('❌ 현재 위치 가져오기 실패:', error);
     } finally {
@@ -337,7 +328,7 @@ const HomeScreen: React.FC = () => {
   const webViewRef = React.useRef<any>(null);
 
   // 내 위치 버튼 클릭 핸들러
-  const handleMyLocationPress = () => {
+  const handleMyLocationPress = async () => {
     if (locationPermission !== 'granted') {
       Alert.alert(
         '위치 권한 필요',
@@ -361,14 +352,17 @@ const HomeScreen: React.FC = () => {
       return;
     }
 
-    // 현재 위치 갱신 및 지도 이동
-    getCurrentLocation();
+    // 현재 위치 갱신
+    await getCurrentLocation();
 
-    // WebView의 지도를 현재 위치(그린스마트쉼터)로 이동하고 줌 레벨 초기화
-    if (webViewRef.current) {
+    // WebView의 지도를 실제 현재 위치로 이동하고 줌 레벨 초기화
+    if (webViewRef.current && currentLocation) {
+      const lat = currentLocation.coords.latitude;
+      const lon = currentLocation.coords.longitude;
+
       const moveScript = `
         if (typeof map !== 'undefined') {
-          var moveLatLon = new kakao.maps.LatLng(37.5016667, 127.0385582);
+          var moveLatLon = new kakao.maps.LatLng(${lat}, ${lon});
           map.setCenter(moveLatLon);
           map.setLevel(3);
         }
@@ -807,9 +801,9 @@ const HomeScreen: React.FC = () => {
       <script>
           var container = document.getElementById('map');
 
-          // 현재 위치가 있으면 해당 위치를 중심으로, 없으면 그린스마트쉼터 위치 사용
-          var centerLat = ${currentLocation?.coords.latitude || 37.5016667};
-          var centerLng = ${currentLocation?.coords.longitude || 127.0385582};
+          // 현재 위치 사용 (기본값 서울)
+          var centerLat = ${currentLocation?.coords.latitude || 37.5665};
+          var centerLng = ${currentLocation?.coords.longitude || 126.9780};
 
           var options = {
               center: new kakao.maps.LatLng(centerLat, centerLng),
