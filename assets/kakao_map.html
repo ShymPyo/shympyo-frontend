@@ -163,8 +163,140 @@
                         title: positions[i].title
                     });
                 }
-                
-                map.setCenter(positions[0].latlng);
+
+                // 현위치 마커 관련 변수
+                var currentPositionMarker = null;
+                var currentHeading = 0;
+
+                // 현위치 마커 이미지 생성 (방향 표시 포함)
+                function createCurrentLocationMarker(heading) {
+                    var svg = `
+                        <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                                    <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                                    <feOffset dx="0" dy="1" result="offsetblur"/>
+                                    <feComponentTransfer>
+                                        <feFuncA type="linear" slope="0.3"/>
+                                    </feComponentTransfer>
+                                    <feMerge>
+                                        <feMergeNode/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                            <g transform="translate(20, 20) rotate(${heading})">
+                                <!-- 외곽 원 -->
+                                <circle cx="0" cy="0" r="12" fill="#4285F4" opacity="0.3" filter="url(#shadow)"/>
+                                <!-- 내부 원 -->
+                                <circle cx="0" cy="0" r="8" fill="#4285F4" stroke="white" stroke-width="2"/>
+                                <!-- 방향 표시 화살표 -->
+                                <path d="M 0,-8 L 4,-2 L 0,0 L -4,-2 Z" fill="white"/>
+                            </g>
+                        </svg>
+                    `;
+
+                    var svgBlob = new Blob([svg], {type: 'image/svg+xml'});
+                    return URL.createObjectURL(svgBlob);
+                }
+
+                // 현위치 마커 업데이트
+                function updateCurrentLocation(position) {
+                    console.log('updateCurrentLocation called with:', position);
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+                    var heading = position.coords.heading || currentHeading;
+
+                    console.log('lat:', lat, 'lng:', lng, 'heading:', heading);
+
+                    // heading이 null이 아니면 업데이트
+                    if (heading !== null && heading !== undefined) {
+                        currentHeading = heading;
+                    }
+
+                    var locPosition = new kakao.maps.LatLng(lat, lng);
+
+                    if (currentPositionMarker) {
+                        console.log('Updating existing marker');
+                        // 기존 마커 위치와 이미지 업데이트
+                        currentPositionMarker.setPosition(locPosition);
+
+                        var markerImageUrl = createCurrentLocationMarker(currentHeading);
+                        var markerImageSize = new kakao.maps.Size(40, 40);
+                        var markerImageOption = {offset: new kakao.maps.Point(20, 20)};
+                        var markerImage = new kakao.maps.MarkerImage(markerImageUrl, markerImageSize, markerImageOption);
+                        currentPositionMarker.setImage(markerImage);
+                    } else {
+                        console.log('Creating new marker');
+                        // 새 마커 생성
+                        var markerImageUrl = createCurrentLocationMarker(currentHeading);
+                        console.log('Marker image URL:', markerImageUrl);
+                        var markerImageSize = new kakao.maps.Size(40, 40);
+                        var markerImageOption = {offset: new kakao.maps.Point(20, 20)};
+                        var markerImage = new kakao.maps.MarkerImage(markerImageUrl, markerImageSize, markerImageOption);
+
+                        currentPositionMarker = new kakao.maps.Marker({
+                            map: map,
+                            position: locPosition,
+                            image: markerImage,
+                            zIndex: 1000
+                        });
+
+                        console.log('Marker created, centering map');
+                        // 첫 위치로 지도 중심 이동
+                        map.setCenter(locPosition);
+                    }
+                }
+
+                // 위치 오류 처리
+                function handleLocationError(error) {
+                    console.error('위치 정보 오류:', error);
+                }
+
+                // React Native에서 위치 데이터 받기
+                window.addEventListener('message', function(event) {
+                    console.log('iOS message received:', event.data);
+                    try {
+                        var data = JSON.parse(event.data);
+                        console.log('Parsed data:', data);
+                        if (data.type === 'location') {
+                            console.log('Location update:', data.latitude, data.longitude, data.heading);
+                            // React Native에서 받은 위치 데이터로 마커 업데이트
+                            var position = {
+                                coords: {
+                                    latitude: data.latitude,
+                                    longitude: data.longitude,
+                                    heading: data.heading
+                                }
+                            };
+                            updateCurrentLocation(position);
+                        }
+                    } catch (error) {
+                        console.error('메시지 파싱 오류:', error);
+                    }
+                });
+
+                // Android용 메시지 리스너
+                document.addEventListener('message', function(event) {
+                    console.log('Android message received:', event.data);
+                    try {
+                        var data = JSON.parse(event.data);
+                        console.log('Parsed data:', data);
+                        if (data.type === 'location') {
+                            console.log('Location update:', data.latitude, data.longitude, data.heading);
+                            var position = {
+                                coords: {
+                                    latitude: data.latitude,
+                                    longitude: data.longitude,
+                                    heading: data.heading
+                                }
+                            };
+                            updateCurrentLocation(position);
+                        }
+                    } catch (error) {
+                        console.error('메시지 파싱 오류:', error);
+                    }
+                });
 
             } catch (error) {
                 console.error('Error initializing map:', error);

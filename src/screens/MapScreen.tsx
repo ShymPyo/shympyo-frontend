@@ -1,21 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 
 const MapScreen: React.FC = () => {
   const [htmlUri, setHtmlUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
+    const requestLocationPermission = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('위치 권한이 거부되었습니다.');
+        return false;
+      }
+      return true;
+    };
+
     const loadAsset = async () => {
       try {
+        const hasPermission = await requestLocationPermission();
         const asset = Asset.fromModule(require('../../assets/kakao_map.html'));
         await asset.downloadAsync();
         setHtmlUri(asset.localUri || asset.uri);
         setLoading(false);
+
+        // 위치 권한이 있으면 실시간 추적 시작
+        if (hasPermission) {
+          startLocationTracking();
+        }
       } catch (err) {
         setError('맵 파일을 불러오는데 실패했습니다.');
         setLoading(false);
@@ -24,6 +41,37 @@ const MapScreen: React.FC = () => {
 
     loadAsset();
   }, []);
+
+  const startLocationTracking = async () => {
+    try {
+      console.log('Starting location tracking...');
+      await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000, // 1초마다 업데이트
+          distanceInterval: 1, // 1m 이동마다 업데이트
+        },
+        (location) => {
+          const { latitude, longitude, heading } = location.coords;
+          console.log('Location update:', latitude, longitude, heading);
+
+          // WebView로 위치 데이터 전달
+          if (webViewRef.current) {
+            const message = JSON.stringify({
+              type: 'location',
+              latitude,
+              longitude,
+              heading: heading || 0,
+            });
+            console.log('Sending to WebView:', message);
+            webViewRef.current.postMessage(message);
+          }
+        }
+      );
+    } catch (err) {
+      console.error('위치 추적 오류:', err);
+    }
+  };
 
   if (loading) {
     return (
@@ -72,6 +120,7 @@ const MapScreen: React.FC = () => {
       </View>
       
       <WebView
+        ref={webViewRef}
         originWhitelist={['*']}
         source={{ uri: htmlUri }}
         style={styles.webview}
@@ -80,6 +129,7 @@ const MapScreen: React.FC = () => {
         allowFileAccess={true}
         allowUniversalAccessFromFileURLs={true}
         mixedContentMode="compatibility"
+        geolocationEnabled={true}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           console.warn('WebView error: ', nativeEvent);

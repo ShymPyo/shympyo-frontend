@@ -14,7 +14,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.ShympyoExpoApp"
+      "bundleIdentifier": "com.anonymous.ShympyoExpoApp",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "이 앱은 지도에서 현재 위치를 표시하기 위해 위치 정보를 사용합니다.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "이 앱은 지도에서 현재 위치를 표시하기 위해 위치 정보를 사용합니다."
+      }
     },
     "android": {
       "package": "com.shimpyo.newapp",
@@ -24,7 +28,9 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
