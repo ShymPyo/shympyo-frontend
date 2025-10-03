@@ -281,14 +281,14 @@ const SignUpScreen: React.FC = () => {
               />
             </View>
 
-            <Text style={styles.title} numberOfLines={1}>회원가입</Text>
+            <Text style={[styles.title, { fontSize: getFontSize(28) }]} numberOfLines={1}>회원가입</Text>
             
             <View style={styles.inputContainer}>
               {/* 이메일 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel} numberOfLines={1}>이메일 *</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>이메일 *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { fontSize: getFontSize(16) }]}
                   placeholder="user@example.com"
                   value={email}
                   onChangeText={setEmail}
@@ -302,9 +302,9 @@ const SignUpScreen: React.FC = () => {
 
               {/* 이름 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel} numberOfLines={1}>이름 *</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>이름 *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { fontSize: getFontSize(16) }]}
                   placeholder="홍길동"
                   value={name}
                   onChangeText={setName}
@@ -316,9 +316,9 @@ const SignUpScreen: React.FC = () => {
 
               {/* 전화번호 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel} numberOfLines={1}>전화번호 *</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>전화번호 *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { fontSize: getFontSize(16) }]}
                   placeholder="010-1234-5678"
                   value={phone}
                   onChangeText={handlePhoneChange}
@@ -331,9 +331,9 @@ const SignUpScreen: React.FC = () => {
 
               {/* 닉네임 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel} numberOfLines={1}>닉네임 *</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>닉네임 *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { fontSize: getFontSize(16) }]}
                   placeholder="길동이"
                   value={nickname}
                   onChangeText={setNickname}
@@ -345,7 +345,7 @@ const SignUpScreen: React.FC = () => {
 
               {/* 프로필 이미지 선택 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel} numberOfLines={1}>프로필 이미지 (선택사항)</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>프로필 이미지 (선택사항)</Text>
                 <TouchableOpacity
                   style={styles.imagePickerContainer}
                   onPress={showImagePickerOptions}
@@ -367,10 +367,10 @@ const SignUpScreen: React.FC = () => {
                     )}
                   </View>
                   <View style={styles.imagePickerTextContainer}>
-                    <Text style={styles.imagePickerText}>
+                    <Text style={[styles.imagePickerText, { fontSize: getFontSize(16) }]}>
                       {profileImage ? '이미지 변경' : '이미지 선택'}
                     </Text>
-                    <Text style={styles.imagePickerSubtext}>
+                    <Text style={[styles.imagePickerSubtext, { fontSize: getFontSize(12) }]}>
                       기본 프로필, 갤러리, 카메라
                     </Text>
                   </View>
@@ -379,9 +379,9 @@ const SignUpScreen: React.FC = () => {
 
               {/* 자기소개 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel} numberOfLines={1}>자기소개 *</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>자기소개 *</Text>
                 <TextInput
-                  style={[styles.input, styles.bioInput]}
+                  style={[styles.input, styles.bioInput, { fontSize: getFontSize(16) }]}
                   placeholder="안녕하세요! 여행을 좋아하는 홍길동입니다."
                   value={bio}
                   onChangeText={setBio}
@@ -393,13 +393,13 @@ const SignUpScreen: React.FC = () => {
                   maxLength={200}
                 />
               </View>
-              
+
               {/* 비밀번호 입력 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel} numberOfLines={1}>비밀번호 *</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>비밀번호 *</Text>
                 <View style={styles.passwordContainer}>
                   <TextInput
-                    style={styles.passwordInput}
+                    style={[styles.passwordInput, { fontSize: getFontSize(16) }]}
                     placeholder="P@ssw0rd! (8자리 이상)"
                     value={password}
                     onChangeText={setPassword}
@@ -409,14 +409,14 @@ const SignUpScreen: React.FC = () => {
                     editable={true}
                     selectTextOnFocus={true}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
                   >
-                    <Ionicons 
-                      name={showPassword ? "eye-off" : "eye"} 
-                      size={20} 
-                      color={Colors.text.light} 
+                    <Ionicons
+                      name={showPassword ? "eye-off" : "eye"}
+                      size={20}
+                      color={Colors.text.light}
                     />
                   </TouchableOpacity>
                 </View>
@@ -424,10 +424,10 @@ const SignUpScreen: React.FC = () => {
 
               {/* 비밀번호 확인 */}
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel} numberOfLines={1}>비밀번호 확인 *</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>비밀번호 확인 *</Text>
                 <View style={styles.passwordContainer}>
                   <TextInput
-                    style={styles.passwordInput}
+                    style={[styles.passwordInput, { fontSize: getFontSize(16) }]}
                     placeholder="비밀번호를 다시 입력하세요"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -437,22 +437,22 @@ const SignUpScreen: React.FC = () => {
                     editable={true}
                     selectTextOnFocus={true}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.eyeButton}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    <Ionicons 
-                      name={showConfirmPassword ? "eye-off" : "eye"} 
-                      size={20} 
-                      color={Colors.text.light} 
+                    <Ionicons
+                      name={showConfirmPassword ? "eye-off" : "eye"}
+                      size={20}
+                      color={Colors.text.light}
                     />
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]} 
+            <TouchableOpacity
+              style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
               onPress={() => {
                 console.log('👆 회원가입 버튼 클릭됨');
                 handleSignUp();
@@ -462,13 +462,13 @@ const SignUpScreen: React.FC = () => {
               {isLoading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text style={styles.signUpButtonText} numberOfLines={1}>회원가입</Text>
+                <Text style={[styles.signUpButtonText, { fontSize: getFontSize(18) }]} numberOfLines={1}>회원가입</Text>
               )}
             </TouchableOpacity>
-            
+
 
             <View style={styles.footer}>
-              <Text style={styles.copyright}>© 2025. All rights reserved.</Text>
+              <Text style={[styles.copyright, { fontSize: getFontSize(12) }]}>© 2025. All rights reserved.</Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

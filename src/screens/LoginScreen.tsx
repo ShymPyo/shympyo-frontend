@@ -69,44 +69,44 @@ const LoginScreen: React.FC = () => {
             </View>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.socialButton, styles.kakaoButton]}
                 onPress={() => handleSocialLogin('Kakao')}
               >
                 <FontAwesome name="comment" size={20} color="#3B1E1E" style={styles.icon} />
-                <Text style={[styles.socialButtonText, styles.kakaoButtonText]} numberOfLines={1}>카카오로 쉬운시작</Text>
+                <Text style={[styles.socialButtonText, styles.kakaoButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>카카오로 쉬운시작</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.socialButton, styles.googleButton]}
                 onPress={() => handleSocialLogin('Google')}
               >
                 <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.icon} />
-                <Text style={[styles.socialButtonText, styles.googleButtonText]} numberOfLines={1}>구글로 쉬운시작</Text>
+                <Text style={[styles.socialButtonText, styles.googleButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>구글로 쉬운시작</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.socialButton, styles.naverButton]}
                 onPress={() => handleSocialLogin('Naver')}
               >
-                <Text style={[styles.socialButtonText, styles.naverButtonText]} numberOfLines={1}>네이버로 쉬운시작</Text>
+                <Text style={[styles.socialButtonText, styles.naverButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>네이버로 쉬운시작</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.socialButton, styles.generalButton]}
                 onPress={() => navigation.navigate('GeneralLogin')}
               >
                 <FontAwesome name="user" size={20} color={Colors.text.primary} style={styles.icon} />
-                <Text style={[styles.socialButtonText, styles.generalButtonText]} numberOfLines={1}>일반 로그인</Text>
+                <Text style={[styles.socialButtonText, styles.generalButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>일반 로그인</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.footer}>
             <TouchableOpacity onPress={handleAdminLogin}>
-              <Text style={styles.footerText} numberOfLines={1}>관리자 로그인 / 회원가입</Text>
+              <Text style={[styles.footerText, { fontSize: getFontSize(14) }]} numberOfLines={1}>관리자 로그인 / 회원가입</Text>
             </TouchableOpacity>
-            <Text style={styles.copyright}>© 2025. All rights reserved.</Text>
+            <Text style={[styles.copyright, { fontSize: getFontSize(12) }]}>© 2025. All rights reserved.</Text>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
