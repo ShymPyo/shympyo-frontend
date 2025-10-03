@@ -189,8 +189,9 @@ const LetterScreen: React.FC = () => {
 
       const response = await ApiService.sendLetter(
         accessToken,
-        selectedPlace.placeId,
-        letterText.trim()
+        selectedPlace.rentalId,
+        letterText.trim(),
+        selectedPlace.placeId  // placeId도 함께 전달
       );
 
       if (response.success && response.data) {

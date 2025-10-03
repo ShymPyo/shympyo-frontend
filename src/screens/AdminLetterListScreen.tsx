@@ -32,33 +32,64 @@ const AdminLetterListScreen: React.FC = () => {
   const [letters, setLetters] = useState<ReceivedLetter[]>([]);
   const [letterCount, setLetterCount] = useState<LetterCount>({ total: 0, unRead: 0, read: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [hasNext, setHasNext] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     loadLetters();
   }, []);
 
-  const loadLetters = async () => {
+  const loadLetters = async (loadMore: boolean = false) => {
     if (!accessToken) return;
 
     try {
-      setIsLoading(true);
-
-      // 편지 목록 조회
-      const lettersResponse = await ApiService.getReceivedLetters(accessToken);
-      if (lettersResponse.success && lettersResponse.data) {
-        console.log('📬 받은 편지 목록:', JSON.stringify(lettersResponse.data, null, 2));
-        setLetters(lettersResponse.data);
+      if (!loadMore) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
       }
 
-      // 편지 개수 조회
-      const countResponse = await ApiService.getLetterCount(accessToken);
-      if (countResponse.success && countResponse.data) {
-        setLetterCount(countResponse.data);
+      let cursorCreatedAt: string | undefined;
+      let cursorId: number | undefined;
+
+      if (loadMore && letters.length > 0) {
+        const lastLetter = letters[letters.length - 1];
+        cursorCreatedAt = lastLetter.createdAt;
+        cursorId = lastLetter.id;
+      }
+
+      // 편지 목록 조회 (커서 페이징)
+      const lettersResponse = await ApiService.getReceivedLetters(accessToken, 10, cursorCreatedAt, cursorId);
+      if (lettersResponse.success && lettersResponse.data) {
+        console.log('📬 받은 편지 목록:', JSON.stringify(lettersResponse.data, null, 2));
+
+        if (loadMore) {
+          setLetters([...letters, ...lettersResponse.data.content]);
+        } else {
+          setLetters(lettersResponse.data.content);
+        }
+
+        setHasNext(lettersResponse.data.hasNext);
+      }
+
+      // 편지 개수 조회 (첫 로드일 때만)
+      if (!loadMore) {
+        const countResponse = await ApiService.getLetterCount(accessToken);
+        if (countResponse.success && countResponse.data) {
+          setLetterCount(countResponse.data);
+        }
       }
     } catch (error) {
       console.error('편지 로드 오류:', error);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const loadMore = () => {
+    if (hasNext && !isLoadingMore) {
+      loadLetters(true);
     }
   };
 
@@ -66,7 +97,7 @@ const AdminLetterListScreen: React.FC = () => {
 
   // 검색 필터링된 편지 목록
   const filteredLetters = letters.filter(letter =>
-    letter.writerInfo.name.toLowerCase().includes(searchText.toLowerCase())
+    letter.writerInfo.nickname.toLowerCase().includes(searchText.toLowerCase())  // name → nickname 변경
   );
 
   const handleLetterPress = async (letter: ReceivedLetter) => {
@@ -117,7 +148,7 @@ const AdminLetterListScreen: React.FC = () => {
             <Text style={styles.profileText}>😊</Text>
           </View>
           <View style={styles.letterTextContainer}>
-            <Text style={styles.customerName}>{letter.writerInfo.name}</Text>
+            <Text style={styles.customerName}>{letter.writerInfo.nickname}</Text>
             <Text style={styles.letterPreview} numberOfLines={1}>{letter.content}</Text>
           </View>
           <Ionicons
@@ -171,7 +202,18 @@ const AdminLetterListScreen: React.FC = () => {
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          onScroll={({ nativeEvent }) => {
+            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+            const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 100;
+            if (isCloseToBottom && hasNext && !isLoadingMore) {
+              loadMore();
+            }
+          }}
+          scrollEventThrottle={400}
+        >
           {/* 편지함 정보 */}
           <View style={styles.letterInfo}>
             <View style={styles.letterCount}>
@@ -189,7 +231,14 @@ const AdminLetterListScreen: React.FC = () => {
           {/* 편지 리스트 */}
           <View style={styles.letterList}>
             {filteredLetters.length > 0 ? (
-              filteredLetters.map(renderLetter)
+              <>
+                {filteredLetters.map(renderLetter)}
+                {isLoadingMore && (
+                  <View style={styles.loadingMore}>
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  </View>
+                )}
+              </>
             ) : searchText.length > 0 ? (
               <View style={styles.noResultsContainer}>
                 <Ionicons name="search" size={48} color={Colors.text.light} />
@@ -227,7 +276,7 @@ const AdminLetterListScreen: React.FC = () => {
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>{selectedLetter?.writerInfo.name} 님의 감사 편지</Text>
+              <Text style={styles.modalTitle}>{selectedLetter?.writerInfo.nickname} 님의 감사 편지</Text>
               <View style={{ width: 24 }} />
             </View>
 
@@ -241,7 +290,7 @@ const AdminLetterListScreen: React.FC = () => {
               </View>
               <View style={styles.modalTextSection}>
                 <Text style={styles.modalLabel}>작성자</Text>
-                <Text style={styles.modalName}>{selectedLetter?.writerInfo.name}</Text>
+                <Text style={styles.modalName}>{selectedLetter?.writerInfo.nickname}</Text>
                 {selectedLetter?.writerInfo.bio && (
                   <Text style={styles.modalBio}>{selectedLetter.writerInfo.bio}</Text>
                 )}
@@ -509,6 +558,10 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  loadingMore: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 });
 

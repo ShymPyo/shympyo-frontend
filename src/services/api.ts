@@ -63,6 +63,8 @@ interface PlaceDetail {
   latitude: number;
   longitude: number;
   type: 'SHELTER' | 'CAFE' | 'RESTAURANT' | 'STORE';
+  currentUserCount?: number;  // 현재 이용 중인 사용자 수
+  maxCapacity?: number;       // 최대 수용 인원
 }
 
 interface RentalEnterRequest {
@@ -97,7 +99,7 @@ interface VisitedPlace {
   placeName: string;
   startTime: string;
   endTime: string;
-  letterSent?: boolean;
+  isWritten?: boolean;  // letterSent → isWritten 변경
   letterRead?: boolean;
   letterId?: number;
 }
@@ -108,7 +110,8 @@ interface VisitedPlacesResponse {
 }
 
 interface SendLetterRequest {
-  placeId: number;
+  placeId: number;   // 백엔드가 아직 placeId 요구
+  rentalId: number;  // rentalId도 추가
   content: string;
 }
 
@@ -158,9 +161,27 @@ interface ReceivedLetter {
   placeName: string;
   writerInfo: {
     id: number;
-    name: string;
-    email: string;
-    phone: string;
+    nickname: string;  // name → nickname 변경
+    bio?: string;
+  };
+  content: string;
+  readAt?: string;
+  createdAt: string;
+  read: boolean;
+}
+
+interface ReceivedLettersResponse {
+  content: ReceivedLetter[];
+  hasNext: boolean;
+}
+
+interface LetterDetail {
+  id: number;
+  placeId: number;
+  placeName: string;
+  writerInfo: {
+    id: number;
+    nickname: string;
     bio?: string;
   };
   content: string;
@@ -503,15 +524,19 @@ class ApiService {
 
   static async sendLetter(
     accessToken: string,
-    placeId: number,
-    content: string
+    rentalId: number,
+    content: string,
+    placeId?: number  // placeId도 선택적으로 받기
   ): Promise<ApiResponse<SendLetterResponse>> {
-    console.log('✉️ 편지 보내기 API 호출:', { placeId, content });
+    console.log('✉️ 편지 보내기 API 호출:', { rentalId, placeId, content });
 
-    const requestBody = { placeId, content };
+    const requestBody: any = { rentalId, content };
+    if (placeId) {
+      requestBody.placeId = placeId;
+    }
     console.log('📤 편지 요청 본문:', JSON.stringify(requestBody));
 
-    return this.request<SendLetterResponse>('/letters/send', {
+    return this.request<SendLetterResponse>('/letters', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -611,10 +636,35 @@ class ApiService {
     });
   }
 
-  // 받은 편지함 조회
-  static async getReceivedLetters(accessToken: string): Promise<ApiResponse<ReceivedLetter[]>> {
-    console.log('📬 받은 편지함 조회 API 호출');
-    return this.request<ReceivedLetter[]>('/letters/received', {
+  // 받은 편지 목록 조회 (커서 페이징)
+  static async getReceivedLetters(
+    accessToken: string,
+    size: number = 10,
+    cursorCreatedAt?: string,
+    cursorId?: number
+  ): Promise<ApiResponse<ReceivedLettersResponse>> {
+    console.log('📬 받은 편지 목록 조회 API 호출');
+
+    let endpoint = `/letters/all?size=${size}`;
+    if (cursorCreatedAt && cursorId) {
+      endpoint += `&cursorCreatedAt=${encodeURIComponent(cursorCreatedAt)}&cursorId=${cursorId}`;
+    }
+
+    return this.request<ReceivedLettersResponse>(endpoint, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 편지 상세 조회
+  static async getLetterDetail(
+    letterId: number,
+    accessToken: string
+  ): Promise<ApiResponse<LetterDetail>> {
+    console.log('📬 편지 상세 조회 API 호출:', letterId);
+    return this.request<LetterDetail>(`/letters/${letterId}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -694,6 +744,8 @@ export type {
   SendLetterResponse,
   AdminPlace,
   ReceivedLetter,
+  ReceivedLettersResponse,
+  LetterDetail,
   LetterCount,
   CurrentRental,
   RentalHistory,
