@@ -97,7 +97,7 @@ const QRScreen: React.FC = () => {
 
     try {
       console.log('🚪 타이머 완료, 자동 퇴장 처리 시작');
-      const exitResponse = await ApiService.exitPlace(accessToken, rentalId);
+      const exitResponse = await ApiService.exitPlace(accessToken);
 
       if (exitResponse.success && exitResponse.data) {
         console.log('✅ 자동 퇴장 완료:', exitResponse.data);
@@ -147,7 +147,7 @@ const QRScreen: React.FC = () => {
     try {
       console.log('🚪 퇴장 처리 시작 (rentalId:', rentalId, ')');
 
-      const exitResponse = await ApiService.exitPlace(accessToken, rentalId);
+      const exitResponse = await ApiService.exitPlace(accessToken);
 
       if (exitResponse.success && exitResponse.data) {
         console.log('✅ 퇴장 완료:', exitResponse.data);

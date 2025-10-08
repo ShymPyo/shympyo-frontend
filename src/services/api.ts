@@ -549,8 +549,8 @@ class ApiService {
   }
 
   // 퇴장 처리
-  static async exitPlace(accessToken: string, rentalId: number): Promise<ApiResponse<RentalExitResponse>> {
-    console.log('🚪 exitPlace API 호출 (rentalId:', rentalId, ')');
+  static async exitPlace(accessToken: string): Promise<ApiResponse<RentalExitResponse>> {
+    console.log('🚪 exitPlace API 호출');
 
     return this.request<RentalExitResponse>('/rental/exit', {
       method: 'POST',
@@ -588,6 +588,7 @@ class ApiService {
     placeId?: number  // placeId도 선택적으로 받기
   ): Promise<ApiResponse<SendLetterResponse>> {
     console.log('✉️ 편지 보내기 API 호출:', { rentalId, placeId, content });
+    console.log('🔑 토큰 정보:', accessToken ? `${accessToken.substring(0, 20)}...` : '없음');
 
     const requestBody: any = { rentalId, content };
     if (placeId) {
