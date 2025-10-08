@@ -103,6 +103,11 @@ const QRScreen: React.FC = () => {
         console.log('✅ 자동 퇴장 완료:', exitResponse.data);
         setHasExited(true);
         sendNotification();
+      } else if (exitResponse.message?.includes('진행 중인 대여가 없습니다')) {
+        // 백엔드 스케줄러가 이미 TIME_EXCEEDED로 전환한 경우
+        console.log('✅ 이미 퇴장 처리됨 (백엔드 스케줄러)');
+        setHasExited(true);
+        sendNotification();
       } else {
         console.log('❌ 자동 퇴장 실패:', exitResponse);
       }
@@ -151,6 +156,10 @@ const QRScreen: React.FC = () => {
 
       if (exitResponse.success && exitResponse.data) {
         console.log('✅ 퇴장 완료:', exitResponse.data);
+        setHasExited(true);
+      } else if (exitResponse.message?.includes('진행 중인 대여가 없습니다')) {
+        // 이미 자동으로 퇴장 처리된 경우 (TIME_EXCEEDED)
+        console.log('✅ 이미 퇴장 처리됨 (시간 초과로 자동 퇴장)');
         setHasExited(true);
       } else {
         console.log('❌ 퇴장 실패:', exitResponse);
