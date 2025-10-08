@@ -55,6 +55,16 @@ interface NearbyPlace {
   distanceM: number;
 }
 
+interface TodayAndHoliday {
+  dayOfWeek: string;
+  closed: boolean;
+  openTime: string;
+  closeTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+  holidays?: string[];
+}
+
 interface PlaceDetail {
   id: number;
   name: string;
@@ -62,9 +72,11 @@ interface PlaceDetail {
   content: string;
   latitude: number;
   longitude: number;
-  type: 'SHELTER' | 'CAFE' | 'RESTAURANT' | 'STORE';
-  currentUserCount?: number;  // 현재 이용 중인 사용자 수
-  maxCapacity?: number;       // 최대 수용 인원
+  type: 'SHELTER' | 'CAFE' | 'RESTAURANT' | 'STORE' | 'STATION' | 'USER_SHELTER';
+  maxCapacity?: number;           // 최대 수용 인원
+  currentCapacity?: number;       // 현재 이용 중인 사용자 수
+  todayAndHoliday?: TodayAndHoliday; // 오늘의 영업시간 및 휴일 정보
+  imageUrl?: string;
 }
 
 interface RentalEnterRequest {
@@ -90,7 +102,7 @@ interface RentalExitResponse {
   placeName: string;
   startTime: string;
   endTime: string;
-  status: string;
+  status: RentalStatus;
 }
 
 interface VisitedPlace {
@@ -190,6 +202,9 @@ interface LetterCount {
   read: number;
 }
 
+// Rental 상태 enum
+type RentalStatus = 'USING' | 'TIME_EXCEEDED' | 'ENDED' | 'CANCELED' | 'KICKED';
+
 interface CurrentRental {
   rentalId: number;
   userId: number;
@@ -198,6 +213,8 @@ interface CurrentRental {
   bio?: string;
   imageUrl: string;
   startTime: string;
+  dueTime: string; // 종료 예정 시간 추가
+  status: RentalStatus; // 상태 추가
   userEmail?: string;
   userPhone?: string;
 }
@@ -208,8 +225,18 @@ interface RentalHistory {
   userName: string;
   startTime: string;
   endTime: string;
-  status: string;
+  status: RentalStatus;
   durationMinutes: number;
+}
+
+// 신고 관련 인터페이스
+type ReportReason = 'ABUSE' | 'INAPPROPRIATE' | 'SCAM' | 'POLICY_VIOLATION' | 'OTHER';
+
+interface ReportRequest {
+  reportedUserId: number;
+  rentalId: number;
+  reason: ReportReason;
+  content: string;
 }
 
 interface WeatherData {
@@ -541,7 +568,7 @@ class ApiService {
   ): Promise<ApiResponse<VisitedPlacesResponse>> {
     console.log('📋 방문한 장소 목록 API 호출');
 
-    let endpoint = `/rental/user/history?status=ended&size=${size}`;
+    let endpoint = `/rental/user/history?status=ENDED&size=${size}`;
     if (cursorEndTime && cursorId) {
       endpoint += `&cursorEndTime=${encodeURIComponent(cursorEndTime)}&cursorId=${cursorId}`;
     }
@@ -748,14 +775,26 @@ class ApiService {
     });
   }
 
-  // 관리자가 특정 대여 취소 (퇴장 처리)
-  static async adminCancelRental(rentalId: number, accessToken: string): Promise<ApiResponse<RentalExitResponse>> {
-    console.log('🚪 관리자 대여 취소 API 호출:', rentalId);
-    return this.request<RentalExitResponse>(`/rental/${rentalId}/cancel`, {
+  // 관리자가 특정 대여 취소 (퇴장 처리) - kick으로 변경
+  static async adminKickRental(rentalId: number, accessToken: string): Promise<ApiResponse<RentalExitResponse>> {
+    console.log('🚪 관리자 강퇴 처리 API 호출:', rentalId);
+    return this.request<RentalExitResponse>(`/rental/${rentalId}/kick`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+    });
+  }
+
+  // 신고하기
+  static async createReport(reportData: ReportRequest, accessToken: string): Promise<ApiResponse<string>> {
+    console.log('🚨 신고 생성 API 호출:', reportData);
+    return this.request<string>('/reports', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(reportData),
     });
   }
 
@@ -825,6 +864,7 @@ export type {
   MapLocation,
   NearbyPlace,
   PlaceDetail,
+  TodayAndHoliday,
   VisitedPlace,
   VisitedPlacesResponse,
   SendLetterRequest,
@@ -838,6 +878,7 @@ export type {
   RentalHistory,
   RentalEnterResponse,
   RentalExitResponse,
+  RentalStatus,
   BusinessHours,
   DayOfWeek,
   WeatherData,
@@ -845,5 +886,7 @@ export type {
   SanctionStatus,
   BlockRequest,
   BlockedUser,
-  BlockDetail
+  BlockDetail,
+  ReportReason,
+  ReportRequest
 };
