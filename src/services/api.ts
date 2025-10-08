@@ -212,6 +212,41 @@ interface RentalHistory {
   durationMinutes: number;
 }
 
+interface WeatherData {
+  weather: string;
+  temperature: number;
+  location: string;
+}
+
+// 차단 관련 인터페이스
+type BlockReason = 'ABUSE' | 'INAPPROPRIATE' | 'SCAM' | 'POLICY_VIOLATION' | 'OTHER';
+type SanctionStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+
+interface BlockRequest {
+  reason: BlockReason;
+  detail: string;
+  endAt?: string; // ISO 8601 형식
+}
+
+interface BlockedUser {
+  sanctionId: number;
+  userId: number;
+  nickname: string;
+  startAt: string;
+  status: SanctionStatus;
+}
+
+interface BlockDetail {
+  sanctionId: number;
+  userId: number;
+  nickname: string;
+  reason: BlockReason;
+  detail: string;
+  startAt: string;
+  endAt: string;
+  status: SanctionStatus;
+}
+
 
 class ApiService {
   private static refreshTokenCallback?: () => Promise<string | null>;
@@ -723,6 +758,61 @@ class ApiService {
       },
     });
   }
+
+  // 날씨 정보 조회
+  static async getWeather(lat: number, lon: number): Promise<ApiResponse<WeatherData>> {
+    console.log('🌤️ 날씨 정보 조회 API 호출:', { lat, lon });
+    return this.request<WeatherData>(`/weather?lat=${lat}&lon=${lon}`, {
+      method: 'GET',
+    });
+  }
+
+  // ========== 차단 관련 API ==========
+
+  // 특정 사용자 차단
+  static async blockUser(userId: number, blockData: BlockRequest, accessToken: string): Promise<ApiResponse<number>> {
+    console.log('🚫 사용자 차단 API 호출:', { userId, blockData });
+    return this.request<number>(`/blocks/providers/me/${userId}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(blockData),
+    });
+  }
+
+  // 특정 사용자 차단 해제
+  static async unblockUser(userId: number, accessToken: string): Promise<ApiResponse<string>> {
+    console.log('✅ 사용자 차단 해제 API 호출:', userId);
+    return this.request<string>(`/blocks/providers/me/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 차단한 사용자 목록 조회
+  static async getBlockedUsers(accessToken: string): Promise<ApiResponse<BlockedUser[]>> {
+    console.log('📋 차단 목록 조회 API 호출');
+    return this.request<BlockedUser[]>('/blocks/providers/me/all', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+
+  // 차단 상세 정보 조회
+  static async getBlockDetail(userId: number, accessToken: string): Promise<ApiResponse<BlockDetail>> {
+    console.log('🔍 차단 상세 조회 API 호출:', userId);
+    return this.request<BlockDetail>(`/blocks/providers/me/${userId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
 }
 
 export default ApiService;
@@ -749,5 +839,11 @@ export type {
   RentalEnterResponse,
   RentalExitResponse,
   BusinessHours,
-  DayOfWeek
+  DayOfWeek,
+  WeatherData,
+  BlockReason,
+  SanctionStatus,
+  BlockRequest,
+  BlockedUser,
+  BlockDetail
 };

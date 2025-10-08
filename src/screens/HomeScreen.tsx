@@ -29,7 +29,7 @@ import * as Location from 'expo-location';
 
 import { Colors, getColors } from '../constants/colors';
 import ShelterDetailModal from '../components/ShelterDetailModal';
-import ApiService, { MapLocation, NearbyPlace } from '../services/api';
+import ApiService, { MapLocation, NearbyPlace, WeatherData } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemedStyles } from '../hooks/useThemedStyles';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -218,6 +218,9 @@ const HomeScreen: React.FC = () => {
   const [mapLocations, setMapLocations] = useState<MapLocation[]>([]);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
+  // 날씨 관련 상태
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+
   // 위치 권한 요청 및 초기 위치 설정
   useEffect(() => {
     const requestLocationPermission = async () => {
@@ -252,12 +255,33 @@ const HomeScreen: React.FC = () => {
       setCurrentLocation(location);
       console.log('✅ 실제 GPS 위치:', location.coords.latitude, location.coords.longitude);
 
-      // 주변 장소 조회
-      await loadNearbyPlaces(location.coords.latitude, location.coords.longitude);
+      // 주변 장소 및 날씨 조회
+      await Promise.all([
+        loadNearbyPlaces(location.coords.latitude, location.coords.longitude),
+        loadWeather(location.coords.latitude, location.coords.longitude)
+      ]);
     } catch (error) {
       console.error('❌ 현재 위치 가져오기 실패:', error);
     } finally {
       setIsLoadingLocation(false);
+    }
+  };
+
+  // 날씨 정보 조회
+  const loadWeather = async (lat: number, lon: number) => {
+    try {
+      console.log('🌤️ 날씨 정보 조회 중... 위치:', { lat, lon });
+
+      const response = await ApiService.getWeather(lat, lon);
+
+      if (response.success && response.data) {
+        setWeatherData(response.data);
+        console.log('✅ 날씨 정보 로드:', response.data);
+      } else {
+        console.log('❌ 날씨 API 실패:', response.message);
+      }
+    } catch (error) {
+      console.error('❌ 날씨 정보 조회 실패:', error);
     }
   };
 
@@ -1014,10 +1038,15 @@ const HomeScreen: React.FC = () => {
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
           {/* 온도계 - 좌측 하단 (카테고리 아래) */}
           <View style={styles.thermometerContainer}>
-            <AnimatedThermometer temperature={65} />
-            <View style={styles.temperatureLabel}>
-              <Text style={styles.temperatureText}>99°</Text>
-              <View style={styles.trianglePointer} />
+            <AnimatedThermometer temperature={weatherData?.temperature || 25} />
+            <View style={styles.temperatureLabelContainer}>
+              <View style={styles.temperatureLabel}>
+                <Text style={styles.temperatureText}>{weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}</Text>
+                <View style={styles.trianglePointer} />
+              </View>
+              {weatherData?.weather && (
+                <Text style={styles.weatherText}>{weatherData.weather}</Text>
+              )}
             </View>
           </View>
           
@@ -1285,6 +1314,10 @@ const styles = StyleSheet.create({
           elevation: 10,
         }),
     },
+    temperatureLabelContainer: {
+        marginLeft: 8,
+        alignItems: 'center',
+    },
     modernThermometer: {
         width: 28,
         height: 90,
@@ -1324,12 +1357,18 @@ const styles = StyleSheet.create({
           shadowRadius: 8,
           elevation: 10,
         }),
-        marginLeft: 8,
     },
     temperatureText: {
         fontSize: 12,
         fontWeight: 'bold',
         color: 'white',
+        textAlign: 'center',
+    },
+    weatherText: {
+        fontSize: 9,
+        fontWeight: '500',
+        color: '#666',
+        marginTop: 4,
         textAlign: 'center',
     },
     trianglePointer: {
