@@ -157,7 +157,7 @@ const AdminMainScreen: React.FC = () => {
 
   // SSE 연결 (adminPlace가 로드된 후)
   useEffect(() => {
-    if (accessToken && adminPlace) {
+    if (accessToken && adminPlace?.id) {
       console.log('🔌 SSE 연결 시작:', adminPlace.id);
       const sseConnection = connectSSE(
         adminPlace.id,
@@ -173,7 +173,7 @@ const AdminMainScreen: React.FC = () => {
         disconnectSSE();
       };
     }
-  }, [accessToken, adminPlace]);
+  }, [accessToken, adminPlace?.id]);
 
   // 화면 포커스 시 데이터 새로고침
   useEffect(() => {
