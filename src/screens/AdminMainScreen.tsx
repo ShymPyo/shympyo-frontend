@@ -147,12 +147,17 @@ const AdminMainScreen: React.FC = () => {
     }
   };
 
+  // 초기 데이터 로드 (최초 1회만)
   useEffect(() => {
-    if (accessToken && user && adminPlace) {
-      console.log('🔍 useEffect 트리거됨 - accessToken과 user 모두 준비됨');
+    if (accessToken && user && !adminPlace) {
+      console.log('🔍 useEffect 트리거됨 - 초기 데이터 로드 시작');
       loadAdminData();
+    }
+  }, [accessToken, user, adminPlace]);
 
-      // SSE 연결
+  // SSE 연결 (adminPlace가 로드된 후)
+  useEffect(() => {
+    if (accessToken && adminPlace) {
       console.log('🔌 SSE 연결 시작:', adminPlace.id);
       const sseConnection = connectSSE(
         adminPlace.id,
@@ -167,14 +172,8 @@ const AdminMainScreen: React.FC = () => {
         console.log('🔌 SSE 연결 해제');
         disconnectSSE();
       };
-    } else {
-      console.log('🔍 useEffect - 아직 준비되지 않음:', {
-        accessToken: accessToken ? '있음' : '없음',
-        user: user ? `${user.name}` : '없음',
-        adminPlace: adminPlace ? `${adminPlace.name}` : '없음'
-      });
     }
-  }, [accessToken, user, adminPlace]);
+  }, [accessToken, adminPlace]);
 
   // 화면 포커스 시 데이터 새로고침
   useEffect(() => {
@@ -620,12 +619,15 @@ const AdminMainScreen: React.FC = () => {
     if (!accessToken || !adminPlace) return;
 
     const formattedHours = tempBusinessHours.map(item => ({
-      ...item,
-      openTime: item.closed ? null : (item.openTime + ':00'),
-      closeTime: item.closed ? null : (item.closeTime + ':00'),
-      breakStart: item.breakStart ? (item.breakStart + ':00') : null,
-      breakEnd: item.breakEnd ? (item.breakEnd + ':00') : null,
+      dayOfWeek: item.dayOfWeek,
+      openTime: item.openTime + ':00',
+      closeTime: item.closeTime + ':00',
+      breakStart: item.breakStart ? (item.breakStart + ':00') : undefined,
+      breakEnd: item.breakEnd ? (item.breakEnd + ':00') : undefined,
+      closed: item.closed,
     }));
+
+    console.log('📤 영업시간 저장 요청:', JSON.stringify({ items: formattedHours }, null, 2));
 
     try {
       const response = await ApiService.updateBusinessHours(
