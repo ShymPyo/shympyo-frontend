@@ -20,6 +20,7 @@ import AdminLoginScreen from '../screens/AdminLoginScreen';
 import AdminMainScreen from '../screens/AdminMainScreen';
 import AdminSpaceEditScreen from '../screens/AdminSpaceEditScreen';
 import AdminLetterListScreen from '../screens/AdminLetterListScreen';
+import BlockedUsersScreen from '../screens/BlockedUsersScreen';
 import GeneralLoginScreen from '../screens/GeneralLoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 
@@ -114,9 +115,17 @@ const AppNavigator = () => {
         <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
         <Stack.Screen name="AdminMain" component={AdminMainScreen} />
         <Stack.Screen name="AdminSpaceEdit" component={AdminSpaceEditScreen} />
-        <Stack.Screen 
-          name="AdminLetterList" 
+        <Stack.Screen
+          name="AdminLetterList"
           component={AdminLetterListScreen}
+          options={{
+            gestureEnabled: true,
+            gestureDirection: 'horizontal',
+          }}
+        />
+        <Stack.Screen
+          name="BlockedUsers"
+          component={BlockedUsersScreen}
           options={{
             gestureEnabled: true,
             gestureDirection: 'horizontal',

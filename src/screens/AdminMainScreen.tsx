@@ -21,8 +21,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
-import ApiService, { AdminPlace, LetterCount, CurrentRental, BusinessHours, DayOfWeek } from '../services/api';
+import ApiService, { AdminPlace, LetterCount, CurrentRental, BusinessHours, DayOfWeek, BlockReason } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import BlockReasonModal from '../components/BlockReasonModal';
 
 type AdminMainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminMain'>;
 
@@ -32,6 +33,7 @@ const AdminMainScreen: React.FC = () => {
 
   const [selectedUser, setSelectedUser] = useState<CurrentRental | null>(null);
   const [isUserModalVisible, setUserModalVisible] = useState(false);
+  const [isBlockModalVisible, setBlockModalVisible] = useState(false);
   const [adminPlace, setAdminPlace] = useState<AdminPlace | null>(null);
   const [users, setUsers] = useState<CurrentRental[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -230,6 +232,41 @@ const AdminMainScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  const handleBlockUser = () => {
+    setUserModalVisible(false);
+    setBlockModalVisible(true);
+  };
+
+  const handleBlockConfirm = async (reason: BlockReason, detail: string) => {
+    if (!selectedUser || !accessToken) return;
+
+    try {
+      // 7일 후 차단 해제 날짜 계산
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 7);
+      const endAt = endDate.toISOString();
+
+      const blockResponse = await ApiService.blockUser(
+        selectedUser.userId,
+        { reason, detail, endAt },
+        accessToken
+      );
+
+      if (blockResponse.success) {
+        Alert.alert('차단 완료', `${selectedUser.nickname}님이 차단되었습니다.`);
+        setBlockModalVisible(false);
+        setSelectedUser(null);
+        // 데이터 새로고침
+        loadAdminData();
+      } else {
+        Alert.alert('오류', blockResponse.message || '차단에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 차단 처리 오류:', error);
+      Alert.alert('오류', '차단 처리 중 오류가 발생했습니다.');
+    }
   };
 
   const handleStatusChange = async (status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE') => {
@@ -691,6 +728,21 @@ const AdminMainScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
 
+        {/* 차단 관리 섹션 */}
+        <TouchableOpacity
+          style={styles.blockSection}
+          onPress={() => navigation.navigate('BlockedUsers')}
+        >
+          <View style={styles.blockSectionHeader}>
+            <View style={styles.blockSectionLeft}>
+              <Ionicons name="ban" size={20} color="#FF8C00" />
+              <Text style={styles.blockSectionTitle}>차단 관리</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.primary} />
+          </View>
+          <Text style={styles.blockSectionDescription}>차단한 사용자를 관리합니다</Text>
+        </TouchableOpacity>
+
         {/* 인원 현황 */}
         <View style={styles.statsSection}>
           <Text style={styles.statsTitle}>
@@ -813,13 +865,28 @@ const AdminMainScreen: React.FC = () => {
               )}
             </View>
 
-            <TouchableOpacity style={styles.exitUserButton} onPress={handleAdminExitUser}>
-              <Ionicons name="log-out-outline" size={24} color="white" />
-              <Text style={styles.exitUserButtonText}>퇴장 시키기</Text>
-            </TouchableOpacity>
+            <View style={styles.userModalActions}>
+              <TouchableOpacity style={styles.blockUserButton} onPress={handleBlockUser}>
+                <Ionicons name="ban-outline" size={20} color="white" />
+                <Text style={styles.blockUserButtonText}>차단하기</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.exitUserButton} onPress={handleAdminExitUser}>
+                <Ionicons name="log-out-outline" size={20} color="white" />
+                <Text style={styles.exitUserButtonText}>퇴장 시키기</Text>
+              </TouchableOpacity>
+            </View>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* 차단 사유 선택 모달 */}
+      <BlockReasonModal
+        visible={isBlockModalVisible}
+        userNickname={selectedUser?.nickname || ''}
+        onClose={() => setBlockModalVisible(false)}
+        onConfirm={handleBlockConfirm}
+      />
 
       {/* 상태 변경 모달 */}
       <Modal
@@ -1235,6 +1302,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  blockSection: {
+    backgroundColor: Colors.surface,
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  blockSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  blockSectionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  blockSectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  blockSectionDescription: {
+    fontSize: 14,
+    color: Colors.text.light,
+    marginTop: 4,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1460,18 +1559,39 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginTop: 10,
   },
+  userModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  blockUserButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF8C00',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  blockUserButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: 'white',
+  },
   exitUserButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FF4444',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 12,
-    gap: 10,
+    gap: 8,
   },
   exitUserButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
     color: 'white',
   },
   noDataText: {

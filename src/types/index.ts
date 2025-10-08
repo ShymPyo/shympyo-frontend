@@ -10,6 +10,7 @@ export type RootStackParamList = {
   AdminMain: undefined;
   AdminSpaceEdit: { place: AdminPlace };
   AdminLetterList: undefined;
+  BlockedUsers: undefined;
   GeneralLogin: undefined;
   SignUp: undefined;
 };
