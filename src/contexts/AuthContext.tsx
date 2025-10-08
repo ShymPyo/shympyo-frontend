@@ -62,10 +62,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     checkAuthStatus();
     testBackendConnection();
-
-    // API 서비스에 토큰 재발급 콜백 설정
-    ApiService.setRefreshTokenCallback(refreshTokens);
   }, []);
+
+  useEffect(() => {
+    // API 서비스에 토큰 재발급 콜백 설정 (refreshToken이 변경될 때마다)
+    ApiService.setRefreshTokenCallback(refreshTokens);
+  }, [refreshToken]);
 
   const testBackendConnection = async () => {
     try {
