@@ -10,6 +10,7 @@ import {
   Platform,
   Pressable,
   Keyboard,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -26,13 +27,36 @@ const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
-  const handleSocialLogin = (provider: string) => {
+  const handleSocialLogin = async (provider: 'Google' | 'Kakao' | 'Naver') => {
     try {
-      // For now, any login attempt will navigate to the main screen
-      console.log(`${provider} login`);
-      navigation.replace('Main');
+      console.log(`🔑 ${provider} 로그인 시작`);
+
+      let authUrl = '';
+      const redirectUri = encodeURIComponent(`${process.env.EXPO_PUBLIC_OAUTH_REDIRECT_URI}/oauth/${provider.toLowerCase()}/callback`);
+
+      if (provider === 'Google') {
+        const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+        const scope = encodeURIComponent('openid email profile phone https://www.googleapis.com/auth/user.phonenumbers.read');
+        authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=shympyo`;
+      } else if (provider === 'Kakao') {
+        const clientId = process.env.EXPO_PUBLIC_KAKAO_CLIENT_ID;
+        authUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}`;
+      } else if (provider === 'Naver') {
+        const clientId = process.env.EXPO_PUBLIC_NAVER_CLIENT_ID;
+        const state = 'shympyo'; // 네이버는 state 필수
+        authUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
+      }
+
+      console.log('🔗 OAuth URL:', authUrl);
+
+      // 웹 환경에서는 window.open, 모바일에서는 Linking
+      if (Platform.OS === 'web') {
+        window.open(authUrl, '_blank');
+      } else {
+        await Linking.openURL(authUrl);
+      }
     } catch (error) {
-      console.error('Login navigation error:', error);
+      console.error('❌ 소셜 로그인 오류:', error);
     }
   };
 

@@ -23,6 +23,7 @@ import AdminLetterListScreen from '../screens/AdminLetterListScreen';
 import BlockedUsersScreen from '../screens/BlockedUsersScreen';
 import GeneralLoginScreen from '../screens/GeneralLoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import OAuthCallbackScreen from '../screens/OAuthCallbackScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -94,8 +95,20 @@ const MainTabNavigator = () => {
 };
 
 const AppNavigator = () => {
+  const linking = {
+    prefixes: ['http://localhost:8081', 'http://localhost:8080'],
+    config: {
+      screens: {
+        OAuthCallback: 'oauth/:provider/callback',
+        Splash: '',
+        Login: 'login',
+        Main: 'main',
+      },
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         initialRouteName="Splash"
         screenOptions={{
@@ -133,6 +146,11 @@ const AppNavigator = () => {
         />
         <Stack.Screen name="GeneralLogin" component={GeneralLoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen
+          name="OAuthCallback"
+          component={OAuthCallbackScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

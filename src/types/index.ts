@@ -13,6 +13,7 @@ export type RootStackParamList = {
   BlockedUsers: undefined;
   GeneralLogin: undefined;
   SignUp: undefined;
+  OAuthCallback: undefined;
 };
 
 export type MainTabParamList = {

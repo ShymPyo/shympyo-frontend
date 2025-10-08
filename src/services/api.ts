@@ -285,7 +285,7 @@ class ApiService {
 
   private static async request<T>(
     endpoint: string,
-    options?: RequestInit,
+    options?: RequestInit & { skipAuthRetry?: boolean },
     isRetry: boolean = false
   ): Promise<ApiResponse<T>> {
     const url = `${BASE_URL}${endpoint}`;
@@ -305,7 +305,7 @@ class ApiService {
     try {
       const response = await fetch(url, config);
 
-      if (response.status === 403 && !isRetry && this.refreshTokenCallback) {
+      if (response.status === 403 && !isRetry && !options?.skipAuthRetry && this.refreshTokenCallback) {
         console.log('🔄 토큰 만료 감지, 재발급 시도...');
         const newAccessToken = await this.refreshTokenCallback();
 
@@ -395,6 +395,54 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(userData),
     });
+  }
+
+  // 소셜 로그인 - 구글 (OAuth는 /api prefix 없음)
+  static async loginWithGoogle(code: string): Promise<ApiResponse<AuthTokens>> {
+    console.log('🔑 구글 로그인 API 호출');
+    const url = `https://shympyo.kro.kr/oauth/google/callback?code=${encodeURIComponent(code)}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
+  // 소셜 로그인 - 카카오 (OAuth는 /api prefix 없음)
+  static async loginWithKakao(code: string): Promise<ApiResponse<AuthTokens>> {
+    console.log('🔑 카카오 로그인 API 호출');
+    const url = `https://shympyo.kro.kr/oauth/kakao/callback?code=${encodeURIComponent(code)}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
+  // 소셜 로그인 - 네이버 (OAuth는 /api prefix 없음)
+  static async loginWithNaver(code: string): Promise<ApiResponse<AuthTokens>> {
+    console.log('🔑 네이버 로그인 API 호출');
+    const url = `https://shympyo.kro.kr/oauth/naver/callback?code=${encodeURIComponent(code)}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    return data;
   }
 
   static async logout(accessToken: string): Promise<ApiResponse<string>> {
