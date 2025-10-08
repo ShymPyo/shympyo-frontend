@@ -21,9 +21,11 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
-import ApiService, { AdminPlace, LetterCount, CurrentRental, BusinessHours, DayOfWeek, BlockReason } from '../services/api';
+import ApiService, { AdminPlace, LetterCount, CurrentRental, BusinessHours, DayOfWeek, BlockReason, RentalStatus, ReportReason } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import BlockReasonModal from '../components/BlockReasonModal';
+import ReportReasonModal from '../components/ReportReasonModal';
+import { connectSSE, disconnectSSE, SSEEvent } from '../services/sse';
 
 type AdminMainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminMain'>;
 
@@ -34,6 +36,7 @@ const AdminMainScreen: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<CurrentRental | null>(null);
   const [isUserModalVisible, setUserModalVisible] = useState(false);
   const [isBlockModalVisible, setBlockModalVisible] = useState(false);
+  const [isReportModalVisible, setReportModalVisible] = useState(false);
   const [adminPlace, setAdminPlace] = useState<AdminPlace | null>(null);
   const [users, setUsers] = useState<CurrentRental[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -145,24 +148,33 @@ const AdminMainScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    if (accessToken && user) {
+    if (accessToken && user && adminPlace) {
       console.log('🔍 useEffect 트리거됨 - accessToken과 user 모두 준비됨');
       loadAdminData();
 
-      // 5초마다 자동 새로고침
-      const interval = setInterval(() => {
-        console.log('🔄 자동 새로고침 - 현재 이용자 업데이트');
-        loadAdminData();
-      }, 5000);
+      // SSE 연결
+      console.log('🔌 SSE 연결 시작:', adminPlace.id);
+      const sseConnection = connectSSE(
+        adminPlace.id,
+        accessToken,
+        handleSSEMessage,
+        (error) => {
+          console.error('❌ SSE 오류:', error);
+        }
+      );
 
-      return () => clearInterval(interval);
+      return () => {
+        console.log('🔌 SSE 연결 해제');
+        disconnectSSE();
+      };
     } else {
       console.log('🔍 useEffect - 아직 준비되지 않음:', {
         accessToken: accessToken ? '있음' : '없음',
-        user: user ? `${user.name}` : '없음'
+        user: user ? `${user.name}` : '없음',
+        adminPlace: adminPlace ? `${adminPlace.name}` : '없음'
       });
     }
-  }, [accessToken, user]);
+  }, [accessToken, user, adminPlace]);
 
   // 화면 포커스 시 데이터 새로고침
   useEffect(() => {
@@ -214,15 +226,15 @@ const AdminMainScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const cancelResponse = await ApiService.adminCancelRental(selectedUser.rentalId, accessToken);
+              const kickResponse = await ApiService.adminKickRental(selectedUser.rentalId, accessToken);
 
-              if (cancelResponse.success) {
+              if (kickResponse.success) {
                 Alert.alert('퇴장 완료', '사용자가 퇴장 처리되었습니다.');
                 setUserModalVisible(false);
                 // 데이터 새로고침
                 loadAdminData();
               } else {
-                Alert.alert('오류', cancelResponse.message || '퇴장 처리에 실패했습니다.');
+                Alert.alert('오류', kickResponse.message || '퇴장 처리에 실패했습니다.');
               }
             } catch (error) {
               console.error('💥 퇴장 처리 오류:', error);
@@ -232,6 +244,38 @@ const AdminMainScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  const handleReportUser = () => {
+    setUserModalVisible(false);
+    setReportModalVisible(true);
+  };
+
+  const handleReportConfirm = async (reason: ReportReason, content: string) => {
+    if (!selectedUser || !accessToken) return;
+
+    try {
+      const reportResponse = await ApiService.createReport(
+        {
+          reportedUserId: selectedUser.userId,
+          rentalId: selectedUser.rentalId,
+          reason,
+          content,
+        },
+        accessToken
+      );
+
+      if (reportResponse.success) {
+        Alert.alert('신고 완료', `${selectedUser.nickname}님이 신고되었습니다.\n3회 누적 시 자동 제재됩니다.`);
+        setReportModalVisible(false);
+        setSelectedUser(null);
+      } else {
+        Alert.alert('오류', reportResponse.message || '신고에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 신고 처리 오류:', error);
+      Alert.alert('오류', '신고 처리 중 오류가 발생했습니다.');
+    }
   };
 
   const handleBlockUser = () => {
@@ -266,6 +310,70 @@ const AdminMainScreen: React.FC = () => {
     } catch (error) {
       console.error('💥 차단 처리 오류:', error);
       Alert.alert('오류', '차단 처리 중 오류가 발생했습니다.');
+    }
+  };
+
+  // SSE 메시지 핸들러
+  const handleSSEMessage = (event: SSEEvent) => {
+    console.log('📨 SSE 메시지 수신:', event);
+
+    switch (event.type) {
+      case 'hello':
+        console.log('✅ SSE 연결 확인');
+        break;
+      case 'rental-started':
+        console.log('🔔 입장 이벤트:', event.data);
+        loadAdminData(); // 실시간 갱신
+        break;
+      case 'rental-ended':
+        console.log('🔔 퇴장 이벤트:', event.data);
+        loadAdminData(); // 실시간 갱신
+        break;
+      case 'rental-kicked':
+        console.log('🔔 강퇴 이벤트:', event.data);
+        loadAdminData(); // 실시간 갱신
+        break;
+      case 'ping':
+        // 연결 유지용 ping - 로그 불필요
+        break;
+      default:
+        console.log('📨 알 수 없는 SSE 이벤트:', event);
+    }
+  };
+
+  // 대여 상태 텍스트 변환
+  const getRentalStatusText = (status: RentalStatus) => {
+    switch (status) {
+      case 'USING':
+        return '이용 중';
+      case 'TIME_EXCEEDED':
+        return '시간 초과';
+      case 'ENDED':
+        return '종료';
+      case 'CANCELED':
+        return '취소됨';
+      case 'KICKED':
+        return '강퇴됨';
+      default:
+        return status;
+    }
+  };
+
+  // 대여 상태 색상
+  const getRentalStatusColor = (status: RentalStatus) => {
+    switch (status) {
+      case 'USING':
+        return '#4CAF50'; // 녹색
+      case 'TIME_EXCEEDED':
+        return '#FF9800'; // 주황색
+      case 'ENDED':
+        return '#9E9E9E'; // 회색
+      case 'CANCELED':
+        return '#9E9E9E'; // 회색
+      case 'KICKED':
+        return '#F44336'; // 빨간색
+      default:
+        return '#9E9E9E';
     }
   };
 
@@ -831,6 +939,17 @@ const AdminMainScreen: React.FC = () => {
             </View>
 
             <View style={styles.userModalInfoSection}>
+              {/* 상태 표시 */}
+              <View style={styles.userModalInfoRow}>
+                <Text style={styles.userModalLabel}>상태</Text>
+                <View style={[
+                  styles.statusBadge,
+                  { backgroundColor: getRentalStatusColor(selectedUser?.status || 'USING') }
+                ]}>
+                  <Text style={styles.statusBadgeText}>{getRentalStatusText(selectedUser?.status || 'USING')}</Text>
+                </View>
+              </View>
+
               <View style={styles.userModalInfoRow}>
                 <Text style={styles.userModalLabel}>입실 시간</Text>
                 <Text style={styles.userModalInfoText}>
@@ -839,14 +958,9 @@ const AdminMainScreen: React.FC = () => {
               </View>
 
               <View style={styles.userModalInfoRow}>
-                <Text style={styles.userModalLabel}>종료 시간</Text>
+                <Text style={styles.userModalLabel}>종료 예정</Text>
                 <Text style={styles.userModalInfoText}>
-                  {selectedUser?.startTime ? (() => {
-                    const startTime = new Date(selectedUser.startTime);
-                    const maxMinutes = maxUsageMinutes || 10;
-                    const endTime = new Date(startTime.getTime() + maxMinutes * 60 * 1000);
-                    return endTime.toLocaleString('ko-KR');
-                  })() : '-'}
+                  {selectedUser?.dueTime ? new Date(selectedUser.dueTime).toLocaleString('ko-KR') : '-'}
                 </Text>
               </View>
 
@@ -866,19 +980,32 @@ const AdminMainScreen: React.FC = () => {
             </View>
 
             <View style={styles.userModalActions}>
+              <TouchableOpacity style={styles.reportUserButton} onPress={handleReportUser}>
+                <Ionicons name="alert-circle-outline" size={18} color="white" />
+                <Text style={styles.reportUserButtonText}>신고</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity style={styles.blockUserButton} onPress={handleBlockUser}>
-                <Ionicons name="ban-outline" size={20} color="white" />
-                <Text style={styles.blockUserButtonText}>차단하기</Text>
+                <Ionicons name="ban-outline" size={18} color="white" />
+                <Text style={styles.blockUserButtonText}>차단</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.exitUserButton} onPress={handleAdminExitUser}>
-                <Ionicons name="log-out-outline" size={20} color="white" />
-                <Text style={styles.exitUserButtonText}>퇴장 시키기</Text>
+                <Ionicons name="log-out-outline" size={18} color="white" />
+                <Text style={styles.exitUserButtonText}>퇴장</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* 신고 사유 선택 모달 */}
+      <ReportReasonModal
+        visible={isReportModalVisible}
+        userNickname={selectedUser?.nickname || ''}
+        onClose={() => setReportModalVisible(false)}
+        onConfirm={handleReportConfirm}
+      />
 
       {/* 차단 사유 선택 모달 */}
       <BlockReasonModal
@@ -1561,8 +1688,23 @@ const styles = StyleSheet.create({
   },
   userModalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     marginTop: 16,
+  },
+  reportUserButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#9C27B0',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+  },
+  reportUserButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
   },
   blockUserButton: {
     flex: 1,
@@ -1570,12 +1712,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FF8C00',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 12,
-    gap: 8,
+    gap: 6,
   },
   blockUserButtonText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: 'white',
   },
@@ -1585,12 +1727,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FF4444',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 12,
-    gap: 8,
+    gap: 6,
   },
   exitUserButtonText: {
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  statusBadgeText: {
+    fontSize: 13,
     fontWeight: '600',
     color: 'white',
   },
