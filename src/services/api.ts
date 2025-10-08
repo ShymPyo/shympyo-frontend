@@ -253,6 +253,7 @@ interface BlockRequest {
   reason: BlockReason;
   detail: string;
   endAt?: string; // ISO 8601 형식
+  placeId?: number; // 제공자의 장소 ID (백엔드에서 요구)
 }
 
 interface BlockedUser {
@@ -812,7 +813,7 @@ class ApiService {
   // 특정 사용자 차단
   static async blockUser(userId: number, blockData: BlockRequest, accessToken: string): Promise<ApiResponse<number>> {
     console.log('🚫 사용자 차단 API 호출:', { userId, blockData });
-    return this.request<number>(`/blocks/providers/me/${userId}`, {
+    return this.request<number>(`/blocks/${userId}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -824,7 +825,7 @@ class ApiService {
   // 특정 사용자 차단 해제
   static async unblockUser(userId: number, accessToken: string): Promise<ApiResponse<string>> {
     console.log('✅ 사용자 차단 해제 API 호출:', userId);
-    return this.request<string>(`/blocks/providers/me/${userId}`, {
+    return this.request<string>(`/blocks/${userId}`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -835,7 +836,7 @@ class ApiService {
   // 차단한 사용자 목록 조회
   static async getBlockedUsers(accessToken: string): Promise<ApiResponse<BlockedUser[]>> {
     console.log('📋 차단 목록 조회 API 호출');
-    return this.request<BlockedUser[]>('/blocks/providers/me/all', {
+    return this.request<BlockedUser[]>('/blocks/all', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -846,7 +847,7 @@ class ApiService {
   // 차단 상세 정보 조회
   static async getBlockDetail(userId: number, accessToken: string): Promise<ApiResponse<BlockDetail>> {
     console.log('🔍 차단 상세 조회 API 호출:', userId);
-    return this.request<BlockDetail>(`/blocks/providers/me/${userId}`, {
+    return this.request<BlockDetail>(`/blocks/${userId}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,

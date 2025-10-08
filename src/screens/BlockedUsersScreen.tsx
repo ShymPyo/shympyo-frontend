@@ -65,56 +65,53 @@ const BlockedUsersScreen: React.FC = () => {
   const handleUnblock = async (userId: number, nickname: string) => {
     if (!accessToken) return;
 
-    Alert.alert('차단 해제', `${nickname}님의 차단을 해제하시겠습니까?`, [
-      {
-        text: '취소',
-        style: 'cancel',
-      },
-      {
-        text: '해제',
-        onPress: async () => {
-          try {
-            const response = await ApiService.unblockUser(userId, accessToken);
+    console.log('🔓 차단 해제 시도:', { userId, nickname });
 
-            if (response.success) {
-              Alert.alert('완료', '차단이 해제되었습니다.');
-              loadBlockedUsers();
-            } else {
-              Alert.alert('오류', response.message || '차단 해제에 실패했습니다.');
-            }
-          } catch (error) {
-            console.error('💥 차단 해제 오류:', error);
-            Alert.alert('오류', '차단 해제 중 오류가 발생했습니다.');
-          }
-        },
-      },
-    ]);
+    const confirmed = window.confirm(`${nickname}님의 차단을 해제하시겠습니까?`);
+    if (!confirmed) return;
+
+    try {
+      console.log('📤 차단 해제 API 호출:', userId);
+      const response = await ApiService.unblockUser(userId, accessToken);
+      console.log('📥 차단 해제 응답:', response);
+
+      if (response.success) {
+        window.alert('차단이 해제되었습니다.');
+        loadBlockedUsers();
+      } else {
+        window.alert(response.message || '차단 해제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 차단 해제 오류:', error);
+      window.alert('차단 해제 중 오류가 발생했습니다.');
+    }
   };
 
   const handleViewDetail = async (userId: number) => {
     if (!accessToken) return;
 
     try {
+      console.log('🔍 차단 상세 조회 시도:', userId);
       const response = await ApiService.getBlockDetail(userId, accessToken);
+      console.log('📥 차단 상세 응답:', response);
 
       if (response.success && response.data) {
         const detail = response.data;
         const reasonText = getReasonText(detail.reason);
 
-        Alert.alert(
-          '차단 상세 정보',
-          `사용자: ${detail.nickname}\n\n차단 사유: ${reasonText}\n\n상세 내용:\n${detail.detail}\n\n차단 시작: ${new Date(
-            detail.startAt
-          ).toLocaleString('ko-KR')}\n차단 해제: ${new Date(detail.endAt).toLocaleString('ko-KR')}\n\n상태: ${
-            detail.status === 'ACTIVE' ? '활성' : detail.status === 'EXPIRED' ? '만료' : '취소'
-          }`
-        );
+        const message = `사용자: ${detail.nickname}\n\n차단 사유: ${reasonText}\n\n상세 내용:\n${detail.detail}\n\n차단 시작: ${new Date(
+          detail.startAt
+        ).toLocaleString('ko-KR')}\n차단 해제: ${new Date(detail.endAt).toLocaleString('ko-KR')}\n\n상태: ${
+          detail.status === 'ACTIVE' ? '활성' : detail.status === 'EXPIRED' ? '만료' : '취소'
+        }`;
+
+        window.alert(`차단 상세 정보\n\n${message}`);
       } else {
-        Alert.alert('오류', '차단 상세 정보를 불러올 수 없습니다.');
+        window.alert('차단 상세 정보를 불러올 수 없습니다.');
       }
     } catch (error) {
       console.error('💥 차단 상세 조회 오류:', error);
-      Alert.alert('오류', '상세 정보를 불러오는 중 오류가 발생했습니다.');
+      window.alert('상세 정보를 불러오는 중 오류가 발생했습니다.');
     }
   };
 

@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Platform,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Picker } from '@react-native-picker/picker';
@@ -210,42 +211,105 @@ const AdminMainScreen: React.FC = () => {
   };
 
   const handleAdminExitUser = async () => {
-    if (!selectedUser || !accessToken) return;
+    console.log('🔍 퇴장 버튼 클릭:', {
+      selectedUser: selectedUser ? {
+        rentalId: selectedUser.rentalId,
+        userId: selectedUser.userId,
+        nickname: selectedUser.nickname,
+      } : null,
+      hasAccessToken: !!accessToken,
+    });
 
-    Alert.alert(
-      '퇴장 처리',
-      '해당 사용자를 퇴장 처리하시겠습니까?',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '퇴장',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const kickResponse = await ApiService.adminKickRental(selectedUser.rentalId, accessToken);
+    if (!selectedUser || !accessToken) {
+      console.log('❌ 퇴장 불가:', {
+        noSelectedUser: !selectedUser,
+        noAccessToken: !accessToken,
+      });
+      Alert.alert('오류', '사용자 정보 또는 인증 정보가 없습니다.');
+      return;
+    }
 
-              if (kickResponse.success) {
-                Alert.alert('퇴장 완료', '사용자가 퇴장 처리되었습니다.');
-                setUserModalVisible(false);
-                // 데이터 새로고침
-                loadAdminData();
-              } else {
-                Alert.alert('오류', kickResponse.message || '퇴장 처리에 실패했습니다.');
-              }
-            } catch (error) {
-              console.error('💥 퇴장 처리 오류:', error);
-              Alert.alert('오류', '퇴장 처리 중 오류가 발생했습니다.');
-            }
+    // 웹 환경에서는 window.confirm 사용
+    const isConfirmed = Platform.OS === 'web'
+      ? window.confirm('해당 사용자를 퇴장 처리하시겠습니까?')
+      : true;
+
+    if (Platform.OS === 'web') {
+      if (!isConfirmed) return;
+
+      try {
+        console.log('🚪 관리자 퇴장 처리 시작:', {
+          rentalId: selectedUser.rentalId,
+          userId: selectedUser.userId,
+          nickname: selectedUser.nickname,
+        });
+
+        const kickResponse = await ApiService.adminKickRental(selectedUser.rentalId, accessToken);
+
+        console.log('📥 Kick 응답:', kickResponse);
+
+        if (kickResponse.success) {
+          console.log('✅ 퇴장 성공, 모달 닫기 및 데이터 새로고침');
+          window.alert('사용자가 퇴장 처리되었습니다.');
+          setUserModalVisible(false);
+          await loadAdminData();
+        } else {
+          console.log('❌ 퇴장 실패:', kickResponse.message);
+          window.alert(kickResponse.message || '퇴장 처리에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('💥 퇴장 처리 오류:', error);
+        window.alert('퇴장 처리 중 오류가 발생했습니다.');
+      }
+    } else {
+      Alert.alert(
+        '퇴장 처리',
+        '해당 사용자를 퇴장 처리하시겠습니까?',
+        [
+          {
+            text: '취소',
+            style: 'cancel',
           },
-        },
-      ]
-    );
+          {
+            text: '퇴장',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                console.log('🚪 관리자 퇴장 처리 시작:', {
+                  rentalId: selectedUser.rentalId,
+                  userId: selectedUser.userId,
+                  nickname: selectedUser.nickname,
+                });
+
+                const kickResponse = await ApiService.adminKickRental(selectedUser.rentalId, accessToken);
+
+                console.log('📥 Kick 응답:', kickResponse);
+
+                if (kickResponse.success) {
+                  console.log('✅ 퇴장 성공, 모달 닫기 및 데이터 새로고침');
+                  Alert.alert('퇴장 완료', '사용자가 퇴장 처리되었습니다.');
+                  setUserModalVisible(false);
+                  await loadAdminData();
+                } else {
+                  console.log('❌ 퇴장 실패:', kickResponse.message);
+                  Alert.alert('오류', kickResponse.message || '퇴장 처리에 실패했습니다.');
+                }
+              } catch (error) {
+                console.error('💥 퇴장 처리 오류:', error);
+                Alert.alert('오류', '퇴장 처리 중 오류가 발생했습니다.');
+              }
+            },
+          },
+        ]
+      );
+    }
   };
 
   const handleReportUser = () => {
+    console.log('🚨 신고 버튼 클릭:', selectedUser ? {
+      userId: selectedUser.userId,
+      nickname: selectedUser.nickname,
+    } : 'selectedUser 없음');
     setUserModalVisible(false);
     setReportModalVisible(true);
   };
@@ -278,12 +342,16 @@ const AdminMainScreen: React.FC = () => {
   };
 
   const handleBlockUser = () => {
+    console.log('🚫 차단 버튼 클릭:', selectedUser ? {
+      userId: selectedUser.userId,
+      nickname: selectedUser.nickname,
+    } : 'selectedUser 없음');
     setUserModalVisible(false);
     setBlockModalVisible(true);
   };
 
   const handleBlockConfirm = async (reason: BlockReason, detail: string) => {
-    if (!selectedUser || !accessToken) return;
+    if (!selectedUser || !accessToken || !adminPlace) return;
 
     try {
       // 7일 후 차단 해제 날짜 계산
@@ -293,7 +361,7 @@ const AdminMainScreen: React.FC = () => {
 
       const blockResponse = await ApiService.blockUser(
         selectedUser.userId,
-        { reason, detail, endAt },
+        { reason, detail, endAt, placeId: adminPlace.id },
         accessToken
       );
 
@@ -715,7 +783,9 @@ const AdminMainScreen: React.FC = () => {
               <View style={styles.profileContent}>
                 <Image
                   source={{
-                    uri: adminPlace.imageUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80'
+                    uri: (adminPlace.imageUrl && !adminPlace.imageUrl.includes('example.com'))
+                      ? adminPlace.imageUrl
+                      : 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80'
                   }}
                   style={styles.shopImage}
                 />
@@ -868,7 +938,9 @@ const AdminMainScreen: React.FC = () => {
               >
                 <Image
                   source={{
-                    uri: user.imageUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
+                    uri: (user.imageUrl && !user.imageUrl.includes('example.com'))
+                      ? user.imageUrl
+                      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
                   }}
                   style={styles.userProfile}
                 />
