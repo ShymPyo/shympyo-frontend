@@ -329,7 +329,7 @@ const AdminLetterListScreen: React.FC = () => {
                 <Text style={styles.modalProfileText}>😊</Text>
               </View>
               <View style={styles.modalTextSection}>
-                <Text style={styles.modalLabel}>작성자</Text>
+                
                 <Text style={styles.modalName}>{selectedLetter?.writerInfo.nickname}</Text>
                 {selectedLetter?.writerInfo.bio && (
                   <Text style={styles.modalBio}>{selectedLetter.writerInfo.bio}</Text>
@@ -452,14 +452,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   letterCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'transparent',
     borderRadius: 12,
     marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   letterContent: {
     padding: 15,
@@ -549,19 +544,20 @@ const styles = StyleSheet.create({
   },
   modalLetterContent: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 10,
+    alignItems: 'flex-end',
   },
   modalProfile: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: '#FFE4B5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
   modalProfileText: {
-    fontSize: 24,
+    fontSize: 36,
   },
   modalTextSection: {
     flex: 1,
@@ -589,7 +585,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   modalLetterSection: {
-    marginTop: 20,
+    marginTop: 10,
   },
   modalLetterText: {
     fontSize: 16,
