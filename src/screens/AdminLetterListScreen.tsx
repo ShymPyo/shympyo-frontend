@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -354,6 +355,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   loadingContainer: {
     flex: 1,
@@ -508,7 +510,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.text.light,
     marginTop: 2,
-    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,
