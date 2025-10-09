@@ -30,6 +30,7 @@ import * as Location from 'expo-location';
 
 import { Colors, getColors } from '../constants/colors';
 import ShelterDetailModal from '../components/ShelterDetailModal';
+import UserShelterDetailModal from '../components/UserShelterDetailModal';
 import ApiService, { MapLocation, NearbyPlace, WeatherData } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemedStyles } from '../hooks/useThemedStyles';
@@ -147,6 +148,16 @@ const AnimatedThermometer: React.FC<{ temperature: number }> = ({ temperature })
 
 // 대중교통 관련 인터페이스와 데이터 제거 - 쉼터 기능만 사용
 
+interface TodayAndHoliday {
+  dayOfWeek: string;
+  closed: boolean;
+  openTime: string;
+  closeTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+  holidays?: string[];
+}
+
 interface Shelter {
   id: string;
   name: string;
@@ -160,6 +171,9 @@ interface Shelter {
   content?: string | null;
   maxCapacity?: number;
   currentCapacity?: number;
+  imageUrl?: string;
+  todayAndHoliday?: TodayAndHoliday;
+  maxUsageMinutes?: number;
 }
 
 const shelters: Shelter[] = [
@@ -463,7 +477,12 @@ const HomeScreen: React.FC = () => {
           color: getColor(response.data?.type || ''),
           address: response.data?.address,
           description: content, // 리스트 API의 content 사용 (버스정류장 정보 등)
-          content: content // 리스트 API의 content 사용
+          content: content, // 리스트 API의 content 사용
+          maxCapacity: response.data?.maxCapacity,
+          currentCapacity: response.data?.currentCapacity,
+          imageUrl: response.data?.imageUrl,
+          todayAndHoliday: response.data?.todayAndHoliday,
+          maxUsageMinutes: response.data?.maxUsageMinutes,
         };
 
         console.log('🔍 변환된 Shelter 객체:', detailShelter);
@@ -500,6 +519,9 @@ const HomeScreen: React.FC = () => {
             description: response.data.content,
             maxCapacity: response.data.maxCapacity,
             currentCapacity: response.data.currentCapacity,
+            imageUrl: response.data.imageUrl,
+            todayAndHoliday: response.data.todayAndHoliday,
+            maxUsageMinutes: response.data.maxUsageMinutes,
           };
           setSelectedShelter(updatedShelter);
         }
@@ -517,9 +539,9 @@ const HomeScreen: React.FC = () => {
   const minHeight = peekHeight; // 최소 높이 - 제목과 첫 번째 카드 일부만 보임
   const maxHeight = bottomSheetHeight; // 최대 높이 - 전체 목록 표시
 
-  // 초기값을 0으로 설정하여 닫힌 상태로 시작
-  const translateY = useSharedValue(0);
-  const [showFade, setShowFade] = useState(false);
+  // 초기값을 -peekHeight으로 설정하여 중간 상태로 시작
+  const translateY = useSharedValue(-peekHeight);
+  const [showFade, setShowFade] = useState(true);
 
   // 드래그 시작 위치를 저장할 변수
   const startY = useSharedValue(0);
@@ -659,6 +681,7 @@ const HomeScreen: React.FC = () => {
       color: getColorFromType(place.type),
       maxCapacity: place.maxCapacity,
       currentCapacity: place.currentCapacity,
+      maxUsageMinutes: place.maxUsageMinutes,
     }))
     .filter(shelter => selectedCategories.includes(shelter.category));
 
@@ -1247,12 +1270,23 @@ const HomeScreen: React.FC = () => {
           </GestureDetector>
         </View>
 
-        {/* 쉼터 세부정보 모달 */}
-        <ShelterDetailModal
-          visible={modalVisible}
-          shelter={selectedShelter}
-          onClose={() => setModalVisible(false)}
-        />
+        {/* 쉼터 세부정보 모달 - 민간 개방 시설 */}
+        {selectedShelter.category === '민간 개방 시설' && (
+          <UserShelterDetailModal
+            visible={modalVisible}
+            shelter={selectedShelter as any}
+            onClose={() => setModalVisible(false)}
+          />
+        )}
+
+        {/* 쉼터 세부정보 모달 - 기타 시설 */}
+        {selectedShelter.category !== '민간 개방 시설' && (
+          <ShelterDetailModal
+            visible={modalVisible}
+            shelter={selectedShelter as any}
+            onClose={() => setModalVisible(false)}
+          />
+        )}
 
         {/* 필터 모달 */}
         <Modal

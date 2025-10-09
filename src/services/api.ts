@@ -55,6 +55,7 @@ interface NearbyPlace {
   distanceM: number;
   maxCapacity?: number;
   currentCapacity?: number;
+  maxUsageMinutes?: number;
 }
 
 interface TodayAndHoliday {
@@ -79,6 +80,7 @@ interface PlaceDetail {
   currentCapacity?: number;       // 현재 이용 중인 사용자 수
   todayAndHoliday?: TodayAndHoliday; // 오늘의 영업시간 및 휴일 정보
   imageUrl?: string;
+  maxUsageMinutes?: number;       // 최대 이용 시간 (분)
 }
 
 interface RentalEnterRequest {
