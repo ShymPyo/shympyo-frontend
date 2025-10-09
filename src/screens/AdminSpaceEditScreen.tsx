@@ -180,7 +180,7 @@ const AdminSpaceEditScreen: React.FC = () => {
 
         {/* 기본 정보 */}
         <View style={[styles.section, styles.sectionCard]}>
-          <Text style={styles.sectionTitle}>기본 정보</Text>
+          
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>공간 이름 *</Text>
@@ -196,7 +196,7 @@ const AdminSpaceEditScreen: React.FC = () => {
 
         {/* 위치 정보 */}
         <View style={[styles.section, styles.sectionCard]}>
-          <Text style={styles.sectionTitle}>위치 정보</Text>
+          
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>주소 *</Text>
@@ -211,7 +211,7 @@ const AdminSpaceEditScreen: React.FC = () => {
 
         {/* 공간 소개 */}
         <View style={[styles.section, styles.sectionCard]}>
-          <Text style={styles.sectionTitle}>공간 소개</Text>
+          
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>소개글 *</Text>
@@ -228,7 +228,7 @@ const AdminSpaceEditScreen: React.FC = () => {
 
         {/* 이용 인원 설정 */}
         <View style={[styles.section, styles.sectionCard]}>
-          <Text style={styles.sectionTitle}>이용 인원 설정</Text>
+          
           
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>최대 이용 인원 *</Text>
@@ -298,6 +298,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -375,30 +376,18 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 0,
   },
   sectionCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'transparent',
     marginHorizontal: 20,
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 10,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 20,
-  },
+
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 15,
   },
   inputLabel: {
     fontSize: 16,
@@ -407,24 +396,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'white',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 15,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   textArea: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'white',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 15,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
     textAlignVertical: 'top',
     minHeight: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   inputRow: {
     flexDirection: 'row',
@@ -435,15 +430,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   timeSelector: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'white',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   timeSelectorText: {
     fontSize: 16,
