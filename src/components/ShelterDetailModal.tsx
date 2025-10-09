@@ -108,9 +108,6 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
             
             <View style={styles.headerTitleContainer}>
               <Text style={styles.categoryText} numberOfLines={1}>{shelter.category}</Text>
-              <View style={[styles.locationIcon, { backgroundColor: shelter.color }]}>
-                <Ionicons name="location" size={12} color="white" />
-              </View>
             </View>
           </View>
 
@@ -135,9 +132,9 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
                     const description = displayInfo.description;
                     const category = shelter.category;
 
-                    // 교통 시설: name 표시 (예: "2호선")
+                    // 교통 시설: name + description 결합 (예: "2호선 용답역")
                     if (category === '교통 시설') {
-                      return name;
+                      return name && description ? `${name} ${description}` : (name || description);
                     }
                     // 민간 개방 시설: name 표시
                     if (category === '민간 개방 시설') {
@@ -171,29 +168,11 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
               </View>
             </View>
 
-            {/* 쉼터 정보 */}
-            {shelter.category !== '기후 동행 쉼터' && (
-              <View style={styles.descriptionSection}>
-                <View style={styles.descriptionHeader}>
-                  <Text style={styles.descriptionTitle} numberOfLines={1}>쉼터 정보</Text>
-                </View>
-                <Text style={styles.descriptionText} numberOfLines={5}>
-                  {(() => {
-                    const category = shelter.category;
-                    // 민간 개방 시설: description 표시
-                    if (category === '민간 개방 시설') {
-                      return displayInfo.description;
-                    }
-                    // 교통 시설: description 표시 (예: "용답역")
-                    if (category === '교통 시설') {
-                      return displayInfo.description;
-                    }
-                    // 그 외: name 표시
-                    return shelter.name;
-                  })()}
-                </Text>
-              </View>
-            )}
+            {/* 길찾기 버튼 */}
+            <TouchableOpacity style={styles.navigationButton}>
+              <Ionicons name="navigate" size={20} color="white" />
+              <Text style={styles.navigationButtonText}>길찾기</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -212,10 +191,10 @@ const styles = StyleSheet.create({
   },
   container: {
     width: '100%',
-    height: 400,
+    height: 320,
     backgroundColor: 'white',
     borderRadius: 20,
-    ...(Platform.OS === 'web' 
+    ...(Platform.OS === 'web'
       ? { boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.3)' }
       : {
           shadowColor: '#000',
@@ -303,24 +282,20 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     flex: 1,
   },
-  descriptionSection: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
+  navigationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
     borderRadius: 12,
-    padding: 16,
+    marginTop: 'auto',
   },
-  descriptionHeader: {
-    marginBottom: 8,
-  },
-  descriptionTitle: {
-    fontSize: 14,
+  navigationButtonText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: Colors.text.primary,
-  },
-  descriptionText: {
-    fontSize: 13,
-    color: Colors.text.secondary,
-    lineHeight: 18,
+    color: 'white',
+    marginLeft: 8,
   },
 });
 

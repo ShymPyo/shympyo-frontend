@@ -432,6 +432,7 @@ const HomeScreen: React.FC = () => {
           if (type === 'SHELTER') return '스마트 쉼터';
           if (type === 'USER_SHELTER') return '민간 개방 시설';
           if (type === 'STATION') return '교통 시설';
+          if (type === 'CLIMATE_SHELTER') return '기후 동행 쉼터';
           return '민간 개방 시설';
         };
 
@@ -439,6 +440,7 @@ const HomeScreen: React.FC = () => {
           if (type === 'SHELTER') return 'medical';
           if (type === 'USER_SHELTER') return 'business';
           if (type === 'STATION') return 'train';
+          if (type === 'CLIMATE_SHELTER') return 'sunny';
           return 'business';
         };
 
@@ -446,6 +448,7 @@ const HomeScreen: React.FC = () => {
           if (type === 'SHELTER') return '#4A90E2';
           if (type === 'USER_SHELTER') return '#FFA500';
           if (type === 'STATION') return '#27AE60';
+          if (type === 'CLIMATE_SHELTER') return '#9B59B6';
           return '#7ED321';
         };
 
@@ -715,9 +718,11 @@ const HomeScreen: React.FC = () => {
           // 쉼터 타입에 따른 마커 이미지 설정
           var markerColor = position.type === 'SHELTER' ? '#4A90E2' :
                            position.type === 'USER_SHELTER' ? '#FFA500' :
-                           position.type === 'STATION' ? '#27AE60' : '#7ED321';
+                           position.type === 'STATION' ? '#27AE60' :
+                           position.type === 'CLIMATE_SHELTER' ? '#9B59B6' : '#7ED321';
           var markerIcon = position.type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' :
                           position.type === 'STATION' ? 'M12 2l-2 6-6 2 6 2 2 6 2-6 6-2-6-2z' :
+                          position.type === 'CLIMATE_SHELTER' ? 'M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z' :
                           'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
 
           var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
@@ -813,9 +818,9 @@ const HomeScreen: React.FC = () => {
             const description = item.description;
             const category = item.category;
 
-            // 교통 시설: name 표시 (예: "2호선")
+            // 교통 시설: name + description 결합 (예: "2호선 용답역")
             if (category === '교통 시설') {
-              return name;
+              return name && description ? `${name} ${description}` : (name || description);
             }
             // 민간 개방 시설: name 표시
             if (category === '민간 개방 시설') {
@@ -963,9 +968,11 @@ const HomeScreen: React.FC = () => {
                   // 쉼터 타입에 따른 마커 이미지 설정
                   var markerColor = positions[i].type === 'SHELTER' ? '#4A90E2' :
                                    positions[i].type === 'USER_SHELTER' ? '#FFA500' :
-                                   positions[i].type === 'STATION' ? '#27AE60' : '#7ED321';
+                                   positions[i].type === 'STATION' ? '#27AE60' :
+                                   positions[i].type === 'CLIMATE_SHELTER' ? '#9B59B6' : '#7ED321';
                   var markerIcon = positions[i].type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' :
                                   positions[i].type === 'STATION' ? 'M12 2l-2 6-6 2 6 2 2 6 2-6 6-2-6-2z' :
+                                  positions[i].type === 'CLIMATE_SHELTER' ? 'M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z' :
                                   'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
 
                   var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
