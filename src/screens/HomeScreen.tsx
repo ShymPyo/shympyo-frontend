@@ -1090,66 +1090,6 @@ const HomeScreen: React.FC = () => {
               )}
             </View>
           </View>
-          
-          {/* 쉼터 종류 범례 - 상단 가로 배치 */}
-          <TouchableOpacity
-            style={[
-              styles.shelterCategoryContainer,
-              { backgroundColor: colors.surface },
-              selectedCategories.length === 0 && styles.shelterCategoryContainerSquare
-            ]}
-            onPress={() => setFilterModalVisible(true)}
-          >
-            {selectedCategories.length === 0 ? (
-              <View style={styles.filterIconContainer}>
-                <Ionicons name="options" size={18} color={colors.text.secondary} />
-                <Text style={styles.filterText}></Text>
-              </View>
-            ) : (
-              <>
-                {selectedCategories.includes('스마트 쉼터') && (
-                  <View style={styles.categoryItem}>
-                    <View style={[styles.categoryPin, { backgroundColor: '#4A90E2' }]}>
-                      <Ionicons name="medical" size={12} color="white" />
-                    </View>
-                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>쉘터</Text>
-                  </View>
-                )}
-                {selectedCategories.includes('민간 개방 시설') && (
-                  <View style={styles.categoryItem}>
-                    <View style={[styles.categoryPin, { backgroundColor: '#FFA500' }]}>
-                      <Ionicons name="business" size={12} color="white" />
-                    </View>
-                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>민간</Text>
-                  </View>
-                )}
-                {selectedCategories.includes('교통 시설') && (
-                  <View style={styles.categoryItem}>
-                    <View style={[styles.categoryPin, { backgroundColor: '#27AE60' }]}>
-                      <Ionicons name="car" size={12} color="white" />
-                    </View>
-                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>교통</Text>
-                  </View>
-                )}
-                {selectedCategories.includes('공공 시설') && (
-                  <View style={styles.categoryItem}>
-                    <View style={[styles.categoryPin, { backgroundColor: '#E74C3C' }]}>
-                      <Ionicons name="library" size={12} color="white" />
-                    </View>
-                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>공공</Text>
-                  </View>
-                )}
-                {selectedCategories.includes('기후 동행 쉼터') && (
-                  <View style={styles.categoryItem}>
-                    <View style={[styles.categoryPin, { backgroundColor: '#9B59B6' }]}>
-                      <Ionicons name="sunny" size={12} color="white" />
-                    </View>
-                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>기후</Text>
-                  </View>
-                )}
-              </>
-            )}
-          </TouchableOpacity>
 
           {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
           <Animated.View style={[styles.locationButtonContainer, locationButtonStyle]}>
@@ -1180,14 +1120,107 @@ const HomeScreen: React.FC = () => {
                 <Text style={[styles.headerTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>반경 500m 내 쉼터</Text>
               </TouchableOpacity>
 
+              {/* 내 주변 쉼터 개수 표시 */}
+              <Text style={[styles.topNote, { fontSize: getFontSize(12), color: colors.text.light }]}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
+
+              {/* 필터 칩 - 스크롤 가능한 가로 배치 */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filterChipContainer}
+                contentContainerStyle={styles.filterChipContent}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectedCategories.includes('스마트 쉼터') && { backgroundColor: '#4A90E2', borderColor: '#4A90E2' }
+                  ]}
+                  onPress={() => toggleCategory('스마트 쉼터')}
+                >
+                  <View style={[styles.filterChipIcon, { backgroundColor: '#4A90E2' }]}>
+                    <Ionicons name="medical" size={14} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterChipText,
+                    { fontSize: getFontSize(13), color: colors.text.secondary },
+                    selectedCategories.includes('스마트 쉼터') && { color: 'white' }
+                  ]}>쉘터</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectedCategories.includes('민간 개방 시설') && { backgroundColor: '#FFA500', borderColor: '#FFA500' }
+                  ]}
+                  onPress={() => toggleCategory('민간 개방 시설')}
+                >
+                  <View style={[styles.filterChipIcon, { backgroundColor: '#FFA500' }]}>
+                    <Ionicons name="business" size={14} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterChipText,
+                    { fontSize: getFontSize(13), color: colors.text.secondary },
+                    selectedCategories.includes('민간 개방 시설') && { color: 'white' }
+                  ]}>민간</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectedCategories.includes('교통 시설') && { backgroundColor: '#27AE60', borderColor: '#27AE60' }
+                  ]}
+                  onPress={() => toggleCategory('교통 시설')}
+                >
+                  <View style={[styles.filterChipIcon, { backgroundColor: '#27AE60' }]}>
+                    <Ionicons name="car" size={14} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterChipText,
+                    { fontSize: getFontSize(13), color: colors.text.secondary },
+                    selectedCategories.includes('교통 시설') && { color: 'white' }
+                  ]}>교통</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectedCategories.includes('공공 시설') && { backgroundColor: '#E74C3C', borderColor: '#E74C3C' }
+                  ]}
+                  onPress={() => toggleCategory('공공 시설')}
+                >
+                  <View style={[styles.filterChipIcon, { backgroundColor: '#E74C3C' }]}>
+                    <Ionicons name="library" size={14} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterChipText,
+                    { fontSize: getFontSize(13), color: colors.text.secondary },
+                    selectedCategories.includes('공공 시설') && { color: 'white' }
+                  ]}>공공</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectedCategories.includes('기후 동행 쉼터') && { backgroundColor: '#9B59B6', borderColor: '#9B59B6' }
+                  ]}
+                  onPress={() => toggleCategory('기후 동행 쉼터')}
+                >
+                  <View style={[styles.filterChipIcon, { backgroundColor: '#9B59B6' }]}>
+                    <Ionicons name="sunny" size={14} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.filterChipText,
+                    { fontSize: getFontSize(13), color: colors.text.secondary },
+                    selectedCategories.includes('기후 동행 쉼터') && { color: 'white' }
+                  ]}>동행</Text>
+                </TouchableOpacity>
+              </ScrollView>
+
               {/* 쉼터 목록 - FlatList로 직접 렌더링 */}
               <FlatList<Shelter>
                 data={filteredShelters}
                 renderItem={renderShelterCard}
                 keyExtractor={(item) => item.id}
-                ListHeaderComponent={
-                  <Text style={[styles.topNote, { fontSize: getFontSize(12), color: colors.text.light }]}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
-                }
                 ListFooterComponent={<View style={styles.bottomFiller} />}
                 showsVerticalScrollIndicator={false}
                 style={styles.contentContainer}
@@ -1589,13 +1622,53 @@ const styles = StyleSheet.create({
         color: Colors.text.primary,
         textAlign: 'center',
     },
+    filterChipContainer: {
+        maxHeight: 50,
+        marginTop: 8,
+        marginBottom: 4,
+    },
+    filterChipContent: {
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        gap: 8,
+    },
+    filterChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        marginRight: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        backgroundColor: 'white',
+    },
+    filterChipSelected: {
+        backgroundColor: '#F5F5F5',
+        borderColor: '#333',
+    },
+    filterChipIcon: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 6,
+    },
+    filterChipText: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    filterChipTextSelected: {
+        fontWeight: '600',
+    },
     topNote: {
         fontSize: 12,
         color: Colors.text.light,
         textAlign: 'center',
-        marginBottom: 8,
-        marginTop: 4, // 상단 여백 줄임
-        paddingHorizontal: 0,
+        marginBottom: 4,
+        marginTop: 8,
+        paddingHorizontal: 16,
     },
     shelterCard: {
         flexDirection: 'row',
