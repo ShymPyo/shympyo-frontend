@@ -23,6 +23,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  runOnJS,
 } from 'react-native-reanimated';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Location from 'expo-location';
@@ -509,12 +510,13 @@ const HomeScreen: React.FC = () => {
 
   // 하단 슬라이드 애니메이션을 위한 값들
   const bottomSheetHeight = height * 0.5; // 전체 높이의 50%
-  const peekHeight = 120; // 기본적으로 살짝 보이는 높이
+  const peekHeight = 200; // 살짝 보이는 높이
   const minHeight = peekHeight; // 최소 높이 - 제목과 첫 번째 카드 일부만 보임
   const maxHeight = bottomSheetHeight; // 최대 높이 - 전체 목록 표시
-  
-  // 초기값을 0으로 설정 (원래 상태)
+
+  // 초기값을 0으로 설정하여 닫힌 상태로 시작
   const translateY = useSharedValue(0);
+  const [showFade, setShowFade] = useState(false);
 
   // 드래그 시작 위치를 저장할 변수
   const startY = useSharedValue(0);
@@ -535,7 +537,7 @@ const HomeScreen: React.FC = () => {
       translateY.value = Math.max(-maxHeight + 100, Math.min(20, newTranslateY));
     })
     .onEnd((event) => {
-      // 3단계 상태 결정: 완전히 닫힘(0), 살짝 열림(-peekHeight), 완전히 열림(-maxHeight)
+      // 3단계 상태 결정: 닫힘(0), 중간(-peekHeight), 완전히 열림(-maxHeight)
       const currentPos = translateY.value;
       const velocity = event.velocityY;
 
@@ -556,7 +558,7 @@ const HomeScreen: React.FC = () => {
         } else if (currentPos < -200) {
           targetY = -maxHeight + 100; // 완전히 열림
         } else {
-          targetY = -peekHeight; // 중간 상태 (살짝 열림)
+          targetY = -peekHeight; // 중간 상태
         }
       }
 
@@ -566,6 +568,13 @@ const HomeScreen: React.FC = () => {
         stiffness: 120,
         mass: 1,
       });
+
+      // 슬라이더가 완전히 닫혔을 때 페이드 숨기기 (runOnJS 사용)
+      if (targetY === 0) {
+        runOnJS(setShowFade)(false);
+      } else {
+        runOnJS(setShowFade)(true);
+      }
     });
 
 
@@ -595,13 +604,15 @@ const HomeScreen: React.FC = () => {
         stiffness: 120,
         mass: 1,
       });
+      setShowFade(false);
     } else {
-      // 닫혀있거나 살짝 열려있으면 완전히 열기
+      // 닫혀있으면 완전히 열기
       translateY.value = withSpring(-maxHeight + 100, {
         damping: 20,
         stiffness: 120,
         mass: 1,
       });
+      setShowFade(true);
     }
   };
 
@@ -658,11 +669,18 @@ const HomeScreen: React.FC = () => {
 
   // 카테고리 토글 함수
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
+    setSelectedCategories(prev => {
+      // 이미 선택된 카테고리를 누른 경우
+      if (prev.includes(category)) {
+        // 최소 1개는 선택되어야 하므로, 마지막 1개면 해제 불가
+        if (prev.length <= 1) {
+          return prev;
+        }
+        return prev.filter(c => c !== category);
+      }
+      // 선택되지 않은 카테고리를 누른 경우 추가
+      return [...prev, category];
+    });
   };
 
   // 필터 변경 시 지도 마커 업데이트
@@ -811,35 +829,17 @@ const HomeScreen: React.FC = () => {
             return description || name;
           })()}
         </Text>
-        {item.address && (
-          <Text style={[styles.shelterAddress, { fontSize: getFontSize(12), color: colors.text.secondary }]}>{item.address}</Text>
-        )}
-        {item.category !== '기후 동행 쉼터' && (
-          <Text style={[styles.shelterDescription, { fontSize: getFontSize(12), color: colors.text.light }]} numberOfLines={1}>
-            {(() => {
-              const category = item.category;
-              // 민간 개방 시설: description 표시
-              if (category === '민간 개방 시설') {
-                return item.description;
-              }
-              // 교통 시설: description 표시 (예: "용답역")
-              if (category === '교통 시설') {
-                return item.description;
-              }
-              // 그 외: name 표시
-              return item.name;
-            })()}
+      </View>
+      {/* 오른쪽 정보 - 거리 또는 인원 */}
+      <View style={styles.rightInfo}>
+        {item.category === '민간 개방 시설' && item.maxCapacity !== undefined && item.currentCapacity !== undefined ? (
+          <Text style={[styles.capacityText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
+            {item.currentCapacity}/{item.maxCapacity}명
           </Text>
-        )}
-        {/* 민간 개방 시설: 현재 인원 표시 */}
-        {item.category === '민간 개방 시설' && item.maxCapacity !== undefined && item.currentCapacity !== undefined && (
-          <Text style={[styles.capacityText, { fontSize: getFontSize(11), color: colors.text.secondary }]}>
-            현재 {item.currentCapacity}/{item.maxCapacity}명
-          </Text>
+        ) : (
+          <Text style={[styles.shelterDistance, { fontSize: getFontSize(18), color: colors.primary }]}>{item.distance}</Text>
         )}
       </View>
-      {/* 거리 정보 - 오른쪽에 큰 글씨로 표시 */}
-      <Text style={[styles.shelterDistance, { fontSize: getFontSize(18), color: colors.primary }]}>{item.distance}</Text>
     </TouchableOpacity>
   );
 
@@ -1109,7 +1109,15 @@ const HomeScreen: React.FC = () => {
               />
             </TouchableOpacity>
           </Animated.View>
-          
+          {/* 하단 페이드 효과 - 슬라이더가 열려있을 때만 표시 */}
+          {showFade && (
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.6)', 'rgba(255, 255, 255, 0.95)']}
+              style={styles.bottomFadeFixed}
+              pointerEvents="none"
+            />
+          )}
+
           <GestureDetector gesture={panGesture}>
             <Animated.View style={[styles.overlayBottom, { backgroundColor: colors.surface }, bottomSheetStyle]}>
               {/* 드래그 핸들 - 미니멀한 회색 바 */}
@@ -1121,7 +1129,9 @@ const HomeScreen: React.FC = () => {
               </TouchableOpacity>
 
               {/* 내 주변 쉼터 개수 표시 */}
-              <Text style={[styles.topNote, { fontSize: getFontSize(12), color: colors.text.light }]}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
+              <Text style={[styles.topNote, { fontSize: getFontSize(12), color: colors.text.light }]}>
+                ※ 내 주변에 쉼터가 <Text style={{ color: '#4A90E2', fontWeight: '700' }}>{filteredShelters.length}개</Text> 있습니다.
+              </Text>
 
               {/* 필터 칩 - 스크롤 가능한 가로 배치 */}
               <ScrollView
@@ -1578,14 +1588,15 @@ const styles = StyleSheet.create({
     },
     overlayBottom: {
         position: 'absolute',
-        bottom: -height * 0.4, // 원래 위치로 복구
+        bottom: -height * 0.4,
         left: 0,
         right: 0,
         backgroundColor: 'white',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         paddingTop: 12,
-        height: height * 0.5, // 원래 높이로 복구
+        paddingBottom: Platform.OS === 'android' ? 30 : 0, // 안드로이드에서 하단 패딩 추가
+        height: Platform.OS === 'android' ? height * 0.5 + 30 : height * 0.5, // 안드로이드에서 높이 증가
         ...getShadowStyle({
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
@@ -1666,8 +1677,8 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: Colors.text.light,
         textAlign: 'center',
-        marginBottom: 4,
-        marginTop: 8,
+        marginBottom: Platform.OS === 'android' ? 8 : 4,
+        marginTop: Platform.OS === 'android' ? 16 : 8,
         paddingHorizontal: 16,
     },
     shelterCard: {
@@ -1677,8 +1688,6 @@ const styles = StyleSheet.create({
         padding: 16,
         marginVertical: 6,
         borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#F0F0F0',
         ...getShadowStyle({
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 1 },
@@ -1730,17 +1739,22 @@ const styles = StyleSheet.create({
         lineHeight: 14,
         fontStyle: 'italic',
     },
+    rightInfo: {
+        justifyContent: 'flex-start',
+        alignItems: 'flex-end',
+        minWidth: 60,
+        paddingTop: 18,
+    },
     capacityText: {
-        fontSize: 11,
+        fontSize: 13,
         fontWeight: '600',
         color: Colors.text.secondary,
-        marginTop: 4,
+        textAlign: 'right',
     },
     shelterDistance: {
         fontSize: 16,
         fontWeight: '700',
         color: Colors.primary,
-        minWidth: 50,
         textAlign: 'right',
     },
     scrollContentContainer: {
@@ -1748,8 +1762,16 @@ const styles = StyleSheet.create({
         paddingTop: 0, // 상단 여백 제거
     },
     bottomFiller: {
-        height: 20, // 하단 여백 최소화
+        height: 60, // 페이드 높이만큼 여백 추가
         backgroundColor: 'transparent',
+    },
+    bottomFadeFixed: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 40,
+        zIndex: 100,
     },
     modalOverlay: {
         flex: 1,
