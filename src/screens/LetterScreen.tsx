@@ -570,6 +570,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   header: {
     padding: 20,

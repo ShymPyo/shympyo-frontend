@@ -11,6 +11,7 @@ import {
   Switch,
   Modal,
   Pressable,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -362,6 +363,7 @@ const SettingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   header: {
     alignItems: 'center',
