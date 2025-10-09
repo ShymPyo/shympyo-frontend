@@ -51,8 +51,10 @@ interface NearbyPlace {
   name: string;
   address: string;
   content: string;
-  type: 'SHELTER' | 'CAFE' | 'RESTAURANT' | 'STORE';
+  type: 'SHELTER' | 'CAFE' | 'RESTAURANT' | 'STORE' | 'CLIMATE_SHELTER' | 'USER_SHELTER' | 'STATION';
   distanceM: number;
+  maxCapacity?: number;
+  currentCapacity?: number;
 }
 
 interface TodayAndHoliday {

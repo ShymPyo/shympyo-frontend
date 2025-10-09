@@ -151,12 +151,14 @@ interface Shelter {
   name: string;
   type: string;
   distance: string;
-  category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설';
+  category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설' | '기후 동행 쉼터';
   icon: string;
   color: string;
   address?: string;
   description?: string;
   content?: string | null;
+  maxCapacity?: number;
+  currentCapacity?: number;
 }
 
 const shelters: Shelter[] = [
@@ -209,7 +211,7 @@ const HomeScreen: React.FC = () => {
   const [selectedShelter, setSelectedShelter] = useState<Shelter>(shelters[0]);
   const [modalVisible, setModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(['민간 개방 시설', '스마트 쉼터', '교통 시설', '공공 시설']);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['민간 개방 시설', '스마트 쉼터', '교통 시설', '공공 시설', '기후 동행 쉼터']);
 
   // 위치 관련 상태
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
@@ -247,18 +249,31 @@ const HomeScreen: React.FC = () => {
     try {
       setIsLoadingLocation(true);
 
-      // 실제 GPS 위치 사용
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      // 고정 위치 사용 (서울 시청)
+      const fixedLat = 37.5665;
+      const fixedLon = 126.978;
+
+      // 고정 위치를 Location 객체 형식으로 생성
+      const location = {
+        coords: {
+          latitude: fixedLat,
+          longitude: fixedLon,
+          altitude: null,
+          accuracy: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as Location.LocationObject;
 
       setCurrentLocation(location);
-      console.log('✅ 실제 GPS 위치:', location.coords.latitude, location.coords.longitude);
+      console.log('✅ 고정 위치 (서울 시청):', fixedLat, fixedLon);
 
       // 주변 장소 및 날씨 조회
       await Promise.all([
-        loadNearbyPlaces(location.coords.latitude, location.coords.longitude),
-        loadWeather(location.coords.latitude, location.coords.longitude)
+        loadNearbyPlaces(fixedLat, fixedLon),
+        loadWeather(fixedLat, fixedLon)
       ]);
     } catch (error) {
       console.error('❌ 현재 위치 가져오기 실패:', error);
@@ -286,7 +301,7 @@ const HomeScreen: React.FC = () => {
   };
 
   // 주변 장소 조회
-  const loadNearbyPlaces = async (lat: number, lon: number, radius: number = 1000) => {
+  const loadNearbyPlaces = async (lat: number, lon: number, radius: number = 500) => {
     try {
       console.log(`🔍 검색 조건: 위치(${lat}, ${lon}), 반경: ${radius}m`);
 
@@ -479,6 +494,8 @@ const HomeScreen: React.FC = () => {
             ...shelter,
             address: response.data.address,
             description: response.data.content,
+            maxCapacity: response.data.maxCapacity,
+            currentCapacity: response.data.currentCapacity,
           };
           setSelectedShelter(updatedShelter);
         }
@@ -504,6 +521,9 @@ const HomeScreen: React.FC = () => {
 
   // 팬 제스처 핸들러 - 3단계 상태를 지원하는 스마트 슬라이드
   const panGesture = Gesture.Pan()
+    .activeOffsetY([-20, 20])
+    .failOffsetX([-15, 15])
+    .enableTrackpadTwoFingerGesture(true)
     .onStart(() => {
       // 드래그 시작 위치 저장
       startY.value = translateY.value;
@@ -586,10 +606,11 @@ const HomeScreen: React.FC = () => {
   };
 
   // 타입에 따른 카테고리/아이콘/색상 매핑 함수
-  const getCategoryFromType = (type: string): '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설' => {
+  const getCategoryFromType = (type: string): '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설' | '기후 동행 쉼터' => {
     if (type === 'SHELTER') return '스마트 쉼터';
     if (type === 'USER_SHELTER') return '민간 개방 시설';
     if (type === 'STATION') return '교통 시설';
+    if (type === 'CLIMATE_SHELTER') return '기후 동행 쉼터';
     return '민간 개방 시설';
   };
 
@@ -597,6 +618,7 @@ const HomeScreen: React.FC = () => {
     if (type === 'SHELTER') return 'medical';
     if (type === 'USER_SHELTER') return 'business';
     if (type === 'STATION') return 'train';
+    if (type === 'CLIMATE_SHELTER') return 'sunny';
     return 'business';
   };
 
@@ -604,6 +626,7 @@ const HomeScreen: React.FC = () => {
     if (type === 'SHELTER') return '#4A90E2';
     if (type === 'USER_SHELTER') return '#FFA500';
     if (type === 'STATION') return '#27AE60';
+    if (type === 'CLIMATE_SHELTER') return '#9B59B6';
     return '#7ED321';
   };
 
@@ -619,7 +642,9 @@ const HomeScreen: React.FC = () => {
       description: place.content,
       content: place.content,
       icon: getIconFromType(place.type),
-      color: getColorFromType(place.type)
+      color: getColorFromType(place.type),
+      maxCapacity: place.maxCapacity,
+      currentCapacity: place.currentCapacity,
     }))
     .filter(shelter => selectedCategories.includes(shelter.category));
 
@@ -770,13 +795,17 @@ const HomeScreen: React.FC = () => {
             const description = item.description;
             const category = item.category;
 
-            // 교통 시설: description에 "역" 붙이기
-            if (category === '교통 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
-              return description + '역';
+            // 교통 시설: name 표시 (예: "2호선")
+            if (category === '교통 시설') {
+              return name;
             }
             // 민간 개방 시설: name 표시
             if (category === '민간 개방 시설') {
               return name;
+            }
+            // 기후 동행 쉼터: name과 description을 공백으로 연결 (예: "경희당점 CU")
+            if (category === '기후 동행 쉼터') {
+              return name && description ? `${name} ${description}` : (name || description);
             }
             // 그 외: description 표시
             return description || name;
@@ -785,17 +814,29 @@ const HomeScreen: React.FC = () => {
         {item.address && (
           <Text style={[styles.shelterAddress, { fontSize: getFontSize(12), color: colors.text.secondary }]}>{item.address}</Text>
         )}
-        <Text style={[styles.shelterDescription, { fontSize: getFontSize(12), color: colors.text.light }]} numberOfLines={1}>
-          {(() => {
-            const category = item.category;
-            // 민간 개방 시설: description 표시
-            if (category === '민간 개방 시설') {
-              return item.description;
-            }
-            // 그 외: name 표시
-            return item.name;
-          })()}
-        </Text>
+        {item.category !== '기후 동행 쉼터' && (
+          <Text style={[styles.shelterDescription, { fontSize: getFontSize(12), color: colors.text.light }]} numberOfLines={1}>
+            {(() => {
+              const category = item.category;
+              // 민간 개방 시설: description 표시
+              if (category === '민간 개방 시설') {
+                return item.description;
+              }
+              // 교통 시설: description 표시 (예: "용답역")
+              if (category === '교통 시설') {
+                return item.description;
+              }
+              // 그 외: name 표시
+              return item.name;
+            })()}
+          </Text>
+        )}
+        {/* 민간 개방 시설: 현재 인원 표시 */}
+        {item.category === '민간 개방 시설' && item.maxCapacity !== undefined && item.currentCapacity !== undefined && (
+          <Text style={[styles.capacityText, { fontSize: getFontSize(11), color: colors.text.secondary }]}>
+            현재 {item.currentCapacity}/{item.maxCapacity}명
+          </Text>
+        )}
       </View>
       {/* 거리 정보 - 오른쪽에 큰 글씨로 표시 */}
       <Text style={[styles.shelterDistance, { fontSize: getFontSize(18), color: colors.primary }]}>{item.distance}</Text>
@@ -1098,6 +1139,14 @@ const HomeScreen: React.FC = () => {
                     <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>공공</Text>
                   </View>
                 )}
+                {selectedCategories.includes('기후 동행 쉼터') && (
+                  <View style={styles.categoryItem}>
+                    <View style={[styles.categoryPin, { backgroundColor: '#9B59B6' }]}>
+                      <Ionicons name="sunny" size={12} color="white" />
+                    </View>
+                    <Text style={[styles.categoryText, { fontSize: getFontSize(11), color: colors.text.primary }]}>기후</Text>
+                  </View>
+                )}
               </>
             )}
           </TouchableOpacity>
@@ -1128,29 +1177,22 @@ const HomeScreen: React.FC = () => {
 
               {/* 헤더 부분 - 터치 시 리스트 토글 */}
               <TouchableOpacity style={[styles.bottomHeader, { borderBottomColor: colors.text.light + '20' }]} onPress={handleHeaderPress}>
-                <Text style={[styles.headerTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>반경 1km 내 쉼터</Text>
+                <Text style={[styles.headerTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>반경 500m 내 쉼터</Text>
               </TouchableOpacity>
 
-              {/* 쉼터 목록 - 스크롤 가능한 영역 */}
-              <ScrollView
-                style={styles.contentContainer}
+              {/* 쉼터 목록 - FlatList로 직접 렌더링 */}
+              <FlatList<Shelter>
+                data={filteredShelters}
+                renderItem={renderShelterCard}
+                keyExtractor={(item) => item.id}
+                ListHeaderComponent={
+                  <Text style={[styles.topNote, { fontSize: getFontSize(12), color: colors.text.light }]}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
+                }
+                ListFooterComponent={<View style={styles.bottomFiller} />}
                 showsVerticalScrollIndicator={false}
+                style={styles.contentContainer}
                 contentContainerStyle={styles.scrollContentContainer}
-              >
-                {/* 실시간 업데이트 안내 - 리스트 내부 */}
-                <Text style={[styles.topNote, { fontSize: getFontSize(12), color: colors.text.light }]}>※ 내 주변에 쉼터가 {filteredShelters.length}개 있습니다.</Text>
-
-                <View style={{ backgroundColor: 'transparent' }}>
-                  {/* 쉼터 목록 항상 표시 */}
-                    <FlatList<Shelter>
-                      data={filteredShelters}
-                      renderItem={renderShelterCard}
-                      keyExtractor={(item) => item.id}
-                      scrollEnabled={false}
-                    />
-                </View>
-                <View style={styles.bottomFiller} />
-              </ScrollView>
+              />
             </Animated.View>
           </GestureDetector>
         </View>
@@ -1267,6 +1309,27 @@ const HomeScreen: React.FC = () => {
                     selectedCategories.includes('공공 시설') && styles.filterOptionTextSelected
                   ]}>공공 시설</Text>
                   {selectedCategories.includes('공공 시설') && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { backgroundColor: colors.background },
+                    selectedCategories.includes('기후 동행 쉼터') && [styles.filterOptionSelected, { borderColor: colors.primary }]
+                  ]}
+                  onPress={() => toggleCategory('기후 동행 쉼터')}
+                >
+                  <View style={[styles.categoryPin, { backgroundColor: '#9B59B6' }]}>
+                    <Ionicons name="sunny" size={16} color="#FFFFFF" />
+                  </View>
+                  <Text style={[
+                    styles.filterOptionText,
+                    { fontSize: getFontSize(16), color: colors.text.primary },
+                    selectedCategories.includes('기후 동행 쉼터') && styles.filterOptionTextSelected
+                  ]}>기후 동행 쉼터</Text>
+                  {selectedCategories.includes('기후 동행 쉼터') && (
                     <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
@@ -1593,6 +1656,12 @@ const styles = StyleSheet.create({
         marginTop: 1,
         lineHeight: 14,
         fontStyle: 'italic',
+    },
+    capacityText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: Colors.text.secondary,
+        marginTop: 4,
     },
     shelterDistance: {
         fontSize: 16,
