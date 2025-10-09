@@ -823,8 +823,8 @@ const HomeScreen: React.FC = () => {
     <TouchableOpacity
       style={[
         styles.shelterCard,
-        { backgroundColor: colors.background },
-        selectedShelter.id === item.id && [styles.selectedCard, { borderColor: colors.primary }] // 선택된 카드는 다른 스타일 적용
+        { backgroundColor: colors.surface },
+        selectedShelter.id === item.id && [styles.selectedCard, { borderColor: colors.primary, backgroundColor: colors.surface }] // 선택된 카드는 다른 스타일 적용
       ]}
       onPress={() => handleShelterPress(item)} // 카드 선택 시 상세 정보 로드 후 모달 열기
     >
@@ -1142,7 +1142,11 @@ const HomeScreen: React.FC = () => {
           {/* 하단 페이드 효과 - 슬라이더가 열려있을 때만 표시 */}
           {showFade && (
             <LinearGradient
-              colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.6)', 'rgba(255, 255, 255, 0.95)']}
+              colors={[
+                `${colors.surface}00`,
+                `${colors.surface}99`,
+                `${colors.surface}F2`
+              ]}
               style={styles.bottomFadeFixed}
               pointerEvents="none"
             />
