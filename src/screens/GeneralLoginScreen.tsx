@@ -193,24 +193,15 @@ const GeneralLoginScreen: React.FC = () => {
         >
           <View style={styles.contentContainer}>
             {/* 뒤로가기 버튼 */}
-            <TouchableOpacity 
-              style={styles.backButton} 
+            <TouchableOpacity
+              style={[styles.backButton, { top: RNPlatform.OS === 'android' ? 40 : 20 }]}
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
 
-            {/* 로고 */}
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../../assets/shympyo_logo.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
-
             <Text style={styles.title}>일반 로그인</Text>
-            
+
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
@@ -221,7 +212,7 @@ const GeneralLoginScreen: React.FC = () => {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              
+
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
@@ -232,21 +223,21 @@ const GeneralLoginScreen: React.FC = () => {
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Ionicons 
-                    name={showPassword ? "eye-off" : "eye"} 
-                    size={20} 
-                    color={Colors.text.light} 
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color={Colors.text.light}
                   />
                 </TouchableOpacity>
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+            <TouchableOpacity
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
               onPress={handleLogin}
               disabled={isLoading}
             >
@@ -263,46 +254,6 @@ const GeneralLoginScreen: React.FC = () => {
             >
               <Text style={styles.signUpButtonText}>일반 회원가입</Text>
             </TouchableOpacity>
-
-            {/* 구분선 */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>또는</Text>
-              <View style={styles.divider} />
-            </View>
-
-            {/* 소셜 로그인 버튼들 */}
-            <View style={styles.socialLoginContainer}>
-              <TouchableOpacity
-                style={[styles.socialButton, styles.googleButton]}
-                onPress={handleGoogleLogin}
-                disabled={isLoading}
-              >
-                <Ionicons name="logo-google" size={20} color="#DB4437" />
-                <Text style={styles.socialButtonText}>구글로 로그인</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.socialButton, styles.kakaoButton]}
-                onPress={handleKakaoLogin}
-                disabled={isLoading}
-              >
-                <Image
-                  source={{ uri: 'https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png' }}
-                  style={styles.kakaoIcon}
-                />
-                <Text style={styles.socialButtonText}>카카오로 로그인</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.socialButton, styles.naverButton]}
-                onPress={handleNaverLogin}
-                disabled={isLoading}
-              >
-                <Text style={styles.naverIcon}>N</Text>
-                <Text style={[styles.socialButtonText, { color: '#fff' }]}>네이버로 로그인</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           <View style={styles.footer}>
@@ -326,28 +277,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 30,
     justifyContent: 'center',
-    paddingTop: 50,
+    paddingTop: 80,
   },
   backButton: {
     position: 'absolute',
-    top: 20,
     left: 30,
     zIndex: 1,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logo: {
-    width: 180,
-    height: 100,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: 30,
   },
   inputContainer: {
     marginBottom: 20,
@@ -407,59 +349,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E5E5',
-  },
-  dividerText: {
-    marginHorizontal: 10,
-    color: '#999',
-    fontSize: 14,
-  },
-  socialLoginContainer: {
-    gap: 12,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    paddingVertical: 14,
-    borderWidth: 1,
-    gap: 10,
-  },
-  googleButton: {
-    backgroundColor: '#fff',
-    borderColor: '#E5E5E5',
-  },
-  kakaoButton: {
-    backgroundColor: '#FEE500',
-    borderColor: '#FEE500',
-  },
-  naverButton: {
-    backgroundColor: '#03C75A',
-    borderColor: '#03C75A',
-  },
-  socialButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  kakaoIcon: {
-    width: 20,
-    height: 20,
-  },
-  naverIcon: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
   },
   footer: {
     alignItems: 'center',

@@ -266,8 +266,8 @@ const SignUpScreen: React.FC = () => {
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
           >
-            <TouchableOpacity 
-              style={styles.backButton} 
+            <TouchableOpacity
+              style={[styles.backButton, { top: Platform.OS === 'android' ? 40 : 20 }]}
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
@@ -491,7 +491,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 20,
     left: 30,
     zIndex: 1,
   },
