@@ -19,7 +19,6 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Svg, { Defs, Mask, Rect, Circle } from 'react-native-svg';
-import * as Notifications from 'expo-notifications';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -30,16 +29,6 @@ import { useThemedStyles } from '../hooks/useThemedStyles';
 
 
 type ScreenState = 'scanning' | 'timer' | 'finished';
-
-// 알림 설정
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
 
 const QRScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -102,40 +91,16 @@ const QRScreen: React.FC = () => {
       if (exitResponse.success && exitResponse.data) {
         console.log('✅ 자동 퇴장 완료:', exitResponse.data);
         setHasExited(true);
-        sendNotification();
       } else if (exitResponse.message?.includes('진행 중인 대여가 없습니다')) {
         // 백엔드 스케줄러가 이미 TIME_EXCEEDED로 전환한 경우
         console.log('✅ 이미 퇴장 처리됨 (백엔드 스케줄러)');
         setHasExited(true);
-        sendNotification();
       } else {
         console.log('❌ 자동 퇴장 실패:', exitResponse);
       }
     } catch (error) {
       console.error('💥 자동 퇴장 오류:', error);
     }
-  };
-
-  // 알림 권한 요청 및 발송 함수
-  useEffect(() => {
-    const requestPermissions = async () => {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('알림 권한이 거부되었습니다.');
-      }
-    };
-    requestPermissions();
-  }, []);
-
-  const sendNotification = async () => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '쉼터 이용 완료! 🌿',
-        body: `${placeName || '쉼터'}에서의 휴식이 끝났습니다.\n감사 편지를 작성해보세요! ✉️`,
-        sound: 'default',
-      },
-      trigger: null, // 즉시 발송
-    });
   };
 
   const handleExit = async () => {
