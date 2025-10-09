@@ -131,14 +131,7 @@ const AdminLoginScreen: React.FC = () => {
               <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
 
-            {/* 로고 */}
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../../assets/shympyo_logo.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
+
 
             <Text style={styles.title}>관리자 로그인</Text>
             
@@ -209,6 +202,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -217,7 +211,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 30,
     justifyContent: 'center',
-    paddingTop: 50,
+    paddingTop: 80,
   },
   backButton: {
     position: 'absolute',
@@ -225,20 +219,13 @@ const styles = StyleSheet.create({
     left: 30,
     zIndex: 1,
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logo: {
-    width: 180,
-    height: 100,
-  },
+
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: 30,
   },
   inputContainer: {
     marginBottom: 20,
