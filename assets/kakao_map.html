@@ -117,6 +117,16 @@
     <div id="map"></div>
     <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985"></script>
     <script>
+        // 브라우저의 Geolocation API 차단
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition = function() {
+                console.log('Geolocation blocked');
+            };
+            navigator.geolocation.watchPosition = function() {
+                console.log('Geolocation watch blocked');
+            };
+        }
+
         window.addEventListener('load', function() {
             try {
                 var container = document.getElementById('map');
@@ -126,7 +136,7 @@
                 }
 
                 var options = {
-                    center: new kakao.maps.LatLng(37.4485, 126.6584),
+                    center: new kakao.maps.LatLng(37.5665, 126.978),
                     level: 4
                 };
 
@@ -253,49 +263,26 @@
                     console.error('위치 정보 오류:', error);
                 }
 
-                // React Native에서 위치 데이터 받기
-                window.addEventListener('message', function(event) {
-                    console.log('iOS message received:', event.data);
-                    try {
-                        var data = JSON.parse(event.data);
-                        console.log('Parsed data:', data);
-                        if (data.type === 'location') {
-                            console.log('Location update:', data.latitude, data.longitude, data.heading);
-                            // React Native에서 받은 위치 데이터로 마커 업데이트
-                            var position = {
-                                coords: {
-                                    latitude: data.latitude,
-                                    longitude: data.longitude,
-                                    heading: data.heading
-                                }
-                            };
-                            updateCurrentLocation(position);
-                        }
-                    } catch (error) {
-                        console.error('메시지 파싱 오류:', error);
+                // 고정 위치 설정 (서울 시청)
+                var fixedPosition = {
+                    coords: {
+                        latitude: 37.5665,
+                        longitude: 126.978,
+                        heading: 0
                     }
+                };
+
+                // 고정 위치로 현위치 마커 생성
+                updateCurrentLocation(fixedPosition);
+
+                // React Native에서 위치 데이터 받기 (무시)
+                window.addEventListener('message', function(event) {
+                    console.log('Message ignored:', event.data);
                 });
 
-                // Android용 메시지 리스너
+                // Android용 메시지 리스너 (무시)
                 document.addEventListener('message', function(event) {
-                    console.log('Android message received:', event.data);
-                    try {
-                        var data = JSON.parse(event.data);
-                        console.log('Parsed data:', data);
-                        if (data.type === 'location') {
-                            console.log('Location update:', data.latitude, data.longitude, data.heading);
-                            var position = {
-                                coords: {
-                                    latitude: data.latitude,
-                                    longitude: data.longitude,
-                                    heading: data.heading
-                                }
-                            };
-                            updateCurrentLocation(position);
-                        }
-                    } catch (error) {
-                        console.error('메시지 파싱 오류:', error);
-                    }
+                    console.log('Message ignored:', event.data);
                 });
 
             } catch (error) {

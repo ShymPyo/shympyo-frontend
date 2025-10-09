@@ -20,7 +20,7 @@ interface Shelter {
   name: string;
   type: string;
   distance?: string;
-  category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설';
+  category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설' | '기후 동행 쉼터';
   icon: string;
   color: string;
   address?: string;
@@ -30,6 +30,8 @@ interface Shelter {
   latitude?: number;
   longitude?: number;
   image?: string;
+  maxCapacity?: number;
+  currentCapacity?: number;
 }
 
 interface ShelterDetailModalProps {
@@ -133,13 +135,17 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
                     const description = displayInfo.description;
                     const category = shelter.category;
 
-                    // 교통 시설: description에 "역" 붙이기
-                    if (category === '교통 시설' && name && name.trim().endsWith('선') && description && !description.endsWith('역')) {
-                      return description + '역';
+                    // 교통 시설: name 표시 (예: "2호선")
+                    if (category === '교통 시설') {
+                      return name;
                     }
                     // 민간 개방 시설: name 표시
                     if (category === '민간 개방 시설') {
                       return name;
+                    }
+                    // 기후 동행 쉼터: name과 description을 공백으로 연결 (예: "경희당점 CU")
+                    if (category === '기후 동행 쉼터') {
+                      return name && description ? `${name} ${description}` : (name || description);
                     }
                     // 그 외: description 표시
                     return displayInfo.description;
@@ -153,26 +159,41 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
                   <Ionicons name="location-outline" size={16} color="#666" />
                   <Text style={styles.infoText} numberOfLines={2}>{displayInfo.address}</Text>
                 </View>
+                {/* 민간 개방 시설: 현재 이용 인원 */}
+                {shelter.category === '민간 개방 시설' && shelter.maxCapacity !== undefined && shelter.currentCapacity !== undefined && (
+                  <View style={styles.infoRow}>
+                    <Ionicons name="people-outline" size={16} color="#666" />
+                    <Text style={styles.infoText}>
+                      현재 이용 인원: {shelter.currentCapacity}/{shelter.maxCapacity}명
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
             {/* 쉼터 정보 */}
-            <View style={styles.descriptionSection}>
-              <View style={styles.descriptionHeader}>
-                <Text style={styles.descriptionTitle} numberOfLines={1}>쉼터 정보</Text>
+            {shelter.category !== '기후 동행 쉼터' && (
+              <View style={styles.descriptionSection}>
+                <View style={styles.descriptionHeader}>
+                  <Text style={styles.descriptionTitle} numberOfLines={1}>쉼터 정보</Text>
+                </View>
+                <Text style={styles.descriptionText} numberOfLines={5}>
+                  {(() => {
+                    const category = shelter.category;
+                    // 민간 개방 시설: description 표시
+                    if (category === '민간 개방 시설') {
+                      return displayInfo.description;
+                    }
+                    // 교통 시설: description 표시 (예: "용답역")
+                    if (category === '교통 시설') {
+                      return displayInfo.description;
+                    }
+                    // 그 외: name 표시
+                    return shelter.name;
+                  })()}
+                </Text>
               </View>
-              <Text style={styles.descriptionText} numberOfLines={5}>
-                {(() => {
-                  const category = shelter.category;
-                  // 민간 개방 시설: description 표시
-                  if (category === '민간 개방 시설') {
-                    return displayInfo.description;
-                  }
-                  // 그 외: name 표시
-                  return shelter.name;
-                })()}
-              </Text>
-            </View>
+            )}
           </View>
         </TouchableOpacity>
       </TouchableOpacity>
