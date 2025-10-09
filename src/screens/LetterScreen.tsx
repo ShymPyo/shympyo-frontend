@@ -368,31 +368,22 @@ const LetterScreen: React.FC = () => {
 
     return (
       <TouchableOpacity
-        style={[styles.card, { backgroundColor: colors.surface }, isLetterSent && [styles.sentCard, { backgroundColor: colors.surface, opacity: 0.7 }]]}
+        style={styles.card}
         onPress={() => isLetterSent && handleLetterPress(item)}
         disabled={!isLetterSent}
       >
         <View style={styles.imagePlaceholder} />
         <View style={styles.cardBody}>
           <View style={styles.cardContent}>
-            <Text style={[styles.date, { fontSize: getFontSize(12), color: colors.text.light }, isLetterSent && styles.sentText]}>
+            <Text style={[styles.date, { fontSize: getFontSize(12), color: colors.text.light }]}>
               {formatDate(item.endTime)}
             </Text>
-            <Text style={[styles.placeName, { fontSize: getFontSize(18), color: colors.text.primary }, isLetterSent && [styles.sentText, { color: colors.text.light }]]} numberOfLines={1}>
-              {item.placeName}
-            </Text>
-            {isLetterSent && (
-              <View style={[styles.sentBadge, { backgroundColor: colors.background }]}>
-                <Ionicons
-                  name={isLetterRead ? "mail-open" : "mail"}
-                  size={16}
-                  color={isLetterRead ? Colors.success : colors.text.light}
-                />
-                <Text style={[styles.sentBadgeText, { fontSize: getFontSize(12), color: colors.text.light }, isLetterRead && [styles.readBadgeText, { color: Colors.success }]]}>
-                  {isLetterRead ? '편지 읽음' : '편지 전송 완료'}
-                </Text>
-              </View>
-            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[styles.placeName, { fontSize: getFontSize(18), color: colors.text.primary, flexShrink: 1 }]} numberOfLines={1}>
+                {item.placeName}
+              </Text>
+              
+            </View>
           </View>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.primary }, isLetterSent && [styles.sentButton, { backgroundColor: colors.surface, borderColor: colors.text.light + '40' }]]}
@@ -600,23 +591,16 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'transparent',
     borderRadius: 12,
     padding: 20,
-    marginBottom: 15,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    ...getShadowStyle({
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 2,
-    }),
   },
   imagePlaceholder: {
-    width: 110,
-    height: 110,
+    width: 100,
+    height: 100,
     borderRadius: 10,
     backgroundColor: '#E9E9E9',
     marginRight: 15,
@@ -647,18 +631,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.text.light,
   },
-  sentText: {
-    color: Colors.text.light,
-  },
+
   sentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
     paddingVertical: 4,
     paddingHorizontal: 8,
     backgroundColor: '#E8E8E8',
     borderRadius: 12,
-    alignSelf: 'flex-start',
   },
   sentBadgeText: {
     fontSize: 12,
@@ -675,7 +655,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Colors.primary,
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   buttonText: {
     color: Colors.text.white,
