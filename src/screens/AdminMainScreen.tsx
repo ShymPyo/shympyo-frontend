@@ -733,6 +733,27 @@ const AdminMainScreen: React.FC = () => {
     setDefaultTimeModalVisible(false);
   };
 
+  const getTodayBusinessHours = () => {
+    if (!businessHours || businessHours.length === 0) {
+      return '영업시간 정보 없음';
+    }
+    const dayIndex = new Date().getDay();
+    const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const today = days[dayIndex];
+
+    const todayHours = businessHours.find(h => h.dayOfWeek === today);
+
+    if (!todayHours) {
+      return '영업시간 정보 없음';
+    }
+
+    if (todayHours.closed) {
+      return '오늘 휴무';
+    }
+
+    return `오늘 ${todayHours.openTime} - ${todayHours.closeTime}`;
+  };
+
   const handleSaveDefaultTime = () => {
     setDefaultOpenTime(tempDefaultOpenTime);
     setDefaultCloseTime(tempDefaultCloseTime);
@@ -744,16 +765,7 @@ const AdminMainScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../../assets/shympyo_logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-      </View>
+
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 환영 메시지 */}
@@ -761,7 +773,7 @@ const AdminMainScreen: React.FC = () => {
           <Text style={styles.welcomeTitle}>
             {adminPlace?.name || user?.name || '관리자'} 사장님 환영합니다 !
           </Text>
-          <Text style={styles.welcomeSubtitle}>쉼표를 제공해주셔서 진심으로 감사드립니다.</Text>
+
         </View>
 
         {/* 공간 프로필 카드 */}
@@ -791,6 +803,10 @@ const AdminMainScreen: React.FC = () => {
                 />
                 <View style={styles.shopInfo}>
                   <Text style={styles.shopName}>{adminPlace.name}</Text>
+                  <View style={styles.shopDetails}>
+                    <Ionicons name="time-outline" size={16} color={Colors.text.secondary} />
+                    <Text style={styles.shopTime}>{getTodayBusinessHours()}</Text>
+                  </View>
                   <View style={styles.shopLocation}>
                     <Ionicons name="location" size={16} color={Colors.text.secondary} />
                     <Text style={styles.shopAddress}>{adminPlace.address}</Text>
@@ -1372,21 +1388,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  logoContainer: {
-    alignItems: 'center',
-  },
-  logo: {
-    width: 140,
-    height: 60,
-  },
+
   content: {
     flex: 1,
     paddingHorizontal: 20,
@@ -1401,20 +1405,12 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     marginBottom: 5,
   },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
+
   profileCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'transparent',
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
   },
   profileHeader: {
     flexDirection: 'row',
@@ -1423,8 +1419,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   profileTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
     color: Colors.text.primary,
   },
   editButton: {
@@ -1481,10 +1476,9 @@ const styles = StyleSheet.create({
   shopDescription: {
     fontSize: 14,
     color: Colors.text.primary,
+    marginTop: 15,
     marginBottom: 5,
-    backgroundColor: '#F8F9FA',
-    padding: 10,
-    borderRadius: 8,
+    lineHeight: 22, // Add some line height for readability
   },
   letterSection: {
     backgroundColor: Colors.surface,
