@@ -118,6 +118,7 @@ interface VisitedPlace {
   isWritten?: boolean;  // letterSent → isWritten 변경
   letterRead?: boolean;
   letterId?: number;
+  imageUrl?: string;  // 민간 쉼터 이미지
 }
 
 interface VisitedPlacesResponse {

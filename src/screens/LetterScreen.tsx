@@ -379,9 +379,6 @@ const LetterScreen: React.FC = () => {
           <Text style={[styles.placeName, { fontSize: getFontSize(18), color: colors.text.primary }, isLetterSent && [styles.sentText, { color: colors.text.light }]]}>
             {item.placeName}
           </Text>
-          <Text style={[styles.rentalInfo, { fontSize: getFontSize(12), color: colors.text.light }, isLetterSent && styles.sentText]}>
-            {formatDate(item.startTime)} ~ {formatDate(item.endTime)}
-          </Text>
           {isLetterSent && (
             <View style={[styles.sentBadge, { backgroundColor: colors.background }]}>
               <Ionicons

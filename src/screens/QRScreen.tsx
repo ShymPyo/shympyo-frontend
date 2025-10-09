@@ -248,10 +248,18 @@ const QRScreen: React.FC = () => {
             data: enterResponse.data
           });
 
-          Alert.alert(
-            '입장 실패',
-            `오류 코드: ${enterResponse.code}\n${enterResponse.message || '쉼터 입장에 실패했습니다.'}`
-          );
+          // 영업중이 아닌 경우 친절한 안내 메시지
+          if (enterResponse.message?.includes('영업') || enterResponse.message?.includes('운영') || enterResponse.message?.includes('시간')) {
+            Alert.alert(
+              '영업시간이 아닙니다',
+              '현재 이 쉼터는 영업중이 아닙니다.\n영업시간을 확인해주세요.'
+            );
+          } else {
+            Alert.alert(
+              '입장 실패',
+              enterResponse.message || '쉼터 입장에 실패했습니다.'
+            );
+          }
         }
         setScanned(false);
         setIsProcessing(false);
@@ -388,18 +396,13 @@ const QRScreen: React.FC = () => {
           </View>
         );
       case 'timer':
-        const elapsedTime = totalTime - timeLeft;
-        const timeFraction = Math.min(elapsedTime / totalTime, 1);
-        const strokeLength = timeFraction * FULL_DASH_ARRAY;
+        const elapsedFraction = Math.min((totalTime - timeLeft) / totalTime, 1);
+        const strokeLength = elapsedFraction * FULL_DASH_ARRAY;
         const dashArray = `${strokeLength.toFixed(1)} ${FULL_DASH_ARRAY}`;
 
         return (
           <View style={styles.timerScreenContainer}>
             <View style={styles.timerContainer}>
-              <Text style={styles.timerTopText}>
-                {hasExited ? '이용해주셔서 감사합니다!' : `따뜻한 배려로 열린 쉼표,${'\n'}최대 ${Math.floor(totalTime / 60)}분 이용 가능합니다.`}
-              </Text>
-
               {/* 원형 프로그레스 바 */}
               <View style={styles.circularProgressContainer}>
                 <Svg width="280" height="280" viewBox="0 0 200 200" style={styles.circularProgress}>
@@ -439,10 +442,20 @@ const QRScreen: React.FC = () => {
                 </View>
               </View>
 
-              <Text style={styles.timerSubtitle}>{placeName || '쉼터'}</Text>
-              <Text style={styles.timerDescription}>
-                {hasExited ? '감사 편지를 남기고 싶으시다면 아래 버튼을 눌러주세요' : '깨끗하고 조용한 공간에서 편히 쉬어가세요'}
-              </Text>
+              {!hasExited && (
+                <>
+                  <Text style={styles.timerPlaceName}>{placeName || '쉼터'}</Text>
+                  <Text style={styles.timerDescription}>
+                    최대 {Math.floor(totalTime / 60)}분 이용 가능합니다.
+                  </Text>
+                </>
+              )}
+
+              {hasExited && (
+                <Text style={styles.timerDescription}>
+                  감사 편지를 남기고 싶으시다면 아래 버튼을 눌러주세요
+                </Text>
+              )}
             </View>
 
             {/* 하단 고정 버튼들 */}
@@ -740,6 +753,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text.primary,
     marginTop: 5,
+  },
+  timerPlaceName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginTop: 15,
   },
   timerDescription: {
     fontSize: 16,
