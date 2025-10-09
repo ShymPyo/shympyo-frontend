@@ -903,42 +903,6 @@ const AdminMainScreen: React.FC = () => {
           )}
         </View>
 
-        {/* 편지함 섹션 */}
-        <TouchableOpacity
-          style={styles.letterSection}
-          onPress={() => navigation.navigate('AdminLetterList')}
-        >
-          <View style={styles.letterSectionHeader}>
-            <Text style={styles.sectionTitle}>편지함</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.primary} />
-          </View>
-          {letterCount.unRead > 0 && (
-            <View style={styles.letterCount}>
-              <Ionicons name="alert-circle" size={16} color={Colors.primary} />
-              <Text style={styles.countText}>새로운 편지가 {letterCount.unRead}개 도착했습니다.</Text>
-            </View>
-          )}
-          <View style={styles.notificationBanner}>
-            <Ionicons name="mail" size={20} color={Colors.text.primary} />
-            <Text style={styles.notificationText}>지금까지 총 {letterCount.total}개의 감사 편지를 받았어요 !</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* 차단 관리 섹션 */}
-        <TouchableOpacity
-          style={styles.blockSection}
-          onPress={() => navigation.navigate('BlockedUsers')}
-        >
-          <View style={styles.blockSectionHeader}>
-            <View style={styles.blockSectionLeft}>
-              <Ionicons name="ban" size={20} color="#FF8C00" />
-              <Text style={styles.blockSectionTitle}>차단 관리</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.primary} />
-          </View>
-          <Text style={styles.blockSectionDescription}>차단한 사용자를 관리합니다</Text>
-        </TouchableOpacity>
-
         {/* 인원 현황 */}
         <View style={styles.statsSection}>
           <Text style={styles.statsTitle}>
@@ -983,6 +947,42 @@ const AdminMainScreen: React.FC = () => {
             ))}
           </View>
         </View>
+
+        {/* 편지함 섹션 */}
+        <TouchableOpacity
+          style={styles.letterSection}
+          onPress={() => navigation.navigate('AdminLetterList')}
+        >
+          <View style={styles.letterSectionHeader}>
+            <Text style={styles.sectionTitle}>편지함</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.primary} />
+          </View>
+          {letterCount.unRead > 0 && (
+            <View style={styles.letterCount}>
+              <Ionicons name="alert-circle" size={16} color={Colors.primary} />
+              <Text style={styles.countText}>새로운 편지가 {letterCount.unRead}개 도착했습니다.</Text>
+            </View>
+          )}
+          <View style={styles.notificationBanner}>
+            <Ionicons name="mail" size={20} color={Colors.text.primary} />
+            <Text style={styles.notificationText}>지금까지 총 {letterCount.total}개의 감사 편지를 받았어요 !</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* 차단 관리 섹션 */}
+        <TouchableOpacity
+          style={styles.blockSection}
+          onPress={() => navigation.navigate('BlockedUsers')}
+        >
+          <View style={styles.blockSectionHeader}>
+            <View style={styles.blockSectionLeft}>
+              
+              <Text style={styles.blockSectionTitle}>차단 관리</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.primary} />
+          </View>
+          <Text style={styles.blockSectionDescription}>차단한 사용자를 관리합니다</Text>
+        </TouchableOpacity>
 
         {/* 로그아웃 버튼 */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -1409,7 +1409,7 @@ const styles = StyleSheet.create({
   profileCard: {
     backgroundColor: 'transparent',
     borderRadius: 15,
-    padding: 20,
+    paddingVertical: 20,
     marginBottom: 20,
   },
   profileHeader: {
@@ -1419,7 +1419,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   profileTitle: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: 'bold',
     color: Colors.text.primary,
   },
   editButton: {
@@ -1474,22 +1475,17 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
   },
   shopDescription: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'android' ? 12 : 14,
     color: Colors.text.primary,
     marginTop: 15,
     marginBottom: 5,
     lineHeight: 22, // Add some line height for readability
   },
   letterSection: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'transparent',
     borderRadius: 15,
-    padding: 20,
+    paddingVertical: 20,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
   },
   letterSectionHeader: {
     flexDirection: 'row',
@@ -1498,15 +1494,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   blockSection: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'transparent',
     borderRadius: 15,
-    padding: 20,
+    paddingVertical: 20,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
   },
   blockSectionHeader: {
     flexDirection: 'row',
@@ -1651,10 +1642,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     paddingHorizontal: 20,
-    borderTopWidth: 8,
+    borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
     marginBottom: 30,
   },
   logoutIcon: {
