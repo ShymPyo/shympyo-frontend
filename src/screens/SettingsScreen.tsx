@@ -265,10 +265,10 @@ const SettingsScreen: React.FC = () => {
         <Text style={[styles.title, { fontSize: getFontSize(20), color: colors.text.primary }]}>설정</Text>
       </View>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* 프로필 섹션 */}
         <TouchableOpacity
-          style={[styles.profileSection, { backgroundColor: colors.surface }]}
+          style={styles.profileSection}
           onPress={handleProfilePress}
         >
           <Image
@@ -276,75 +276,74 @@ const SettingsScreen: React.FC = () => {
             style={styles.profileImage}
           />
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { fontSize: getFontSize(18), color: colors.text.primary }]}>
+            <Text style={[styles.profileName, { fontSize: getFontSize(22), color: colors.text.primary }]}>
               {loading ? '로딩 중...' : (authUser ? authUser.name : '로그인이 필요합니다')}
             </Text>
-            <Text style={[styles.profileLink, { fontSize: getFontSize(14), color: colors.text.secondary }]}>
+            <Text style={[styles.profileLink, { fontSize: getFontSize(15), color: colors.text.secondary }]}>
               {authUser ? '내 정보 · 주소 관리' : '로그인하여 프로필을 확인하세요'}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+          <Ionicons name="chevron-forward" size={24} color={colors.text.light} />
         </TouchableOpacity>
 
-        {/* 접근성 설정들 */}
+        {/* 설정 섹션 1 */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
-            접근성 설정
-          </Text>
-
           {/* 글자 크기 */}
           <TouchableOpacity
-            style={[styles.settingItem, { borderBottomColor: colors.background }]}
-            onPress={() => setShowFontModal(true)}
+style={styles.settingItem}
           >
-            <Ionicons name="text-outline" size={24} color={colors.text.secondary} style={styles.itemIcon} />
             <Text style={[styles.itemTitle, { fontSize: getFontSize(16), color: colors.text.primary }]}>
               글자 크기
             </Text>
-            <Text style={[styles.itemValue, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
-              {getFontDisplayName()}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+            <View style={styles.itemValueContainer}>
+              <Text style={[styles.itemValue, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
+                {getFontDisplayName()}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+            </View>
           </TouchableOpacity>
 
           {/* 화면 테마 */}
           <TouchableOpacity
-            style={[styles.settingItem, { borderBottomColor: colors.background }]}
+            style={styles.settingItem}
             onPress={() => setShowThemeModal(true)}
           >
-            <Ionicons name="color-palette-outline" size={24} color={colors.text.secondary} style={styles.itemIcon} />
             <Text style={[styles.itemTitle, { fontSize: getFontSize(16), color: colors.text.primary }]}>
               화면 테마
             </Text>
-            <Text style={[styles.itemValue, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
-              {getThemeDisplayName()}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+            <View style={styles.itemValueContainer}>
+              <Text style={[styles.itemValue, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
+                {getThemeDisplayName()}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+            </View>
           </TouchableOpacity>
 
           {/* 화면 대비 */}
           <TouchableOpacity
-            style={[styles.settingItem, { borderBottomColor: colors.background }]}
+            style={styles.settingItem}
             onPress={() => setShowContrastModal(true)}
           >
-            <Ionicons name="contrast-outline" size={24} color={colors.text.secondary} style={styles.itemIcon} />
             <Text style={[styles.itemTitle, { fontSize: getFontSize(16), color: colors.text.primary }]}>
               화면 대비
             </Text>
-            <Text style={[styles.itemValue, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
-              {getContrastDisplayName()}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+            <View style={styles.itemValueContainer}>
+              <Text style={[styles.itemValue, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
+                {getContrastDisplayName()}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+            </View>
           </TouchableOpacity>
         </View>
-
+        
         {/* 로그아웃 버튼 */}
         {authUser && (
-          <TouchableOpacity style={[styles.logoutButton, { borderTopColor: colors.surface }]} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color={colors.error} style={styles.itemIcon} />
-            <Text style={[styles.logoutText, { fontSize: getFontSize(16), color: colors.error }]}>로그아웃</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
-          </TouchableOpacity>
+          <View style={[styles.section, { backgroundColor: colors.surface, marginTop: 10 }]}>
+            <TouchableOpacity style={styles.settingItem} onPress={handleLogout}>
+              <Text style={[styles.itemTitle, { fontSize: getFontSize(16), color: colors.error }]}>로그아웃</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
 
@@ -377,61 +376,53 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    marginBottom: 10,
+    paddingVertical: 20,
   },
   profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 20,
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   profileLink: {
     // 동적 스타일은 컴포넌트에서 적용
   },
   section: {
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontWeight: '600',
-    paddingHorizontal: 20,
-    paddingTop: 15,
-    paddingBottom: 10,
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-  },
-  itemIcon: {
-    marginRight: 15,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
   },
   itemTitle: {
     flex: 1,
   },
-  itemValue: {
-    marginRight: 10,
-  },
-  logoutButton: {
+  itemValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    borderTopWidth: 10,
-    marginTop: 10,
+  },
+  itemValue: {
+    marginRight: 4,
   },
   logoutText: {
-    flex: 1,
     fontWeight: '500',
   },
   modalOverlay: {
