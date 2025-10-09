@@ -15,64 +15,78 @@ import { Colors } from '../constants/colors';
 
 const { width, height } = Dimensions.get('window');
 
-interface Shelter {
+interface TodayAndHoliday {
+  dayOfWeek: string;
+  closed: boolean;
+  openTime: string;
+  closeTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+  holidays?: string[];
+}
+
+interface UserShelter {
   id: string | number;
   name: string;
   type: string;
   distance?: string;
-  category: '스마트 쉼터' | '교통 시설' | '공공 시설' | '기후 동행 쉼터';
+  category: '민간 개방 시설';
   icon: string;
   color: string;
   address?: string;
-  hours?: string;
   description?: string;
-  content?: string | null;
   latitude?: number;
   longitude?: number;
-  image?: string;
+  imageUrl?: string;
+  maxCapacity?: number;
+  currentCapacity?: number;
+  todayAndHoliday?: TodayAndHoliday;
+  maxUsageMinutes?: number;
 }
 
-interface ShelterDetailModalProps {
+interface UserShelterDetailModalProps {
   visible: boolean;
-  shelter: Shelter | null;
+  shelter: UserShelter | null;
   onClose: () => void;
 }
 
-const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
+const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
   visible,
   shelter,
   onClose,
 }) => {
   if (!shelter) return null;
 
+  // 영업시간 포맷팅 (초 제거)
+  const formatBusinessHours = (todayAndHoliday?: TodayAndHoliday): string => {
+    if (!todayAndHoliday) return '24시간 운영\n연중무휴';
 
-  // 스마트쉘터 기본 설명
-  const getDefaultDescription = (type: string, content: string | null | undefined) => {
-    if (content) {
-      return content;
+    if (todayAndHoliday.closed) {
+      return '오늘은 휴무일입니다';
     }
 
-    // content가 null이거나 없을 때 기본 설명
-    switch (type) {
-      case 'SHELTER':
-        return '스마트 시설과 에어컨이 완비된 쉼터입니다. 24시간 이용 가능하며, 무료 Wi-Fi와 충전 시설을 제공합니다.';
-      case 'CAFE':
-        return '편안한 휴식 공간을 제공하는 카페입니다.';
-      case 'RESTAURANT':
-        return '맛있는 음식을 제공하는 식당입니다.';
-      case 'STORE':
-        return '생필품을 구매할 수 있는 상점입니다.';
-      default:
-        return '시설 정보를 확인해주세요.';
+    // 시간:분:초 형식에서 시간:분만 추출
+    const formatTime = (time: string) => {
+      const parts = time.split(':');
+      return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
+    };
+
+    const openTime = formatTime(todayAndHoliday.openTime || '00:00');
+    const closeTime = formatTime(todayAndHoliday.closeTime || '24:00');
+
+    let hoursText = `${openTime} - ${closeTime}`;
+
+    if (todayAndHoliday.breakStart && todayAndHoliday.breakEnd) {
+      const breakStart = formatTime(todayAndHoliday.breakStart);
+      const breakEnd = formatTime(todayAndHoliday.breakEnd);
+      hoursText += `\n휴게시간: ${breakStart} - ${breakEnd}`;
     }
+
+    return hoursText;
   };
 
-  // 실제 데이터 사용
-  const displayInfo = {
-    hours: shelter.hours || '24시간 운영\n연중무휴',
-    address: shelter.address || '주소 정보 없음',
-    description: getDefaultDescription(shelter.type, shelter.content || shelter.description),
-  };
+  const displayHours = formatBusinessHours(shelter.todayAndHoliday);
+  const displayAddress = shelter.address || '주소 정보 없음';
 
   return (
     <Modal
@@ -103,9 +117,9 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Ionicons name="close" size={20} color={Colors.text.primary} />
             </TouchableOpacity>
-            
+
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.categoryText} numberOfLines={1}>{shelter.category}</Text>
+              <Text style={styles.categoryText} numberOfLines={1}>민간 개방 시설</Text>
             </View>
             <View style={{ width: 32 }} />
           </View>
@@ -114,45 +128,63 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
           <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={false}>
             {/* 상단 정보 섹션 */}
             <View style={styles.topSection}>
-              {/* 왼쪽: 시설 이미지 */}
-              <View style={styles.imageContainer}>
-                <Ionicons
-                  name={shelter.icon as any}
-                  size={32}
-                  color={shelter.color}
-                />
-              </View>
-              
-              {/* 오른쪽: 시설명과 기본 정보 */}
-              <View style={styles.infoContainer}>
-                <Text style={styles.shelterName} numberOfLines={2}>
-                  {(() => {
-                    const name = shelter.name;
-                    const description = displayInfo.description;
-                    const category = shelter.category;
+              {/* 왼쪽: 시설 이미지 - 이미지가 있을 때만 표시 */}
+              {shelter.imageUrl && (
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={{ uri: shelter.imageUrl }}
+                    style={styles.shelterImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
 
-                    // 교통 시설: name + description 결합 (예: "2호선 용답역")
-                    if (category === '교통 시설') {
-                      return name && description ? `${name} ${description}` : (name || description);
-                    }
-                    // 기후 동행 쉼터: name과 description을 공백으로 연결 (예: "경희당점 CU")
-                    if (category === '기후 동행 쉼터') {
-                      return name && description ? `${name} ${description}` : (name || description);
-                    }
-                    // 그 외: description 표시
-                    return displayInfo.description;
-                  })()}
+              {/* 오른쪽: 시설명과 기본 정보 */}
+              <View style={[styles.infoContainer, !shelter.imageUrl && { marginLeft: 0 }]}>
+                <Text style={styles.shelterName} numberOfLines={2}>
+                  {shelter.name}
                 </Text>
                 <View style={styles.infoRow}>
                   <Ionicons name="time-outline" size={16} color="#666" />
-                  <Text style={styles.infoText} numberOfLines={2}>{displayInfo.hours}</Text>
+                  <Text style={styles.infoText} numberOfLines={2}>{displayHours}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Ionicons name="location-outline" size={16} color="#666" />
-                  <Text style={styles.infoText} numberOfLines={2}>{displayInfo.address}</Text>
+                  <Text style={styles.infoText} numberOfLines={2}>{displayAddress}</Text>
                 </View>
               </View>
             </View>
+
+            {/* 쉼터 소개 */}
+            {shelter.description && (
+              <View style={styles.descriptionSection}>
+                <Text style={styles.descriptionText} numberOfLines={3}>
+                  {shelter.description}
+                </Text>
+              </View>
+            )}
+
+            {/* 쉴 수 있는 시간 */}
+            {shelter.maxUsageMinutes !== undefined && (
+              <View style={styles.restTimeSection}>
+                <Text style={styles.restTimeText}>{shelter.maxUsageMinutes}분까지, 마음 편히 쉬어가세요.</Text>
+              </View>
+            )}
+
+            {/* 현재 이용 인원 - 크게 표시 */}
+            {shelter.maxCapacity !== undefined && shelter.currentCapacity !== undefined && (
+              <View style={styles.capacitySection}>
+                <View style={styles.capacityHeader}>
+                  <Ionicons name="people" size={20} color={Colors.primary} />
+                  <Text style={styles.capacityLabel}>현재 이용 인원</Text>
+                </View>
+                <View style={styles.capacityDisplay}>
+                  <Text style={styles.capacityNumber}>{shelter.currentCapacity}</Text>
+                  <Text style={styles.capacitySeparator}>/</Text>
+                  <Text style={styles.capacityMax}>{shelter.maxCapacity}명</Text>
+                </View>
+              </View>
+            )}
 
             {/* 길찾기 버튼 */}
             <TouchableOpacity style={styles.navigationButton}>
@@ -220,13 +252,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text.primary,
   },
-  locationIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   mainContent: {
     padding: 20,
   },
@@ -270,6 +295,60 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     flex: 1,
   },
+  descriptionSection: {
+    marginBottom: 16,
+  },
+  descriptionText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    lineHeight: 18,
+  },
+  restTimeSection: {
+    marginBottom: 16,
+  },
+  restTimeText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  capacitySection: {
+    backgroundColor: '#f0f8ff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  capacityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  capacityLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginLeft: 6,
+  },
+  capacityDisplay: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+  },
+  capacityNumber: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  capacitySeparator: {
+    fontSize: 24,
+    fontWeight: '400',
+    color: Colors.text.light,
+    marginHorizontal: 4,
+  },
+  capacityMax: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
   navigationButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -287,4 +366,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ShelterDetailModal;
+export default UserShelterDetailModal;
