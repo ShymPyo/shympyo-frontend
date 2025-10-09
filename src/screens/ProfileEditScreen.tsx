@@ -11,6 +11,7 @@ import {
   Image,
   Modal,
   FlatList,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
@@ -317,6 +318,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   header: {
     flexDirection: 'row',
