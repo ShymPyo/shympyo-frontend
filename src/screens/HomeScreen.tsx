@@ -1184,7 +1184,7 @@ const HomeScreen: React.FC = () => {
                     styles.filterChipText,
                     { fontSize: getFontSize(13), color: colors.text.secondary },
                     selectedCategories.includes('스마트 쉼터') && { color: 'white' }
-                  ]}>쉘터</Text>
+                  ]}>스마트 쉘터</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1201,7 +1201,7 @@ const HomeScreen: React.FC = () => {
                     styles.filterChipText,
                     { fontSize: getFontSize(13), color: colors.text.secondary },
                     selectedCategories.includes('민간 개방 시설') && { color: 'white' }
-                  ]}>민간</Text>
+                  ]}>민간 개방</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1218,7 +1218,7 @@ const HomeScreen: React.FC = () => {
                     styles.filterChipText,
                     { fontSize: getFontSize(13), color: colors.text.secondary },
                     selectedCategories.includes('교통 시설') && { color: 'white' }
-                  ]}>교통</Text>
+                  ]}>교통 시설</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1235,7 +1235,7 @@ const HomeScreen: React.FC = () => {
                     styles.filterChipText,
                     { fontSize: getFontSize(13), color: colors.text.secondary },
                     selectedCategories.includes('공공 시설') && { color: 'white' }
-                  ]}>공공</Text>
+                  ]}>공공 시설</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1252,7 +1252,7 @@ const HomeScreen: React.FC = () => {
                     styles.filterChipText,
                     { fontSize: getFontSize(13), color: colors.text.secondary },
                     selectedCategories.includes('기후 동행 쉼터') && { color: 'white' }
-                  ]}>동행</Text>
+                  ]}>기후 동행</Text>
                 </TouchableOpacity>
               </ScrollView>
 
