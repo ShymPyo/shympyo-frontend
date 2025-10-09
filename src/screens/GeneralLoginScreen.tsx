@@ -186,8 +186,8 @@ const GeneralLoginScreen: React.FC = () => {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar style={statusBarStyle as any} />
         
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <KeyboardAvoidingView
+          behavior={RNPlatform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardAvoidingView}
           keyboardVerticalOffset={-100}
         >

@@ -68,7 +68,6 @@ const LoginScreen: React.FC = () => {
     }
   };
 
-  // 키보드 닫기 함수 (향후 텍스트 입력이 추가될 때를 대비)
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
@@ -85,7 +84,7 @@ const LoginScreen: React.FC = () => {
         >
           <View style={styles.contentContainer}>
             <View style={styles.logoContainer}>
-              <Image 
+              <Image
                 source={require('../../assets/shympyo_logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
@@ -93,6 +92,25 @@ const LoginScreen: React.FC = () => {
             </View>
 
             <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.socialButton, styles.generalButton]}
+                onPress={() => navigation.navigate('GeneralLogin')}
+              >
+                <FontAwesome name="user" size={20} color={Colors.text.primary} style={styles.icon} />
+                <Text style={[styles.socialButtonText, styles.generalButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>일반 로그인</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.socialButton, styles.googleButton]}
+                onPress={() => handleSocialLogin('Google')}
+              >
+                <Image
+                  source={require('../../assets/google-color.png')}
+                  style={styles.googleIcon}
+                />
+                <Text style={[styles.socialButtonText, styles.googleButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>구글로 쉬운시작</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.socialButton, styles.kakaoButton]}
                 onPress={() => handleSocialLogin('Kakao')}
@@ -102,33 +120,18 @@ const LoginScreen: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.socialButton, styles.googleButton]}
-                onPress={() => handleSocialLogin('Google')}
-              >
-                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.icon} />
-                <Text style={[styles.socialButtonText, styles.googleButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>구글로 쉬운시작</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
                 style={[styles.socialButton, styles.naverButton]}
                 onPress={() => handleSocialLogin('Naver')}
               >
+                <Text style={styles.naverIcon}>N</Text>
                 <Text style={[styles.socialButtonText, styles.naverButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>네이버로 쉬운시작</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.socialButton, styles.generalButton]}
-                onPress={() => navigation.navigate('GeneralLogin')}
-              >
-                <FontAwesome name="user" size={20} color={Colors.text.primary} style={styles.icon} />
-                <Text style={[styles.socialButtonText, styles.generalButtonText, { fontSize: getFontSize(16) }]} numberOfLines={1}>일반 로그인</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.footer}>
             <TouchableOpacity onPress={handleAdminLogin}>
-              <Text style={[styles.footerText, { fontSize: getFontSize(14) }]} numberOfLines={1}>관리자 로그인 / 회원가입</Text>
+              <Text style={[styles.footerText, { fontSize: getFontSize(14) }]} numberOfLines={1}>관리자 로그인 / 신청</Text>
             </TouchableOpacity>
             <Text style={[styles.copyright, { fontSize: getFontSize(12) }]}>© 2025. All rights reserved.</Text>
           </View>
@@ -160,12 +163,9 @@ const styles = StyleSheet.create({
     width: 180,
     height: 100,
   },
-  subtitle: {
-    fontSize: 18,
-    color: Colors.text.secondary,
-  },
   buttonContainer: {
     width: '100%',
+    marginTop: 80,
   },
   socialButton: {
     flexDirection: 'row',
@@ -175,12 +175,25 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginBottom: 15,
     width: '100%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   socialButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
   },
   icon: {
+    marginRight: 10,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
     marginRight: 10,
   },
   kakaoButton: {
@@ -191,8 +204,6 @@ const styles = StyleSheet.create({
   },
   googleButton: {
     backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
   },
   googleButtonText: {
     color: Colors.text.primary,
@@ -204,12 +215,16 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   generalButton: {
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.text.light,
+    backgroundColor: 'white',
   },
   generalButtonText: {
     color: Colors.text.primary,
+  },
+  naverIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    marginRight: 10,
   },
   footer: {
     alignItems: 'center',
