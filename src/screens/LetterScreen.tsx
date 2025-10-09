@@ -372,49 +372,52 @@ const LetterScreen: React.FC = () => {
         onPress={() => isLetterSent && handleLetterPress(item)}
         disabled={!isLetterSent}
       >
-        <View style={styles.cardContent}>
-          <Text style={[styles.date, { fontSize: getFontSize(12), color: colors.text.light }, isLetterSent && styles.sentText]}>
-            {formatDate(item.endTime)}
-          </Text>
-          <Text style={[styles.placeName, { fontSize: getFontSize(18), color: colors.text.primary }, isLetterSent && [styles.sentText, { color: colors.text.light }]]}>
-            {item.placeName}
-          </Text>
-          {isLetterSent && (
-            <View style={[styles.sentBadge, { backgroundColor: colors.background }]}>
-              <Ionicons
-                name={isLetterRead ? "mail-open" : "mail"}
-                size={16}
-                color={isLetterRead ? Colors.success : colors.text.light}
-              />
-              <Text style={[styles.sentBadgeText, { fontSize: getFontSize(12), color: colors.text.light }, isLetterRead && [styles.readBadgeText, { color: Colors.success }]]}>
-                {isLetterRead ? '편지 읽음' : '편지 전송 완료'}
-              </Text>
-            </View>
-          )}
+        <View style={styles.imagePlaceholder} />
+        <View style={styles.cardBody}>
+          <View style={styles.cardContent}>
+            <Text style={[styles.date, { fontSize: getFontSize(12), color: colors.text.light }, isLetterSent && styles.sentText]}>
+              {formatDate(item.endTime)}
+            </Text>
+            <Text style={[styles.placeName, { fontSize: getFontSize(18), color: colors.text.primary }, isLetterSent && [styles.sentText, { color: colors.text.light }]]} numberOfLines={1}>
+              {item.placeName}
+            </Text>
+            {isLetterSent && (
+              <View style={[styles.sentBadge, { backgroundColor: colors.background }]}>
+                <Ionicons
+                  name={isLetterRead ? "mail-open" : "mail"}
+                  size={16}
+                  color={isLetterRead ? Colors.success : colors.text.light}
+                />
+                <Text style={[styles.sentBadgeText, { fontSize: getFontSize(12), color: colors.text.light }, isLetterRead && [styles.readBadgeText, { color: Colors.success }]]}>
+                  {isLetterRead ? '편지 읽음' : '편지 전송 완료'}
+                </Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary }, isLetterSent && [styles.sentButton, { backgroundColor: colors.surface, borderColor: colors.text.light + '40' }]]}
+            onPress={(e) => {
+              e.stopPropagation();
+              if (!isLetterSent) {
+                handleWriteLetter({
+                  placeId: Number(item.placeId),
+                  placeName: item.placeName,
+                  rentalId: item.rentalId
+                });
+              }
+            }}
+            disabled={isLetterSent}
+          >
+            <Ionicons
+              name={isLetterSent ? "checkmark" : "pencil"}
+              size={20}
+              color={isLetterSent ? Colors.text.secondary : Colors.text.white}
+            />
+            <Text style={[styles.buttonText, isLetterSent && styles.sentButtonText]}>
+              {isLetterSent ? '전송 완료' : '고마운 마음 전하기'}
+            </Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary }, isLetterSent && [styles.sentButton, { backgroundColor: colors.surface, borderColor: colors.text.light + '40' }]]}
-          onPress={(e) => {
-            e.stopPropagation();
-            if (!isLetterSent) {
-              handleWriteLetter({
-                placeId: Number(item.placeId),
-                placeName: item.placeName,
-                rentalId: item.rentalId
-              });
-            }
-          }}
-          disabled={isLetterSent}
-        >
-          <Ionicons
-            name={isLetterSent ? "checkmark" : "pencil"}
-            size={20}
-            color={isLetterSent ? Colors.text.secondary : Colors.text.white}
-          />
-          <Text style={[styles.buttonText, isLetterSent && styles.sentButtonText]}>
-            {isLetterSent ? '전송 완료' : '고마운 마음 전하기'}
-          </Text>
-        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -601,6 +604,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
     ...getShadowStyle({
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
@@ -608,6 +613,17 @@ const styles = StyleSheet.create({
       shadowRadius: 3,
       elevation: 2,
     }),
+  },
+  imagePlaceholder: {
+    width: 110,
+    height: 110,
+    borderRadius: 10,
+    backgroundColor: '#E9E9E9',
+    marginRight: 15,
+  },
+  cardBody: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   sentCard: {
     backgroundColor: '#F5F5F5',
