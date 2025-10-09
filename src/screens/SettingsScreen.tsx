@@ -290,7 +290,8 @@ const SettingsScreen: React.FC = () => {
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           {/* 글자 크기 */}
           <TouchableOpacity
-style={styles.settingItem}
+            style={styles.settingItem}
+            onPress={() => setShowFontModal(true)}
           >
             <Text style={[styles.itemTitle, { fontSize: getFontSize(16), color: colors.text.primary }]}>
               글자 크기
