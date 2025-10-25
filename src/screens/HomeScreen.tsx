@@ -1177,7 +1177,7 @@ const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
-                    selectedCategories.includes('스마트 쉼터') && { backgroundColor: '#4A90E2', borderColor: '#4A90E2' }
+                    selectedCategories.includes('스마트 쉼터') && { borderColor: '#4A90E2', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('스마트 쉼터')}
                 >
@@ -1186,15 +1186,14 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterChipText,
-                    { fontSize: getFontSize(13), color: colors.text.secondary },
-                    selectedCategories.includes('스마트 쉼터') && { color: 'white' }
+                    { fontSize: getFontSize(13), color: colors.text.secondary }
                   ]}>스마트 쉘터</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
-                    selectedCategories.includes('민간 개방 시설') && { backgroundColor: '#FFA500', borderColor: '#FFA500' }
+                    selectedCategories.includes('민간 개방 시설') && { borderColor: '#FFA500', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('민간 개방 시설')}
                 >
@@ -1203,15 +1202,14 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterChipText,
-                    { fontSize: getFontSize(13), color: colors.text.secondary },
-                    selectedCategories.includes('민간 개방 시설') && { color: 'white' }
+                    { fontSize: getFontSize(13), color: colors.text.secondary }
                   ]}>민간 개방</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
-                    selectedCategories.includes('교통 시설') && { backgroundColor: '#27AE60', borderColor: '#27AE60' }
+                    selectedCategories.includes('교통 시설') && { borderColor: '#27AE60', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('교통 시설')}
                 >
@@ -1220,15 +1218,14 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterChipText,
-                    { fontSize: getFontSize(13), color: colors.text.secondary },
-                    selectedCategories.includes('교통 시설') && { color: 'white' }
+                    { fontSize: getFontSize(13), color: colors.text.secondary }
                   ]}>교통 시설</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
-                    selectedCategories.includes('공공 시설') && { backgroundColor: '#E74C3C', borderColor: '#E74C3C' }
+                    selectedCategories.includes('공공 시설') && { borderColor: '#E74C3C', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('공공 시설')}
                 >
@@ -1237,15 +1234,14 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterChipText,
-                    { fontSize: getFontSize(13), color: colors.text.secondary },
-                    selectedCategories.includes('공공 시설') && { color: 'white' }
+                    { fontSize: getFontSize(13), color: colors.text.secondary }
                   ]}>공공 시설</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
-                    selectedCategories.includes('기후 동행 쉼터') && { backgroundColor: '#9B59B6', borderColor: '#9B59B6' }
+                    selectedCategories.includes('기후 동행 쉼터') && { borderColor: '#9B59B6', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('기후 동행 쉼터')}
                 >
@@ -1254,8 +1250,7 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <Text style={[
                     styles.filterChipText,
-                    { fontSize: getFontSize(13), color: colors.text.secondary },
-                    selectedCategories.includes('기후 동행 쉼터') && { color: 'white' }
+                    { fontSize: getFontSize(13), color: colors.text.secondary }
                   ]}>기후 동행</Text>
                 </TouchableOpacity>
               </ScrollView>
@@ -1686,7 +1681,7 @@ const styles = StyleSheet.create({
     filterChipContent: {
         paddingHorizontal: 16,
         alignItems: 'center',
-        gap: 8,
+        gap: 6,
     },
     filterChip: {
         flexDirection: 'row',
@@ -1694,7 +1689,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 20,
-        marginRight: 8,
+        marginRight: 6,
         borderWidth: 1,
         borderColor: '#E0E0E0',
         backgroundColor: 'white',

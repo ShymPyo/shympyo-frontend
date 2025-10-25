@@ -98,7 +98,7 @@ const AdminLetterListScreen: React.FC = () => {
 
   // 검색 필터링된 편지 목록
   const filteredLetters = letters.filter(letter =>
-    letter.writerInfo.nickname.toLowerCase().includes(searchText.toLowerCase())  // name → nickname 변경
+    letter.createdAt.startsWith(searchText)  // name → nickname 변경
   );
 
   const handleLetterPress = async (letter: ReceivedLetter) => {
@@ -224,7 +224,7 @@ const AdminLetterListScreen: React.FC = () => {
           <Ionicons name="search" size={20} color={Colors.text.light} />
           <TextInput
             style={styles.searchInput}
-            placeholder="사용자 닉네임으로 검색..."
+            placeholder="날짜로 검색 (YYYY-MM-DD)..."
             value={searchText}
             onChangeText={setSearchText}
             placeholderTextColor={Colors.text.light}
