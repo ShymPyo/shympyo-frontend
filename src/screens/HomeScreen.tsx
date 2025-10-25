@@ -1177,6 +1177,7 @@ const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
+                    { backgroundColor: colors.surface, borderColor: colors.text.light + '40' },
                     selectedCategories.includes('스마트 쉼터') && { borderColor: '#4A90E2', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('스마트 쉼터')}
@@ -1193,6 +1194,7 @@ const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
+                    { backgroundColor: colors.surface, borderColor: colors.text.light + '40' },
                     selectedCategories.includes('민간 개방 시설') && { borderColor: '#FFA500', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('민간 개방 시설')}
@@ -1209,6 +1211,7 @@ const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
+                    { backgroundColor: colors.surface, borderColor: colors.text.light + '40' },
                     selectedCategories.includes('교통 시설') && { borderColor: '#27AE60', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('교통 시설')}
@@ -1225,6 +1228,7 @@ const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
+                    { backgroundColor: colors.surface, borderColor: colors.text.light + '40' },
                     selectedCategories.includes('공공 시설') && { borderColor: '#E74C3C', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('공공 시설')}
@@ -1241,6 +1245,7 @@ const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.filterChip,
+                    { backgroundColor: colors.surface, borderColor: colors.text.light + '40' },
                     selectedCategories.includes('기후 동행 쉼터') && { borderColor: '#9B59B6', borderWidth: 2 }
                   ]}
                   onPress={() => toggleCategory('기후 동행 쉼터')}
