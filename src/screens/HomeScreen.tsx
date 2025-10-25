@@ -63,20 +63,20 @@ const getShadowStyle = (shadowConfig: {
 };
 
 // SVG Path로 자연스러운 물결 (안전한 버전)
-const AnimatedThermometer: React.FC<{ temperature: number }> = ({ temperature }) => {
+const AnimatedThermometer: React.FC<{ temperature: number; colors: any; contrastMode: 'normal' | 'high' }> = ({ temperature, colors, contrastMode }) => {
   const [waveOffset1, setWaveOffset1] = React.useState(0);
   const [waveOffset2, setWaveOffset2] = React.useState(0);
-  
+
   React.useEffect(() => {
     // 자연스러운 속도로 더 빠르게
     const interval1 = setInterval(() => {
       setWaveOffset1(prev => (prev + 0.12) % (Math.PI * 2)); // 더 빠르게
     }, 40); // 더 자주 업데이트
-    
+
     const interval2 = setInterval(() => {
-      setWaveOffset2(prev => (prev + 0.10) % (Math.PI * 2)); // 더 빠르게  
+      setWaveOffset2(prev => (prev + 0.10) % (Math.PI * 2)); // 더 빠르게
     }, 40); // 더 자주 업데이트
-    
+
     return () => {
       clearInterval(interval1);
       clearInterval(interval2);
@@ -89,56 +89,79 @@ const AnimatedThermometer: React.FC<{ temperature: number }> = ({ temperature })
     const height = 90;
     const fillHeight = height * 0.65;
     const waveTop = height - fillHeight;
-    
+
     let path = `M 0,${waveTop}`;
-    
+
     // 더 적은 점으로 간단하게
     for (let x = 0; x <= width; x += 2) {
       const y = waveTop + Math.sin((x / width) * Math.PI * 2 + offset) * amplitude;
       path += ` L ${x},${y}`;
     }
-    
+
     path += ` L ${width},${height} L 0,${height} Z`;
     return path;
   };
 
+  // 고대비 모드에 따른 색상 설정
+  const gradientColors = contrastMode === 'high'
+    ? {
+        primary1: colors.primary,
+        primary2: colors.primary,
+        primary3: colors.primary,
+        primary4: colors.primary,
+        secondary1: colors.primary,
+        secondary2: colors.primary,
+        secondary3: colors.primary,
+        solidColor: colors.primary,
+      }
+    : {
+        primary1: '#D50000',
+        primary2: '#FF1744',
+        primary3: '#FF5722',
+        primary4: '#FF8A65',
+        secondary1: '#B71C1C',
+        secondary2: '#E53935',
+        secondary3: '#FF6B6B',
+        solidColor: '#FF3D00',
+      };
+
   return (
     <View style={styles.modernThermometer}>
-      <View style={styles.thermometerBackground} />
-      
+      <View style={[styles.thermometerBackground, { backgroundColor: contrastMode === 'high' ? colors.surface : '#E8E8E8' }]} />
+
       {/* 그라데이션 배경 */}
-      <Svg 
-        height="90" 
-        width="28" 
+      <Svg
+        height="90"
+        width="28"
         style={{ position: 'absolute', bottom: 0 }}
         viewBox="0 0 28 90"
       >
         <Defs>
           <SvgLinearGradient id="thermometerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#D50000" stopOpacity={1} />
-            <Stop offset="30%" stopColor="#FF1744" stopOpacity={0.95} />
-            <Stop offset="60%" stopColor="#FF5722" stopOpacity={0.9} />
-            <Stop offset="100%" stopColor="#FF8A65" stopOpacity={0.85} />
+            <Stop offset="0%" stopColor={gradientColors.primary1} stopOpacity={1} />
+            <Stop offset="30%" stopColor={gradientColors.primary2} stopOpacity={0.95} />
+            <Stop offset="60%" stopColor={gradientColors.primary3} stopOpacity={0.9} />
+            <Stop offset="100%" stopColor={gradientColors.primary4} stopOpacity={0.85} />
           </SvgLinearGradient>
           <SvgLinearGradient id="redGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#B71C1C" stopOpacity={0.9} />
-            <Stop offset="50%" stopColor="#E53935" stopOpacity={0.9} />
-            <Stop offset="100%" stopColor="#FF6B6B" stopOpacity={0.8} />
+            <Stop offset="0%" stopColor={gradientColors.secondary1} stopOpacity={0.9} />
+            <Stop offset="50%" stopColor={gradientColors.secondary2} stopOpacity={0.9} />
+            <Stop offset="100%" stopColor={gradientColors.secondary3} stopOpacity={0.8} />
           </SvgLinearGradient>
         </Defs>
-        
-        
+
+
         {/* 첫 번째 물결 레이어 */}
-        <Path 
+        <Path
           d={createWavePath(waveOffset1, 1.8)} // 작은 진폭
           fill="url(#redGradient)"
           opacity={0.8}
         />
-        
+
         {/* 두 번째 물결 레이어 */}
-        <Path 
+        <Path
           d={createWavePath(waveOffset2 + Math.PI/3, 1.2)} // 더 작은 진폭, 위상차
-          fill="#FF3D00"
+          fill={gradientColors.solidColor}
           opacity={0.6}
         />
       </Svg>
@@ -220,7 +243,7 @@ type HomeScreenNavigationProp = StackNavigationProp<MainTabParamList, 'Home'>;
 const HomeScreen: React.FC = () => {
   const { accessToken, refreshTokens } = useAuth();
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
+  const { colors, getFontSize, statusBarStyle, contrastMode } = useThemedStyles();
 
   // 상태 관리: 선택된 쉼터 정보만 관리
   const [selectedShelter, setSelectedShelter] = useState<Shelter>(shelters[0]);
@@ -1109,14 +1132,14 @@ const HomeScreen: React.FC = () => {
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
           {/* 온도계 - 좌측 하단 (카테고리 아래) */}
           <View style={styles.thermometerContainer}>
-            <AnimatedThermometer temperature={weatherData?.temperature || 25} />
+            <AnimatedThermometer temperature={weatherData?.temperature || 25} colors={colors} contrastMode={contrastMode} />
             <View style={styles.temperatureLabelContainer}>
-              <View style={styles.temperatureLabel}>
-                <Text style={styles.temperatureText}>{weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}</Text>
-                <View style={styles.trianglePointer} />
+              <View style={[styles.temperatureLabel, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.temperatureText, { color: colors.text.white }]}>{weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}</Text>
+                <View style={[styles.trianglePointer, { borderRightColor: colors.primary }]} />
               </View>
               {weatherData?.weather && (
-                <Text style={styles.weatherText}>{weatherData.weather}</Text>
+                <Text style={[styles.weatherText, { backgroundColor: contrastMode === 'high' ? colors.surface : 'rgba(255, 255, 255, 0.9)', color: colors.text.primary }]}>{weatherData.weather}</Text>
               )}
             </View>
           </View>
@@ -1495,7 +1518,6 @@ const styles = StyleSheet.create({
         borderRadius: 12.5,
     },
     temperatureLabel: {
-        backgroundColor: '#000',
         width: 40,
         height: 40,
         borderRadius: 20,
@@ -1512,16 +1534,13 @@ const styles = StyleSheet.create({
     temperatureText: {
         fontSize: 12,
         fontWeight: 'bold',
-        color: 'white',
         textAlign: 'center',
     },
     weatherText: {
         fontSize: 10,
         fontWeight: '600',
-        color: '#333',
         marginTop: 6,
         textAlign: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 8,
@@ -1540,7 +1559,6 @@ const styles = StyleSheet.create({
         borderBottomWidth: 5,
         borderLeftWidth: 0,
         borderTopColor: 'transparent',
-        borderRightColor: '#000',
         borderBottomColor: 'transparent',
     },
     shelterCategoryContainer: {

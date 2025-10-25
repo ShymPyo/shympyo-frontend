@@ -16,16 +16,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import { Colors } from '../constants/colors';
 import { RootStackParamList } from '../types';
 import ApiService, { ReceivedLetter, LetterCount } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 type AdminLetterListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminLetterList'>;
 
 const AdminLetterListScreen: React.FC = () => {
   const navigation = useNavigation<AdminLetterListScreenNavigationProp>();
   const { accessToken } = useAuth();
+  const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
   const [selectedLetter, setSelectedLetter] = useState<ReceivedLetter | null>(null);
   const [isModalVisible, setModalVisible] = useState(false);
@@ -179,23 +180,23 @@ const AdminLetterListScreen: React.FC = () => {
     >
       <View style={styles.letterContent}>
         <View style={styles.letterHeader}>
-          <Text style={styles.letterDate}>{new Date(letter.createdAt).toLocaleString('ko-KR')}</Text>
-          {!letter.read && <View style={styles.unreadIndicator} />}
+          <Text style={[styles.letterDate, { fontSize: getFontSize(12), color: colors.text.light }]}>{new Date(letter.createdAt).toLocaleString('ko-KR')}</Text>
+          {!letter.read && <View style={[styles.unreadIndicator, { backgroundColor: colors.primary }]} />}
         </View>
         <View style={styles.letterMain}>
-          <View style={styles.profileCircle}>
-            <Text style={styles.profileText}>😊</Text>
+          <View style={[styles.profileCircle, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.profileText, { fontSize: getFontSize(20) }]}>😊</Text>
           </View>
           <View style={styles.letterTextContainer}>
-            <Text style={styles.customerName}>{letter.writerInfo.nickname}</Text>
+            <Text style={[styles.customerName, { fontSize: getFontSize(16), color: colors.text.primary }]}>{letter.writerInfo.nickname}</Text>
             {letter.writerInfo.bio && (
-              <Text style={styles.letterBio} numberOfLines={1}>{letter.writerInfo.bio}</Text>
+              <Text style={[styles.letterBio, { fontSize: getFontSize(12), color: colors.text.light }]} numberOfLines={1}>{letter.writerInfo.bio}</Text>
             )}
           </View>
           <Ionicons
             name={letter.read ? "mail-open" : "mail"}
             size={24}
-            color={letter.read ? Colors.text.light : Colors.primary}
+            color={letter.read ? colors.text.light : colors.primary}
           />
         </View>
       </View>
@@ -203,35 +204,35 @@ const AdminLetterListScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={statusBarStyle} />
+
       {/* 헤더 */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>편지함</Text>
+        <Text style={[styles.headerTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>편지함</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {/* 검색창 */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color={Colors.text.light} />
+      <View style={[styles.searchContainer, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
+        <View style={[styles.searchInputContainer, { backgroundColor: colors.surface }]}>
+          <Ionicons name="search" size={20} color={colors.text.light} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { fontSize: getFontSize(16), color: colors.text.primary }]}
             placeholder="날짜로 검색 (YYYY-MM-DD)..."
             value={searchText}
             onChangeText={setSearchText}
-            placeholderTextColor={Colors.text.light}
+            placeholderTextColor={colors.text.light}
           />
           {searchText.length > 0 && (
             <TouchableOpacity onPress={() => setSearchText('')}>
-              <Ionicons name="close-circle" size={20} color={Colors.text.light} />
+              <Ionicons name="close-circle" size={20} color={colors.text.light} />
             </TouchableOpacity>
           )}
         </View>
@@ -240,7 +241,7 @@ const AdminLetterListScreen: React.FC = () => {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <ScrollView
@@ -257,14 +258,14 @@ const AdminLetterListScreen: React.FC = () => {
         >
           {/* 편지함 정보 */}
           <View style={styles.letterInfo}>
-            <View style={styles.letterCount}>
-              <Ionicons name="mail" size={20} color={Colors.primary} />
-              <Text style={styles.countText}>지금까지 총 {letterCount.total}개의 감사 편지를 받았어요 !</Text>
+            <View style={[styles.letterCount, { backgroundColor: colors.surface, borderLeftColor: colors.primary }]}>
+              <Ionicons name="mail" size={20} color={colors.primary} />
+              <Text style={[styles.countText, { fontSize: getFontSize(14), color: colors.text.primary }]}>지금까지 총 {letterCount.total}개의 감사 편지를 받았어요 !</Text>
             </View>
             {unreadCount > 0 && (
               <View style={styles.unreadCount}>
-                <Ionicons name="alert-circle" size={16} color={Colors.primary} />
-                <Text style={styles.unreadCountText}>새로운 편지가 {unreadCount}개 도착했습니다.</Text>
+                <Ionicons name="alert-circle" size={16} color={colors.primary} />
+                <Text style={[styles.unreadCountText, { fontSize: getFontSize(14), color: colors.primary }]}>새로운 편지가 {unreadCount}개 도착했습니다.</Text>
               </View>
             )}
           </View>
@@ -276,20 +277,20 @@ const AdminLetterListScreen: React.FC = () => {
                 {filteredLetters.map(renderLetter)}
                 {isLoadingMore && (
                   <View style={styles.loadingMore}>
-                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <ActivityIndicator size="small" color={colors.primary} />
                   </View>
                 )}
               </>
             ) : searchText.length > 0 ? (
               <View style={styles.noResultsContainer}>
-                <Ionicons name="search" size={48} color={Colors.text.light} />
-                <Text style={styles.noResultsText}>'{searchText}'에 대한 검색 결과가 없습니다.</Text>
-                <Text style={styles.noResultsSubtext}>다른 닉네임으로 검색해보세요.</Text>
+                <Ionicons name="search" size={48} color={colors.text.light} />
+                <Text style={[styles.noResultsText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>'{searchText}'에 대한 검색 결과가 없습니다.</Text>
+                <Text style={[styles.noResultsSubtext, { fontSize: getFontSize(14), color: colors.text.light }]}>다른 닉네임으로 검색해보세요.</Text>
               </View>
             ) : (
               <View style={styles.noResultsContainer}>
-                <Ionicons name="mail-outline" size={48} color={Colors.text.light} />
-                <Text style={styles.noResultsText}>아직 받은 편지가 없습니다.</Text>
+                <Ionicons name="mail-outline" size={48} color={colors.text.light} />
+                <Text style={[styles.noResultsText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>아직 받은 편지가 없습니다.</Text>
               </View>
             )}
           </View>
@@ -309,38 +310,38 @@ const AdminLetterListScreen: React.FC = () => {
           onPress={handleCloseModal}
         >
           <TouchableOpacity
-            style={styles.modalContent}
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={handleCloseModal}>
-                <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+                <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>{selectedLetter?.writerInfo.nickname} 님의 감사 편지</Text>
+              <Text style={[styles.modalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>{selectedLetter?.writerInfo.nickname} 님의 감사 편지</Text>
               <View style={{ width: 24 }} />
             </View>
 
-            <Text style={styles.modalDate}>
+            <Text style={[styles.modalDate, { fontSize: getFontSize(14), color: colors.text.secondary }]}>
               {selectedLetter?.createdAt ? new Date(selectedLetter.createdAt).toLocaleString('ko-KR') : ''} 발송
             </Text>
 
             <View style={styles.modalLetterContent}>
-              <View style={styles.modalProfile}>
-                <Text style={styles.modalProfileText}>😊</Text>
+              <View style={[styles.modalProfile, { backgroundColor: colors.background }]}>
+                <Text style={[styles.modalProfileText, { fontSize: getFontSize(36) }]}>😊</Text>
               </View>
               <View style={styles.modalTextSection}>
-                
-                <Text style={styles.modalName}>{selectedLetter?.writerInfo.nickname}</Text>
+
+                <Text style={[styles.modalName, { fontSize: getFontSize(18), color: colors.text.primary }]}>{selectedLetter?.writerInfo.nickname}</Text>
                 {selectedLetter?.writerInfo.bio && (
-                  <Text style={styles.modalBio}>{selectedLetter.writerInfo.bio}</Text>
+                  <Text style={[styles.modalBio, { fontSize: getFontSize(14), color: colors.text.secondary }]}>{selectedLetter.writerInfo.bio}</Text>
                 )}
               </View>
             </View>
 
             <View style={styles.modalLetterSection}>
-              <Text style={styles.modalLabel}>편지 내용</Text>
-              <Text style={styles.modalLetterText}>
+              <Text style={[styles.modalLabel, { fontSize: getFontSize(14), color: colors.text.light }]}>편지 내용</Text>
+              <Text style={[styles.modalLetterText, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.background }]}>
                 {selectedLetter?.content}
               </Text>
             </View>
@@ -354,7 +355,6 @@ const AdminLetterListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
     paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   loadingContainer: {
@@ -369,35 +369,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
   backButton: {
     padding: 5,
   },
   headerTitle: {
-    fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.text.primary,
   },
   searchContainer: {
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: Colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 12,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: Colors.text.primary,
     marginLeft: 10,
     marginRight: 10,
   },
@@ -411,16 +403,12 @@ const styles = StyleSheet.create({
   letterCount: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9E6',
     padding: 15,
     borderRadius: 10,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
     marginBottom: 10,
   },
   countText: {
-    fontSize: 14,
-    color: Colors.text.primary,
     marginLeft: 10,
     fontWeight: '500',
   },
@@ -429,8 +417,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unreadCountText: {
-    fontSize: 14,
-    color: Colors.primary,
     marginLeft: 5,
     fontWeight: '600',
   },
@@ -442,14 +428,10 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   noResultsText: {
-    fontSize: 16,
-    color: Colors.text.secondary,
     marginTop: 15,
     textAlign: 'center',
   },
   noResultsSubtext: {
-    fontSize: 14,
-    color: Colors.text.light,
     marginTop: 5,
     textAlign: 'center',
   },
@@ -468,14 +450,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   letterDate: {
-    fontSize: 12,
-    color: Colors.text.light,
   },
   unreadIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.primary,
   },
   letterMain: {
     flexDirection: 'row',
@@ -485,30 +464,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFE4B5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   profileText: {
-    fontSize: 20,
   },
   letterTextContainer: {
     flex: 1,
   },
   customerName: {
-    fontSize: 16,
     fontWeight: 'bold',
-    color: Colors.text.primary,
     marginBottom: 3,
   },
   letterPreview: {
-    fontSize: 14,
-    color: Colors.text.secondary,
   },
   letterBio: {
-    fontSize: 12,
-    color: Colors.text.light,
     marginTop: 2,
   },
   modalOverlay: {
@@ -519,7 +490,6 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    backgroundColor: 'white',
     borderRadius: 20,
     padding: 20,
     maxHeight: '80%',
@@ -531,15 +501,11 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   modalTitle: {
-    fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.text.primary,
     flex: 1,
     textAlign: 'center',
   },
   modalDate: {
-    fontSize: 14,
-    color: Colors.text.secondary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -552,36 +518,26 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#FFE4B5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
   modalProfileText: {
-    fontSize: 36,
   },
   modalTextSection: {
     flex: 1,
   },
   modalLabel: {
-    fontSize: 14,
     fontWeight: '600',
-    color: Colors.text.light,
     marginBottom: 5,
   },
   modalText: {
-    fontSize: 16,
-    color: Colors.text.primary,
   },
   modalName: {
-    fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.text.primary,
     marginBottom: 5,
   },
   modalBio: {
-    fontSize: 14,
-    color: Colors.text.secondary,
     lineHeight: 20,
     fontStyle: 'italic',
   },
@@ -589,16 +545,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   modalLetterText: {
-    fontSize: 16,
-    color: Colors.text.primary,
-    backgroundColor: Colors.surface,
     padding: 15,
     borderRadius: 8,
     lineHeight: 24,
   },
   modalSubText: {
-    fontSize: 14,
-    color: Colors.text.secondary,
     marginTop: 8,
     fontStyle: 'italic',
   },

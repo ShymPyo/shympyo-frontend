@@ -49,35 +49,35 @@ const darkTheme: ColorScheme = {
 };
 
 const lightHighContrast: ColorScheme = {
-  primary: '#0000FF', // 파란색 (참고 이미지의 파란색)
-  secondary: '#FFFF00', // 노란색 (참고 이미지의 노란색)
-  background: '#FFFFFF', // 흰색 배경
-  surface: '#F0F0F0', // 연한 회색
+  primary: '#0066FF', // 밝은 파란색 (이미지 참고)
+  secondary: '#FFD700', // 금색/노란색 (이미지의 키패드 색상)
+  background: '#FFFFFF', // 순수 흰색 배경
+  surface: '#F5F5F5', // 연한 회색
   text: {
-    primary: '#000000', // 검은색 텍스트 (최대 대비)
-    secondary: '#000000', // 검은색 텍스트 (고대비에서는 모든 텍스트를 검은색으로)
-    light: '#333333', // 진한 회색
-    white: '#000000', // 고대비에서는 white도 검은색으로
+    primary: '#000000', // 순수 검은색 텍스트 (최대 대비)
+    secondary: '#000000', // 순수 검은색 텍스트
+    light: '#000000', // 순수 검은색 (고대비에서는 모든 텍스트 동일)
+    white: '#FFFFFF', // 순수 흰색
   },
-  success: '#00FF00', // 초록색 (참고 이미지의 초록색)
-  warning: '#FFFF00', // 노란색
-  error: '#FF0000', // 빨간색 (참고 이미지의 빨간색)
+  success: '#00CC00', // 초록색
+  warning: '#FFD700', // 금색/노란색
+  error: '#FF0000', // 순수 빨간색
 };
 
 const darkHighContrast: ColorScheme = {
-  primary: '#00FFFF', // 청록색 (참고 이미지의 청록색)
-  secondary: '#FFFF00', // 노란색
-  background: '#000000', // 검은색 배경
-  surface: '#1A1A1A', // 진한 회색
+  primary: '#FFD700', // 금색/노란색 (이미지의 키패드 색상과 동일)
+  secondary: '#0066FF', // 밝은 파란색
+  background: '#000000', // 순수 검은색 배경
+  surface: '#1A1A1A', // 약간 밝은 검은색 (구분을 위해)
   text: {
-    primary: '#FFFFFF', // 흰색 텍스트 (최대 대비)
-    secondary: '#FFFFFF', // 흰색 텍스트 (고대비에서는 모든 텍스트를 흰색으로)
-    light: '#CCCCCC', // 연한 회색
-    white: '#FFFFFF', // 흰색 유지
+    primary: '#FFFFFF', // 순수 흰색 텍스트 (최대 대비)
+    secondary: '#FFFFFF', // 순수 흰색 텍스트
+    light: '#FFFFFF', // 순수 흰색 (고대비에서는 모든 텍스트 동일)
+    white: '#000000', // 검은색 (노란색 배경 위에 사용)
   },
-  success: '#00FF00', // 초록색
-  warning: '#FFFF00', // 노란색
-  error: '#FF0000', // 빨간색
+  success: '#00FF00', // 순수 초록색
+  warning: '#FFD700', // 금색/노란색
+  error: '#FF3333', // 밝은 빨간색
 };
 
 export const getColors = (themeMode: ThemeMode, contrastMode: ContrastMode): ColorScheme => {

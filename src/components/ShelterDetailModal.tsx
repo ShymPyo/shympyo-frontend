@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 const { width, height } = Dimensions.get('window');
 
@@ -43,6 +43,8 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
   shelter,
   onClose,
 }) => {
+  const { colors, getFontSize } = useThemedStyles();
+
   if (!shelter) return null;
 
 
@@ -93,19 +95,19 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
         {...(Platform.OS === 'web' && { accessible: false })}
       >
         <TouchableOpacity
-          style={styles.container}
+          style={[styles.container, { backgroundColor: colors.background }]}
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
           accessible={false}
         >
           {/* 헤더 */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.backButton}>
-              <Ionicons name="close" size={20} color={Colors.text.primary} />
+          <View style={[styles.header, { borderBottomColor: colors.surface }]}>
+            <TouchableOpacity onPress={onClose} style={[styles.backButton, { backgroundColor: colors.surface }]}>
+              <Ionicons name="close" size={20} color={colors.text.primary} />
             </TouchableOpacity>
-            
+
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.categoryText} numberOfLines={1}>{shelter.category}</Text>
+              <Text style={[styles.categoryText, { fontSize: getFontSize(14), color: colors.text.primary }]} numberOfLines={1}>{shelter.category}</Text>
             </View>
             <View style={{ width: 32 }} />
           </View>
@@ -115,17 +117,17 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
             {/* 상단 정보 섹션 */}
             <View style={styles.topSection}>
               {/* 왼쪽: 시설 이미지 */}
-              <View style={styles.imageContainer}>
+              <View style={[styles.imageContainer, { backgroundColor: colors.surface }]}>
                 <Ionicons
                   name={shelter.icon as any}
                   size={32}
                   color={shelter.color}
                 />
               </View>
-              
+
               {/* 오른쪽: 시설명과 기본 정보 */}
               <View style={styles.infoContainer}>
-                <Text style={styles.shelterName} numberOfLines={2}>
+                <Text style={[styles.shelterName, { fontSize: getFontSize(20), color: colors.text.primary }]} numberOfLines={2}>
                   {(() => {
                     const name = shelter.name;
                     const description = displayInfo.description;
@@ -144,20 +146,20 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
                   })()}
                 </Text>
                 <View style={styles.infoRow}>
-                  <Ionicons name="time-outline" size={16} color="#666" />
-                  <Text style={styles.infoText} numberOfLines={2}>{displayInfo.hours}</Text>
+                  <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
+                  <Text style={[styles.infoText, { fontSize: getFontSize(13), color: colors.text.secondary }]} numberOfLines={2}>{displayInfo.hours}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Ionicons name="location-outline" size={16} color="#666" />
-                  <Text style={styles.infoText} numberOfLines={2}>{displayInfo.address}</Text>
+                  <Ionicons name="location-outline" size={16} color={colors.text.secondary} />
+                  <Text style={[styles.infoText, { fontSize: getFontSize(13), color: colors.text.secondary }]} numberOfLines={2}>{displayInfo.address}</Text>
                 </View>
               </View>
             </View>
 
             {/* 길찾기 버튼 */}
-            <TouchableOpacity style={styles.navigationButton}>
-              <Ionicons name="navigate" size={20} color="white" />
-              <Text style={styles.navigationButtonText}>길찾기</Text>
+            <TouchableOpacity style={[styles.navigationButton, { backgroundColor: colors.primary }]}>
+              <Ionicons name="navigate" size={20} color={colors.text.white} />
+              <Text style={[styles.navigationButtonText, { fontSize: getFontSize(16), color: colors.text.white }]}>길찾기</Text>
             </TouchableOpacity>
           </ScrollView>
         </TouchableOpacity>
@@ -177,7 +179,6 @@ const styles = StyleSheet.create({
   },
   container: {
     width: '100%',
-    backgroundColor: 'white',
     borderRadius: 20,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.3)' }
@@ -199,13 +200,11 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   backButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -216,9 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryText: {
-    fontSize: 14,
     fontWeight: '600',
-    color: Colors.text.primary,
   },
   locationIcon: {
     width: 20,
@@ -238,7 +235,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-    backgroundColor: '#f8f9fa',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -253,9 +249,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   shelterName: {
-    fontSize: 20,
     fontWeight: '700',
-    color: Colors.text.primary,
     marginBottom: 8,
     lineHeight: 28,
   },
@@ -265,8 +259,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   infoText: {
-    fontSize: 13,
-    color: Colors.text.secondary,
     marginLeft: 6,
     flex: 1,
   },
@@ -274,15 +266,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     marginTop: 'auto',
   },
   navigationButtonText: {
-    fontSize: 16,
     fontWeight: '600',
-    color: 'white',
     marginLeft: 8,
   },
 });

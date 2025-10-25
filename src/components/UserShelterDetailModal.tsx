@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 const { width, height } = Dimensions.get('window');
 
@@ -55,6 +55,8 @@ const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
   shelter,
   onClose,
 }) => {
+  const { colors, getFontSize } = useThemedStyles();
+
   if (!shelter) return null;
 
   // 영업시간 포맷팅 (초 제거)
@@ -107,19 +109,19 @@ const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
         {...(Platform.OS === 'web' && { accessible: false })}
       >
         <TouchableOpacity
-          style={styles.container}
+          style={[styles.container, { backgroundColor: colors.background }]}
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
           accessible={false}
         >
           {/* 헤더 */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.backButton}>
-              <Ionicons name="close" size={20} color={Colors.text.primary} />
+          <View style={[styles.header, { borderBottomColor: colors.surface }]}>
+            <TouchableOpacity onPress={onClose} style={[styles.backButton, { backgroundColor: colors.surface }]}>
+              <Ionicons name="close" size={20} color={colors.text.primary} />
             </TouchableOpacity>
 
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.categoryText} numberOfLines={1}>민간 개방 시설</Text>
+              <Text style={[styles.categoryText, { fontSize: getFontSize(14), color: colors.text.primary }]} numberOfLines={1}>민간 개방 시설</Text>
             </View>
             <View style={{ width: 32 }} />
           </View>
@@ -130,7 +132,7 @@ const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
             <View style={styles.topSection}>
               {/* 왼쪽: 시설 이미지 - 이미지가 있을 때만 표시 */}
               {shelter.imageUrl && (
-                <View style={styles.imageContainer}>
+                <View style={[styles.imageContainer, { backgroundColor: colors.surface }]}>
                   <Image
                     source={{ uri: shelter.imageUrl }}
                     style={styles.shelterImage}
@@ -141,16 +143,16 @@ const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
 
               {/* 오른쪽: 시설명과 기본 정보 */}
               <View style={[styles.infoContainer, !shelter.imageUrl && { marginLeft: 0 }]}>
-                <Text style={styles.shelterName} numberOfLines={2}>
+                <Text style={[styles.shelterName, { fontSize: getFontSize(20), color: colors.text.primary }]} numberOfLines={2}>
                   {shelter.name}
                 </Text>
                 <View style={styles.infoRow}>
-                  <Ionicons name="time-outline" size={16} color="#666" />
-                  <Text style={styles.infoText} numberOfLines={2}>{displayHours}</Text>
+                  <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
+                  <Text style={[styles.infoText, { fontSize: getFontSize(13), color: colors.text.secondary }]} numberOfLines={2}>{displayHours}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Ionicons name="location-outline" size={16} color="#666" />
-                  <Text style={styles.infoText} numberOfLines={2}>{displayAddress}</Text>
+                  <Ionicons name="location-outline" size={16} color={colors.text.secondary} />
+                  <Text style={[styles.infoText, { fontSize: getFontSize(13), color: colors.text.secondary }]} numberOfLines={2}>{displayAddress}</Text>
                 </View>
               </View>
             </View>
@@ -158,7 +160,7 @@ const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
             {/* 쉼터 소개 */}
             {shelter.description && (
               <View style={styles.descriptionSection}>
-                <Text style={styles.descriptionText} numberOfLines={3}>
+                <Text style={[styles.descriptionText, { fontSize: getFontSize(12), color: colors.text.secondary }]} numberOfLines={3}>
                   {shelter.description}
                 </Text>
               </View>
@@ -167,29 +169,29 @@ const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
             {/* 쉴 수 있는 시간 */}
             {shelter.maxUsageMinutes !== undefined && (
               <View style={styles.restTimeSection}>
-                <Text style={styles.restTimeText}>{shelter.maxUsageMinutes}분까지, 마음 편히 쉬어가세요.</Text>
+                <Text style={[styles.restTimeText, { fontSize: getFontSize(14), color: colors.primary }]}>{shelter.maxUsageMinutes}분까지, 마음 편히 쉬어가세요.</Text>
               </View>
             )}
 
             {/* 현재 이용 인원 - 크게 표시 */}
             {shelter.maxCapacity !== undefined && shelter.currentCapacity !== undefined && (
-              <View style={styles.capacitySection}>
+              <View style={[styles.capacitySection, { backgroundColor: colors.surface }]}>
                 <View style={styles.capacityHeader}>
-                  <Ionicons name="people" size={20} color={Colors.primary} />
-                  <Text style={styles.capacityLabel}>현재 이용 인원</Text>
+                  <Ionicons name="people" size={20} color={colors.primary} />
+                  <Text style={[styles.capacityLabel, { fontSize: getFontSize(14), color: colors.text.primary }]}>현재 이용 인원</Text>
                 </View>
                 <View style={styles.capacityDisplay}>
-                  <Text style={styles.capacityNumber}>{shelter.currentCapacity}</Text>
-                  <Text style={styles.capacitySeparator}>/</Text>
-                  <Text style={styles.capacityMax}>{shelter.maxCapacity}명</Text>
+                  <Text style={[styles.capacityNumber, { fontSize: getFontSize(36), color: colors.primary }]}>{shelter.currentCapacity}</Text>
+                  <Text style={[styles.capacitySeparator, { fontSize: getFontSize(24), color: colors.text.light }]}>/</Text>
+                  <Text style={[styles.capacityMax, { fontSize: getFontSize(20), color: colors.text.secondary }]}>{shelter.maxCapacity}명</Text>
                 </View>
               </View>
             )}
 
             {/* 길찾기 버튼 */}
-            <TouchableOpacity style={styles.navigationButton}>
-              <Ionicons name="navigate" size={20} color="white" />
-              <Text style={styles.navigationButtonText}>길찾기</Text>
+            <TouchableOpacity style={[styles.navigationButton, { backgroundColor: colors.primary }]}>
+              <Ionicons name="navigate" size={20} color={colors.text.white} />
+              <Text style={[styles.navigationButtonText, { fontSize: getFontSize(16), color: colors.text.white }]}>길찾기</Text>
             </TouchableOpacity>
           </ScrollView>
         </TouchableOpacity>
@@ -209,7 +211,6 @@ const styles = StyleSheet.create({
   },
   container: {
     width: '100%',
-    backgroundColor: 'white',
     borderRadius: 20,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.3)' }
@@ -231,13 +232,11 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   backButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -248,9 +247,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryText: {
-    fontSize: 14,
     fontWeight: '600',
-    color: Colors.text.primary,
   },
   mainContent: {
     padding: 20,
@@ -263,7 +260,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-    backgroundColor: '#f8f9fa',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -278,9 +274,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   shelterName: {
-    fontSize: 20,
     fontWeight: '700',
-    color: Colors.text.primary,
     marginBottom: 8,
     lineHeight: 28,
   },
@@ -290,8 +284,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   infoText: {
-    fontSize: 13,
-    color: Colors.text.secondary,
     marginLeft: 6,
     flex: 1,
   },
@@ -299,20 +291,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   descriptionText: {
-    fontSize: 12,
-    color: Colors.text.secondary,
     lineHeight: 18,
   },
   restTimeSection: {
     marginBottom: 16,
   },
   restTimeText: {
-    fontSize: 14,
-    color: Colors.primary,
     fontWeight: '700',
   },
   capacitySection: {
-    backgroundColor: '#f0f8ff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -323,9 +310,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   capacityLabel: {
-    fontSize: 14,
     fontWeight: '600',
-    color: Colors.text.primary,
     marginLeft: 6,
   },
   capacityDisplay: {
@@ -334,34 +319,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   capacityNumber: {
-    fontSize: 36,
     fontWeight: '700',
-    color: Colors.primary,
   },
   capacitySeparator: {
-    fontSize: 24,
     fontWeight: '400',
-    color: Colors.text.light,
     marginHorizontal: 4,
   },
   capacityMax: {
-    fontSize: 20,
     fontWeight: '600',
-    color: Colors.text.secondary,
   },
   navigationButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     marginTop: 'auto',
   },
   navigationButtonText: {
-    fontSize: 16,
     fontWeight: '600',
-    color: 'white',
     marginLeft: 8,
   },
 });

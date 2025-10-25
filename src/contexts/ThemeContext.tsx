@@ -80,6 +80,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setContrastModeState(mode);
       await AsyncStorage.setItem(STORAGE_KEYS.CONTRAST_MODE, mode);
       console.log('🔆 대비 모드 변경:', mode);
+
+      // 고대비 모드를 켜면 자동으로 다크모드 ON
+      if (mode === 'high') {
+        setThemeModeState('dark');
+        await AsyncStorage.setItem(STORAGE_KEYS.THEME_MODE, 'dark');
+        console.log('🎨 고대비 모드 활성화로 다크모드 자동 전환');
+      }
     } catch (error) {
       console.error('대비 모드 저장 실패:', error);
     }
