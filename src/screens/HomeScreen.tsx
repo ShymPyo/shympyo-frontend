@@ -192,6 +192,8 @@ interface Shelter {
   address?: string;
   description?: string;
   content?: string | null;
+  latitude?: number;
+  longitude?: number;
   maxCapacity?: number;
   currentCapacity?: number;
   imageUrl?: string;
@@ -501,6 +503,8 @@ const HomeScreen: React.FC = () => {
           address: response.data?.address,
           description: content, // 리스트 API의 content 사용 (버스정류장 정보 등)
           content: content, // 리스트 API의 content 사용
+          latitude: response.data?.latitude,
+          longitude: response.data?.longitude,
           maxCapacity: response.data?.maxCapacity,
           currentCapacity: response.data?.currentCapacity,
           imageUrl: response.data?.imageUrl,
@@ -524,8 +528,6 @@ const HomeScreen: React.FC = () => {
 
   // 장소 상세 정보 가져오기
   const handleShelterPress = async (shelter: Shelter) => {
-    setSelectedShelter(shelter);
-
     // 백엔드에서 실제 데이터가 있는 경우 상세 정보 조회
     if (mapLocations.length > 0) {
       try {
@@ -540,20 +542,155 @@ const HomeScreen: React.FC = () => {
             ...shelter,
             address: response.data.address,
             description: response.data.content,
+            latitude: response.data.latitude,
+            longitude: response.data.longitude,
             maxCapacity: response.data.maxCapacity,
             currentCapacity: response.data.currentCapacity,
             imageUrl: response.data.imageUrl,
             todayAndHoliday: response.data.todayAndHoliday,
             maxUsageMinutes: response.data.maxUsageMinutes,
           };
+          console.log('🔍 업데이트된 Shelter - lat:', updatedShelter.latitude, 'lon:', updatedShelter.longitude);
           setSelectedShelter(updatedShelter);
+          setModalVisible(true);
+        } else {
+          // API 실패 시 기본 shelter로 모달 열기
+          setSelectedShelter(shelter);
+          setModalVisible(true);
         }
       } catch (error) {
         console.error('❌ 장소 상세 정보 조회 실패:', error);
+        // 에러 시 기본 shelter로 모달 열기
+        setSelectedShelter(shelter);
+        setModalVisible(true);
       }
+    } else {
+      // mapLocations가 없으면 기본 shelter로 모달 열기
+      setSelectedShelter(shelter);
+      setModalVisible(true);
+    }
+  };
+
+  // 길찾기: 지도에 경로 그리기 (TMAP 보행자 경로 API)
+  const handleNavigation = async (destLat: number, destLon: number) => {
+    if (!currentLocation) {
+      Alert.alert('알림', '현재 위치 정보를 가져올 수 없습니다.');
+      return;
     }
 
-    setModalVisible(true);
+    const myLat = currentLocation.coords.latitude;
+    const myLon = currentLocation.coords.longitude;
+
+    console.log('🗺️ 길찾기 시작:', { from: { myLat, myLon }, to: { destLat, destLon } });
+
+    try {
+      // TMAP 보행자 경로 안내 API
+      const requestBody = {
+        startX: myLon.toString(),
+        startY: myLat.toString(),
+        endX: destLon.toString(),
+        endY: destLat.toString(),
+        reqCoordType: 'WGS84GEO',
+        resCoordType: 'WGS84GEO', // WGS84로 받아서 변환 불필요
+        startName: '출발지',
+        endName: '목적지',
+        searchOption: '0',
+      };
+
+      console.log('🗺️ TMAP API 요청:', requestBody);
+
+      const response = await fetch('https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1&format=json', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'appKey': process.env.EXPO_PUBLIC_TMAP_API_KEY || '',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API 오류 응답:', errorText);
+        throw new Error(`API 오류: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('🗺️ TMAP 경로 데이터 수신 성공');
+
+      if (!data.features || data.features.length === 0) {
+        throw new Error('경로를 찾을 수 없습니다');
+      }
+
+      // GeoJSON features에서 LineString 타입만 추출하여 경로 좌표 생성
+      let pathCoords: [number, number][] = [];
+      let totalDistance = 0;
+      let totalTime = 0;
+
+      data.features.forEach((feature: any) => {
+        if (feature.geometry.type === 'LineString') {
+          // LineString의 coordinates 배열 추가
+          feature.geometry.coordinates.forEach((coord: number[]) => {
+            // TMAP은 [경도, 위도] 형식, 카카오맵도 LatLng(위도, 경도)
+            pathCoords.push([coord[1], coord[0]]); // [위도, 경도]
+          });
+        }
+
+        // 첫 번째 feature에서 총 거리와 시간 정보 추출
+        if (feature.properties && feature.properties.totalDistance) {
+          totalDistance = feature.properties.totalDistance;
+          totalTime = feature.properties.totalTime;
+        }
+      });
+
+      console.log('🗺️ 경로 좌표 개수:', pathCoords.length);
+      console.log('🗺️ 총 거리:', totalDistance, 'm, 총 시간:', totalTime, '초');
+
+      // WebView에 경로 그리기
+      if (webViewRef.current && pathCoords.length > 0) {
+        const pathString = pathCoords.map(coord => `new kakao.maps.LatLng(${coord[0]}, ${coord[1]})`).join(',');
+
+        const drawRouteScript = `
+          // 기존 경로 폴리라인 제거
+          if (window.routeLine) {
+            window.routeLine.setMap(null);
+          }
+
+          // 실제 보행자 경로 그리기
+          var linePath = [${pathString}];
+
+          window.routeLine = new kakao.maps.Polyline({
+            path: linePath,
+            strokeWeight: 6,
+            strokeColor: '#4A90E2',
+            strokeOpacity: 0.9,
+            strokeStyle: 'solid'
+          });
+
+          window.routeLine.setMap(window.map);
+
+          // 경로가 모두 보이도록 지도 범위 조정
+          var bounds = new kakao.maps.LatLngBounds();
+          linePath.forEach(function(point) {
+            bounds.extend(point);
+          });
+          window.map.setBounds(bounds);
+
+          console.log('✅ 보행자 경로가 지도에 표시되었습니다');
+        `;
+
+        webViewRef.current.injectJavaScript(drawRouteScript);
+
+        // 거리와 시간 정보 표시
+        const distance = (totalDistance / 1000).toFixed(1); // km
+        const duration = Math.round(totalTime / 60); // 분
+
+        Alert.alert('길찾기', `거리: 약 ${distance}km\n도보 예상 시간: 약 ${duration}분`);
+      }
+    } catch (error) {
+      console.error('❌ 경로 탐색 실패:', error);
+      Alert.alert('오류', '경로를 찾을 수 없습니다.\n다시 시도해주세요.');
+    }
   };
 
   // 하단 슬라이드 애니메이션을 위한 값들
@@ -691,21 +828,28 @@ const HomeScreen: React.FC = () => {
 
   // 실제 API 데이터를 필터링된 쉼터 목록으로 변환
   const filteredShelters: Shelter[] = nearbyPlaces
-    .map(place => ({
-      id: place.id.toString(),
-      name: place.name,
-      category: getCategoryFromType(place.type),
-      type: place.type,
-      distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
-      address: place.address,
-      description: place.content,
-      content: place.content,
-      icon: getIconFromType(place.type),
-      color: getColorFromType(place.type),
-      maxCapacity: place.maxCapacity,
-      currentCapacity: place.currentCapacity,
-      maxUsageMinutes: place.maxUsageMinutes,
-    }))
+    .map(place => {
+      // mapLocations에서 같은 id의 위치 정보 찾기
+      const locationData = mapLocations.find(loc => loc.id === place.id);
+
+      return {
+        id: place.id.toString(),
+        name: place.name,
+        category: getCategoryFromType(place.type),
+        type: place.type,
+        distance: place.distanceM < 1000 ? `${Math.round(place.distanceM)}m` : `${(place.distanceM / 1000).toFixed(1)}km`,
+        address: place.address,
+        description: place.content,
+        content: place.content,
+        latitude: locationData?.latitude,
+        longitude: locationData?.longitude,
+        icon: getIconFromType(place.type),
+        color: getColorFromType(place.type),
+        maxCapacity: place.maxCapacity,
+        currentCapacity: place.currentCapacity,
+        maxUsageMinutes: place.maxUsageMinutes,
+      };
+    })
     .filter(shelter => selectedCategories.includes(shelter.category));
 
   // 필터링된 쉼터에 해당하는 지도 위치 데이터
@@ -1303,6 +1447,7 @@ const HomeScreen: React.FC = () => {
             visible={modalVisible}
             shelter={selectedShelter as any}
             onClose={() => setModalVisible(false)}
+            onNavigate={handleNavigation}
           />
         )}
 
@@ -1312,6 +1457,7 @@ const HomeScreen: React.FC = () => {
             visible={modalVisible}
             shelter={selectedShelter as any}
             onClose={() => setModalVisible(false)}
+            onNavigate={handleNavigation}
           />
         )}
 

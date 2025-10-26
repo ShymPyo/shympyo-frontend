@@ -9,6 +9,8 @@ import {
   ScrollView,
   Dimensions,
   Platform,
+  Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemedStyles } from '../hooks/useThemedStyles';
@@ -36,16 +38,32 @@ interface ShelterDetailModalProps {
   visible: boolean;
   shelter: Shelter | null;
   onClose: () => void;
+  onNavigate?: (latitude: number, longitude: number) => void;
 }
 
 const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
   visible,
   shelter,
   onClose,
+  onNavigate,
 }) => {
   const { colors, getFontSize } = useThemedStyles();
 
   if (!shelter) return null;
+
+  // 길찾기 버튼 클릭 시 부모 컴포넌트에 알림
+  const handleNavigation = () => {
+    if (!shelter.latitude || !shelter.longitude) {
+      Alert.alert('알림', '위치 정보가 없어 길찾기를 사용할 수 없습니다.');
+      return;
+    }
+
+    // 모달을 닫고 부모 컴포넌트에서 경로 그리기
+    onClose();
+    if (onNavigate) {
+      onNavigate(shelter.latitude, shelter.longitude);
+    }
+  };
 
 
   // 스마트쉘터 기본 설명
@@ -157,7 +175,10 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
             </View>
 
             {/* 길찾기 버튼 */}
-            <TouchableOpacity style={[styles.navigationButton, { backgroundColor: colors.primary }]}>
+            <TouchableOpacity
+              style={[styles.navigationButton, { backgroundColor: colors.primary }]}
+              onPress={handleNavigation}
+            >
               <Ionicons name="navigate" size={20} color={colors.text.white} />
               <Text style={[styles.navigationButtonText, { fontSize: getFontSize(16), color: colors.text.white }]}>길찾기</Text>
             </TouchableOpacity>
