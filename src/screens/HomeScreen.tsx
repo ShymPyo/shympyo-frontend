@@ -301,9 +301,9 @@ const NavigationMessage: React.FC<{
   useEffect(() => {
     if (visible) {
       // 페이드인 + 스케일 + 위에서 아래로
-      opacity.value = withSpring(1, { damping: 15, stiffness: 100 });
-      scale.value = withSpring(1, { damping: 15, stiffness: 100 });
-      translateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+      opacity.value = withSpring(1, { damping: 30, stiffness: 80 });
+      scale.value = withSpring(1, { damping: 30, stiffness: 80 });
+      translateY.value = withSpring(0, { damping: 30, stiffness: 80 });
     } else {
       opacity.value = 0;
       scale.value = 0.8;
@@ -657,15 +657,25 @@ const HomeScreen: React.FC = () => {
     // 선택된 쉼터 ID 업데이트
     setSelectedShelterId(shelter.id);
 
-    // 지도에서 해당 마커를 강조 (크기 확대 + 펄스 애니메이션)
+    // 지도에서 해당 마커를 강조 (색상 변경)
     if (webViewRef.current) {
       const highlightScript = `
-        // 모든 마커를 원래 크기로 복원
+        // 모든 마커를 원래 색상으로 복원
         if (window.markers) {
           window.markers.forEach(function(markerObj) {
-            if (markerObj.marker && markerObj.circle) {
-              // 기존 강조 원 제거
-              markerObj.circle.setMap(null);
+            if (markerObj.marker && markerObj.originalColor) {
+              var normalImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="16" cy="16" r="14" fill="\${markerObj.originalColor}" stroke="white" stroke-width="2"/>
+                  <path d="\${markerObj.icon}" fill="white" transform="translate(8, 8) scale(0.7)"/>
+                </svg>
+              \`);
+              var normalImage = new kakao.maps.MarkerImage(
+                normalImageSrc,
+                new kakao.maps.Size(32, 32),
+                { offset: new kakao.maps.Point(16, 16) }
+              );
+              markerObj.marker.setImage(normalImage);
             }
           });
         }
@@ -677,24 +687,19 @@ const HomeScreen: React.FC = () => {
         }) : null;
 
         if (selectedMarkerObj && selectedMarkerObj.marker) {
-          var markerPos = selectedMarkerObj.marker.getPosition();
-
-          // 선택된 마커 위치로 지도 이동
-          map.setCenter(markerPos);
-
-          // 강조용 펄스 원 추가
-          var pulseCircle = new kakao.maps.Circle({
-            center: markerPos,
-            radius: 30,
-            strokeWeight: 3,
-            strokeColor: '#FF0000',
-            strokeOpacity: 0.8,
-            fillColor: '#FF0000',
-            fillOpacity: 0.2
-          });
-
-          pulseCircle.setMap(map);
-          selectedMarkerObj.circle = pulseCircle;
+          // 밝고 반짝이는 노란색으로 변경
+          var highlightImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="14" fill="#FFD700" stroke="white" stroke-width="3"/>
+              <path d="\${selectedMarkerObj.icon}" fill="white" transform="translate(8, 8) scale(0.7)"/>
+            </svg>
+          \`);
+          var highlightImage = new kakao.maps.MarkerImage(
+            highlightImageSrc,
+            new kakao.maps.Size(32, 32),
+            { offset: new kakao.maps.Point(16, 16) }
+          );
+          selectedMarkerObj.marker.setImage(highlightImage);
         }
       `;
       webViewRef.current.injectJavaScript(highlightScript);
@@ -758,8 +763,8 @@ const HomeScreen: React.FC = () => {
 
     // 하단 슬라이드 닫기
     translateY.value = withSpring(0, {
-      damping: 20,
-      stiffness: 90,
+      damping: 40,
+      stiffness: 60,
     });
     runOnJS(setShowFade)(false);
 
@@ -946,7 +951,7 @@ const HomeScreen: React.FC = () => {
           : `${(totalDistance / 1000).toFixed(1)}km`;
         const duration = Math.round(totalTime / 60); // 분
 
-        // 애니메이션과 함께 길안내 시작 (500ms 후)
+        // 애니메이션과 함께 길안내 시작 (2초 후)
         setTimeout(() => {
           setIsNavigating(true);
           setNavigationInfo({
@@ -957,7 +962,7 @@ const HomeScreen: React.FC = () => {
           setDestinationCoords({ lat: destLat, lon: destLon }); // 목적지 좌표 저장
           setIsLoadingRoute(false);
           console.log('✅ 길안내 시작:', { destinationName, distance, duration });
-        }, 500);
+        }, 2000);
       }
     } catch (error) {
       console.error('❌ 경로 탐색 실패:', error);
@@ -1050,13 +1055,13 @@ const HomeScreen: React.FC = () => {
 
       // 하단 슬라이드 다시 중간 상태로 열기
       translateY.value = withSpring(-peekHeight, {
-        damping: 20,
-        stiffness: 90,
+        damping: 40,
+        stiffness: 60,
       });
       runOnJS(setShowFade)(true);
 
       console.log('✅ 길안내 종료됨');
-    }, 1500); // 1.5초 후 종료
+    }, 2000); // 2초 후 종료
   };
 
   // 하단 슬라이드 애니메이션을 위한 값들
@@ -1309,7 +1314,10 @@ const HomeScreen: React.FC = () => {
           var markerObj = {
             id: String(position.id),
             marker: marker,
-            circle: null
+            circle: null,
+            originalColor: markerColor,
+            type: position.type,
+            icon: markerIcon
           };
           window.markers.push(markerObj);
 
@@ -1565,7 +1573,10 @@ const HomeScreen: React.FC = () => {
                   window.markers.push({
                       id: String(positions[i].id),
                       marker: marker,
-                      circle: null
+                      circle: null,
+                      originalColor: markerColor,
+                      type: positions[i].type,
+                      icon: markerIcon
                   });
 
                   // 정보창 생성
@@ -1654,19 +1665,6 @@ const HomeScreen: React.FC = () => {
             }}
           />
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
-          {/* 온도계 - 좌측 하단 (카테고리 아래) */}
-          <View style={styles.thermometerContainer}>
-            <AnimatedThermometer temperature={weatherData?.temperature || 25} colors={colors} contrastMode={contrastMode} />
-            <View style={styles.temperatureLabelContainer}>
-              <View style={[styles.temperatureLabel, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.temperatureText, { color: colors.text.white }]}>{weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}</Text>
-                <View style={[styles.trianglePointer, { borderRightColor: colors.primary }]} />
-              </View>
-              {weatherData?.weather && (
-                <Text style={[styles.weatherText, { backgroundColor: contrastMode === 'high' ? colors.surface : 'rgba(255, 255, 255, 0.9)', color: colors.text.primary }]}>{weatherData.weather}</Text>
-              )}
-            </View>
-          </View>
 
           {/* 길안내 로딩 오버레이 */}
           <NavigationMessage
@@ -1718,6 +1716,24 @@ const HomeScreen: React.FC = () => {
             </Animated.View>
           )}
 
+          {/* 온도계 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
+          <Animated.View style={[styles.thermometerBottomContainer, locationButtonStyle]}>
+            <View style={styles.thermometerCard}>
+              <View style={styles.thermometerRow}>
+                <AnimatedThermometer temperature={weatherData?.temperature || 25} colors={colors} contrastMode={contrastMode} />
+                <View style={styles.temperatureLabelContainer}>
+                  <View style={[styles.temperatureLabel, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.temperatureText, { color: colors.text.white }]}>{weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}</Text>
+                    <View style={[styles.trianglePointer, { borderRightColor: colors.primary }]} />
+                  </View>
+                  {weatherData?.weather && (
+                    <Text style={[styles.weatherText, { backgroundColor: contrastMode === 'high' ? colors.surface : 'rgba(255, 255, 255, 0.9)', color: colors.text.primary }]}>{weatherData.weather}</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+
           {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
           <Animated.View style={[styles.locationButtonContainer, locationButtonStyle]}>
             <TouchableOpacity
@@ -1736,18 +1752,6 @@ const HomeScreen: React.FC = () => {
               />
             </TouchableOpacity>
           </Animated.View>
-          {/* 하단 페이드 효과 - 슬라이더가 열려있을 때만 표시 */}
-          {showFade && (
-            <LinearGradient
-              colors={[
-                `${colors.surface}00`,
-                `${colors.surface}99`,
-                `${colors.surface}F2`
-              ]}
-              style={styles.bottomFadeFixed}
-              pointerEvents="none"
-            />
-          )}
 
           <GestureDetector gesture={panGesture}>
             <Animated.View style={[styles.overlayBottom, { backgroundColor: colors.surface }, bottomSheetStyle]}>
@@ -2064,6 +2068,19 @@ const styles = StyleSheet.create({
           elevation: 10,
         }),
     },
+    thermometerBottomContainer: {
+        position: 'absolute',
+        left: 20,
+        bottom: 80,
+        zIndex: 10,
+    },
+    thermometerCard: {
+        backgroundColor: 'transparent',
+    },
+    thermometerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     temperatureLabelContainer: {
         marginLeft: 8,
         alignItems: 'center',
@@ -2180,7 +2197,7 @@ const styles = StyleSheet.create({
     },
     navigationInfoContainer: {
         position: 'absolute',
-        top: 120,
+        top: 80,
         left: 20,
         right: 20,
         borderRadius: 12,
