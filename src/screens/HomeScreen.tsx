@@ -242,6 +242,98 @@ const shelters: Shelter[] = [
 
 type HomeScreenNavigationProp = StackNavigationProp<MainTabParamList, 'Home'>;
 
+// 로딩 점 애니메이션 컴포넌트
+const LoadingDots: React.FC<{ color: string }> = ({ color }) => {
+  const dot1Opacity = useSharedValue(0.3);
+  const dot2Opacity = useSharedValue(0.3);
+  const dot3Opacity = useSharedValue(0.3);
+
+  useEffect(() => {
+    const animateDot = (dotOpacity: Animated.SharedValue<number>, delay: number) => {
+      dotOpacity.value = withSpring(1, { damping: 2, stiffness: 100 }, () => {
+        dotOpacity.value = withSpring(0.3, { damping: 2, stiffness: 100 });
+      });
+    };
+
+    const interval = setInterval(() => {
+      animateDot(dot1Opacity, 0);
+      setTimeout(() => animateDot(dot2Opacity, 0), 200);
+      setTimeout(() => animateDot(dot3Opacity, 0), 400);
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const dot1Style = useAnimatedStyle(() => ({
+    opacity: dot1Opacity.value,
+  }));
+
+  const dot2Style = useAnimatedStyle(() => ({
+    opacity: dot2Opacity.value,
+  }));
+
+  const dot3Style = useAnimatedStyle(() => ({
+    opacity: dot3Opacity.value,
+  }));
+
+  return (
+    <View style={styles.loadingDots}>
+      <Animated.View style={[styles.dot, { backgroundColor: color }, dot1Style]} />
+      <Animated.View style={[styles.dot, { backgroundColor: color }, dot2Style]} />
+      <Animated.View style={[styles.dot, { backgroundColor: color }, dot3Style]} />
+    </View>
+  );
+};
+
+// 길안내 메시지 애니메이션 컴포넌트
+const NavigationMessage: React.FC<{
+  visible: boolean;
+  icon: string;
+  message: string;
+  colors: any;
+  getFontSize: (size: number) => number;
+  showDots?: boolean;
+}> = ({ visible, icon, message, colors, getFontSize, showDots = false }) => {
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.8);
+  const translateY = useSharedValue(-20);
+
+  useEffect(() => {
+    if (visible) {
+      // 페이드인 + 스케일 + 위에서 아래로
+      opacity.value = withSpring(1, { damping: 15, stiffness: 100 });
+      scale.value = withSpring(1, { damping: 15, stiffness: 100 });
+      translateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+    } else {
+      opacity.value = 0;
+      scale.value = 0.8;
+      translateY.value = -20;
+    }
+  }, [visible]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [
+      { scale: scale.value },
+      { translateY: translateY.value },
+    ],
+  }));
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.loadingOverlay}>
+      <Animated.View style={[styles.loadingCard, { backgroundColor: colors.surface }, animatedStyle]}>
+        <Ionicons name={icon as any} size={32} color={colors.primary} />
+        <Text style={[styles.loadingText, { fontSize: getFontSize(16), color: colors.text.primary }]}>
+          {message}
+        </Text>
+        {showDots && <LoadingDots color={colors.primary} />}
+      </Animated.View>
+    </View>
+  );
+};
+
 const HomeScreen: React.FC = () => {
   const { accessToken, refreshTokens } = useAuth();
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -270,6 +362,29 @@ const HomeScreen: React.FC = () => {
     distance: string;
     duration: string;
   } | null>(null);
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+  const [isEndingRoute, setIsEndingRoute] = useState(false);
+  const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lon: number } | null>(null);
+
+  // 길안내 정보 카드 애니메이션
+  const navInfoOpacity = useSharedValue(0);
+  const navInfoTranslateY = useSharedValue(-20);
+
+  // 길안내 정보 카드 애니메이션 트리거
+  useEffect(() => {
+    if (isNavigating && !isLoadingRoute && !isEndingRoute) {
+      navInfoOpacity.value = withSpring(1, { damping: 15, stiffness: 100 });
+      navInfoTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+    } else {
+      navInfoOpacity.value = 0;
+      navInfoTranslateY.value = -20;
+    }
+  }, [isNavigating, isLoadingRoute, isEndingRoute]);
+
+  const navInfoAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: navInfoOpacity.value,
+    transform: [{ translateY: navInfoTranslateY.value }],
+  }));
 
   // 선택된 쉼터 ID (마커 강조용)
   const [selectedShelterId, setSelectedShelterId] = useState<string | null>(null);
@@ -641,6 +756,16 @@ const HomeScreen: React.FC = () => {
 
     console.log('🗺️ 길찾기 시작:', { from: { myLat, myLon }, to: { destLat, destLon }, name: destinationName });
 
+    // 하단 슬라이드 닫기
+    translateY.value = withSpring(0, {
+      damping: 20,
+      stiffness: 90,
+    });
+    runOnJS(setShowFade)(false);
+
+    // 로딩 시작
+    setIsLoadingRoute(true);
+
     try {
       // TMAP 보행자 경로 안내 API
       const requestBody = {
@@ -701,17 +826,43 @@ const HomeScreen: React.FC = () => {
         }
       });
 
+      // 출발지와 목적지를 명시적으로 연결 (끊김 방지)
+      if (pathCoords.length > 0) {
+        // 첫 번째 좌표가 현재 위치와 다르면 출발지 추가
+        const firstCoord = pathCoords[0];
+        const distToStart = Math.abs(firstCoord[0] - myLat) + Math.abs(firstCoord[1] - myLon);
+        if (distToStart > 0.0001) { // 약 10m 이상 차이나면
+          console.log('🔗 출발지 연결:', { myLat, myLon }, '→', firstCoord);
+          pathCoords.unshift([myLat, myLon]); // 맨 앞에 현재 위치 추가
+        }
+
+        // 마지막 좌표가 목적지와 다르면 목적지 추가
+        const lastCoord = pathCoords[pathCoords.length - 1];
+        const distToEnd = Math.abs(lastCoord[0] - destLat) + Math.abs(lastCoord[1] - destLon);
+        if (distToEnd > 0.0001) { // 약 10m 이상 차이나면
+          console.log('🔗 목적지 연결:', lastCoord, '→', { destLat, destLon });
+          pathCoords.push([destLat, destLon]); // 맨 뒤에 목적지 추가
+        }
+      }
+
       console.log('🗺️ 경로 좌표 개수:', pathCoords.length);
       console.log('🗺️ 총 거리:', totalDistance, 'm, 총 시간:', totalTime, '초');
+      console.log('🗺️ 경로 시작:', pathCoords[0], '경로 끝:', pathCoords[pathCoords.length - 1]);
 
       // WebView에 경로 그리기
       if (webViewRef.current && pathCoords.length > 0) {
         const pathString = pathCoords.map(coord => `new kakao.maps.LatLng(${coord[0]}, ${coord[1]})`).join(',');
 
         const drawRouteScript = `
-          // 기존 경로 폴리라인 제거
+          // 기존 경로 폴리라인 및 마커 제거
           if (window.routeLine) {
             window.routeLine.setMap(null);
+          }
+          if (window.startMarker) {
+            window.startMarker.setMap(null);
+          }
+          if (window.endMarker) {
+            window.endMarker.setMap(null);
           }
 
           // 실제 보행자 경로 그리기
@@ -727,12 +878,62 @@ const HomeScreen: React.FC = () => {
 
           window.routeLine.setMap(window.map);
 
+          // 출발지 마커 (현재 위치 - 초록색)
+          var startLatLng = new kakao.maps.LatLng(${myLat}, ${myLon});
+          var startMarkerImage = new kakao.maps.MarkerImage(
+            'data:image/svg+xml;base64,' + btoa(\`
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="18" fill="#22C55E" stroke="white" stroke-width="3"/>
+                <circle cx="20" cy="20" r="8" fill="white"/>
+              </svg>
+            \`),
+            new kakao.maps.Size(40, 40),
+            { offset: new kakao.maps.Point(20, 20) }
+          );
+
+          window.startMarker = new kakao.maps.Marker({
+            position: startLatLng,
+            image: startMarkerImage,
+            zIndex: 100
+          });
+          window.startMarker.setMap(window.map);
+
+          // 목적지 마커 (도착지 - 빨간색 핀)
+          var endLatLng = new kakao.maps.LatLng(${destLat}, ${destLon});
+          var endMarkerImage = new kakao.maps.MarkerImage(
+            'data:image/svg+xml;base64,' + btoa(\`
+              <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 0C11.716 0 5 6.716 5 15c0 11.25 15 35 15 35s15-23.75 15-35c0-8.284-6.716-15-15-15z" fill="#EF4444"/>
+                <circle cx="20" cy="15" r="8" fill="white"/>
+              </svg>
+            \`),
+            new kakao.maps.Size(40, 50),
+            { offset: new kakao.maps.Point(20, 50) }
+          );
+
+          window.endMarker = new kakao.maps.Marker({
+            position: endLatLng,
+            image: endMarkerImage,
+            zIndex: 101
+          });
+          window.endMarker.setMap(window.map);
+
           // 경로가 모두 보이도록 지도 범위 조정
           var bounds = new kakao.maps.LatLngBounds();
           linePath.forEach(function(point) {
             bounds.extend(point);
           });
+
+          // 지도 범위 설정 및 강제 리렌더링
           window.map.setBounds(bounds);
+
+          // 약간의 딜레이 후 다시 한 번 bounds 설정 (렌더링 버그 방지)
+          setTimeout(function() {
+            window.map.setBounds(bounds);
+            if (window.map.relayout) {
+              window.map.relayout();
+            }
+          }, 100);
 
           console.log('✅ 보행자 경로가 지도에 표시되었습니다');
         `;
@@ -745,39 +946,117 @@ const HomeScreen: React.FC = () => {
           : `${(totalDistance / 1000).toFixed(1)}km`;
         const duration = Math.round(totalTime / 60); // 분
 
-        // 길안내 상태 업데이트
-        setIsNavigating(true);
-        setNavigationInfo({
-          destinationName: destinationName || '목적지',
-          distance: distance,
-          duration: `약 ${duration}분`,
-        });
-
-        console.log('✅ 길안내 시작:', { destinationName, distance, duration });
+        // 애니메이션과 함께 길안내 시작 (500ms 후)
+        setTimeout(() => {
+          setIsNavigating(true);
+          setNavigationInfo({
+            destinationName: destinationName || '목적지',
+            distance: distance,
+            duration: `약 ${duration}분`,
+          });
+          setDestinationCoords({ lat: destLat, lon: destLon }); // 목적지 좌표 저장
+          setIsLoadingRoute(false);
+          console.log('✅ 길안내 시작:', { destinationName, distance, duration });
+        }, 500);
       }
     } catch (error) {
       console.error('❌ 경로 탐색 실패:', error);
+      setIsLoadingRoute(false);
       Alert.alert('오류', '경로를 찾을 수 없습니다.\n다시 시도해주세요.');
     }
   };
 
+  // 하버사인 공식을 사용한 거리 계산 (미터 단위)
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3; // 지구 반지름 (미터)
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // 미터 단위
+  };
+
+  // 목적지 도착 감지
+  useEffect(() => {
+    if (!isNavigating || !destinationCoords || !currentLocation) return;
+
+    const distance = calculateDistance(
+      currentLocation.coords.latitude,
+      currentLocation.coords.longitude,
+      destinationCoords.lat,
+      destinationCoords.lon
+    );
+
+    console.log('📍 목적지까지 거리:', Math.round(distance), 'm');
+
+    // 목적지 반경 10m 이내에 도착하면 자동 종료
+    if (distance <= 10) {
+      console.log('🎯 목적지 도착!');
+      handleCancelNavigation();
+    }
+  }, [currentLocation, isNavigating, destinationCoords]);
+
   // 길안내 취소 함수
   const handleCancelNavigation = () => {
-    // 지도에서 경로 제거
-    if (webViewRef.current) {
-      const clearRouteScript = `
-        if (window.routeLine) {
-          window.routeLine.setMap(null);
-          window.routeLine = null;
-        }
-      `;
-      webViewRef.current.injectJavaScript(clearRouteScript);
-    }
+    // 종료 메시지 표시
+    setIsEndingRoute(true);
 
-    // 상태 초기화
-    setIsNavigating(false);
-    setNavigationInfo(null);
-    console.log('✅ 길안내 취소됨');
+    setTimeout(() => {
+      // 지도에서 경로 및 마커 제거 및 내 위치로 포커스
+      if (webViewRef.current) {
+        const myLat = currentLocation?.coords.latitude || 37.5665;
+        const myLon = currentLocation?.coords.longitude || 126.9780;
+
+        const clearRouteScript = `
+          // 경로 및 마커 제거
+          if (window.routeLine) {
+            window.routeLine.setMap(null);
+            window.routeLine = null;
+          }
+          if (window.startMarker) {
+            window.startMarker.setMap(null);
+            window.startMarker = null;
+          }
+          if (window.endMarker) {
+            window.endMarker.setMap(null);
+            window.endMarker = null;
+          }
+
+          // 내 위치로 지도 이동 (부드러운 애니메이션)
+          var myPosition = new kakao.maps.LatLng(${myLat}, ${myLon});
+          window.map.panTo(myPosition);
+
+          // 적절한 줌 레벨로 설정
+          setTimeout(function() {
+            window.map.setLevel(4);
+          }, 300);
+
+          console.log('📍 내 위치로 포커스:', ${myLat}, ${myLon});
+        `;
+        webViewRef.current.injectJavaScript(clearRouteScript);
+      }
+
+      // 상태 초기화
+      setIsNavigating(false);
+      setNavigationInfo(null);
+      setDestinationCoords(null);
+      setIsEndingRoute(false);
+
+      // 하단 슬라이드 다시 중간 상태로 열기
+      translateY.value = withSpring(-peekHeight, {
+        damping: 20,
+        stiffness: 90,
+      });
+      runOnJS(setShowFade)(true);
+
+      console.log('✅ 길안내 종료됨');
+    }, 1500); // 1.5초 후 종료
   };
 
   // 하단 슬라이드 애니메이션을 위한 값들
@@ -1389,9 +1668,28 @@ const HomeScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* 길안내 로딩 오버레이 */}
+          <NavigationMessage
+            visible={isLoadingRoute}
+            icon="navigate"
+            message="길안내를 시작하겠습니다"
+            colors={colors}
+            getFontSize={getFontSize}
+            showDots={true}
+          />
+
+          {/* 길안내 종료 오버레이 */}
+          <NavigationMessage
+            visible={isEndingRoute}
+            icon="checkmark-circle"
+            message="길안내를 종료하겠습니다"
+            colors={colors}
+            getFontSize={getFontSize}
+          />
+
           {/* 길안내 정보 오버레이 */}
-          {isNavigating && navigationInfo && (
-            <View style={[styles.navigationInfoContainer, { backgroundColor: colors.surface }]}>
+          {isNavigating && navigationInfo && !isLoadingRoute && !isEndingRoute && (
+            <Animated.View style={[styles.navigationInfoContainer, { backgroundColor: colors.surface }, navInfoAnimatedStyle]}>
               <View style={styles.navigationInfoContent}>
                 <View style={styles.navigationInfoLeft}>
                   <Ionicons name="navigate" size={20} color={colors.primary} />
@@ -1417,7 +1715,7 @@ const HomeScreen: React.FC = () => {
                   <Ionicons name="close" size={18} color={colors.text.secondary} />
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
           )}
 
           {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
@@ -1838,6 +2136,47 @@ const styles = StyleSheet.create({
         borderLeftWidth: 0,
         borderTopColor: 'transparent',
         borderBottomColor: 'transparent',
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100,
+    },
+    loadingCard: {
+        borderRadius: 20,
+        padding: 32,
+        alignItems: 'center',
+        minWidth: 200,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
+          elevation: 12,
+        }),
+    },
+    loadingText: {
+        marginTop: 16,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    loadingDots: {
+        flexDirection: 'row',
+        marginTop: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginHorizontal: 4,
     },
     navigationInfoContainer: {
         position: 'absolute',
