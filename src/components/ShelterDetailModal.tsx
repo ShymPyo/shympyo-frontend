@@ -38,7 +38,7 @@ interface ShelterDetailModalProps {
   visible: boolean;
   shelter: Shelter | null;
   onClose: () => void;
-  onNavigate?: (latitude: number, longitude: number) => void;
+  onNavigate?: (latitude: number, longitude: number, name?: string) => void;
 }
 
 const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
@@ -61,7 +61,7 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
     // 모달을 닫고 부모 컴포넌트에서 경로 그리기
     onClose();
     if (onNavigate) {
-      onNavigate(shelter.latitude, shelter.longitude);
+      onNavigate(shelter.latitude, shelter.longitude, shelter.name);
     }
   };
 

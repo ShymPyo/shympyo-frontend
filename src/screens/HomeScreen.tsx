@@ -263,6 +263,17 @@ const HomeScreen: React.FC = () => {
   // 날씨 관련 상태
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
 
+  // 길안내 관련 상태
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [navigationInfo, setNavigationInfo] = useState<{
+    destinationName: string;
+    distance: string;
+    duration: string;
+  } | null>(null);
+
+  // 선택된 쉼터 ID (마커 강조용)
+  const [selectedShelterId, setSelectedShelterId] = useState<string | null>(null);
+
   // 위치 권한 요청 및 초기 위치 설정
   useEffect(() => {
     const requestLocationPermission = async () => {
@@ -528,6 +539,53 @@ const HomeScreen: React.FC = () => {
 
   // 장소 상세 정보 가져오기
   const handleShelterPress = async (shelter: Shelter) => {
+    // 선택된 쉼터 ID 업데이트
+    setSelectedShelterId(shelter.id);
+
+    // 지도에서 해당 마커를 강조 (크기 확대 + 펄스 애니메이션)
+    if (webViewRef.current) {
+      const highlightScript = `
+        // 모든 마커를 원래 크기로 복원
+        if (window.markers) {
+          window.markers.forEach(function(markerObj) {
+            if (markerObj.marker && markerObj.circle) {
+              // 기존 강조 원 제거
+              markerObj.circle.setMap(null);
+            }
+          });
+        }
+
+        // 선택된 마커 찾기
+        var selectedMarkerId = "${shelter.id}";
+        var selectedMarkerObj = window.markers ? window.markers.find(function(m) {
+          return m.id === selectedMarkerId;
+        }) : null;
+
+        if (selectedMarkerObj && selectedMarkerObj.marker) {
+          var markerPos = selectedMarkerObj.marker.getPosition();
+
+          // 선택된 마커 위치로 지도 이동
+          map.setCenter(markerPos);
+
+          // 강조용 펄스 원 추가
+          var pulseCircle = new kakao.maps.Circle({
+            center: markerPos,
+            radius: 30,
+            strokeWeight: 3,
+            strokeColor: '#FF0000',
+            strokeOpacity: 0.8,
+            fillColor: '#FF0000',
+            fillOpacity: 0.2
+          });
+
+          pulseCircle.setMap(map);
+          selectedMarkerObj.circle = pulseCircle;
+        }
+      `;
+      webViewRef.current.injectJavaScript(highlightScript);
+      console.log('🎯 마커 강조:', shelter.name, shelter.id);
+    }
+
     // 백엔드에서 실제 데이터가 있는 경우 상세 정보 조회
     if (mapLocations.length > 0) {
       try {
@@ -572,7 +630,7 @@ const HomeScreen: React.FC = () => {
   };
 
   // 길찾기: 지도에 경로 그리기 (TMAP 보행자 경로 API)
-  const handleNavigation = async (destLat: number, destLon: number) => {
+  const handleNavigation = async (destLat: number, destLon: number, destinationName?: string) => {
     if (!currentLocation) {
       Alert.alert('알림', '현재 위치 정보를 가져올 수 없습니다.');
       return;
@@ -581,7 +639,7 @@ const HomeScreen: React.FC = () => {
     const myLat = currentLocation.coords.latitude;
     const myLon = currentLocation.coords.longitude;
 
-    console.log('🗺️ 길찾기 시작:', { from: { myLat, myLon }, to: { destLat, destLon } });
+    console.log('🗺️ 길찾기 시작:', { from: { myLat, myLon }, to: { destLat, destLon }, name: destinationName });
 
     try {
       // TMAP 보행자 경로 안내 API
@@ -681,16 +739,45 @@ const HomeScreen: React.FC = () => {
 
         webViewRef.current.injectJavaScript(drawRouteScript);
 
-        // 거리와 시간 정보 표시
-        const distance = (totalDistance / 1000).toFixed(1); // km
+        // 거리와 시간 정보 계산
+        const distance = totalDistance < 1000
+          ? `${Math.round(totalDistance)}m`
+          : `${(totalDistance / 1000).toFixed(1)}km`;
         const duration = Math.round(totalTime / 60); // 분
 
-        Alert.alert('길찾기', `거리: 약 ${distance}km\n도보 예상 시간: 약 ${duration}분`);
+        // 길안내 상태 업데이트
+        setIsNavigating(true);
+        setNavigationInfo({
+          destinationName: destinationName || '목적지',
+          distance: distance,
+          duration: `약 ${duration}분`,
+        });
+
+        console.log('✅ 길안내 시작:', { destinationName, distance, duration });
       }
     } catch (error) {
       console.error('❌ 경로 탐색 실패:', error);
       Alert.alert('오류', '경로를 찾을 수 없습니다.\n다시 시도해주세요.');
     }
+  };
+
+  // 길안내 취소 함수
+  const handleCancelNavigation = () => {
+    // 지도에서 경로 제거
+    if (webViewRef.current) {
+      const clearRouteScript = `
+        if (window.routeLine) {
+          window.routeLine.setMap(null);
+          window.routeLine = null;
+        }
+      `;
+      webViewRef.current.injectJavaScript(clearRouteScript);
+    }
+
+    // 상태 초기화
+    setIsNavigating(false);
+    setNavigationInfo(null);
+    console.log('✅ 길안내 취소됨');
   };
 
   // 하단 슬라이드 애니메이션을 위한 값들
@@ -896,7 +983,10 @@ const HomeScreen: React.FC = () => {
       const updateMarkersScript = `
         // 기존 마커들 제거
         if (window.markers) {
-          window.markers.forEach(marker => marker.setMap(null));
+          window.markers.forEach(function(markerObj) {
+            if (markerObj.marker) markerObj.marker.setMap(null);
+            if (markerObj.circle) markerObj.circle.setMap(null);
+          });
         }
         window.markers = [];
 
@@ -935,7 +1025,14 @@ const HomeScreen: React.FC = () => {
           });
 
           marker.setMap(window.map);
-          window.markers.push(marker);
+
+          // 마커를 ID와 함께 배열에 저장
+          var markerObj = {
+            id: String(position.id),
+            marker: marker,
+            circle: null
+          };
+          window.markers.push(markerObj);
 
           kakao.maps.event.addListener(marker, 'click', function() {
             console.log('🗺️ 동적 마커 클릭됨! Place ID:', position.id);
@@ -1185,8 +1282,12 @@ const HomeScreen: React.FC = () => {
                       image: markerImage
                   });
 
-                  // 마커를 배열에 저장
-                  window.markers.push(marker);
+                  // 마커를 ID와 함께 배열에 저장 (강조 기능용)
+                  window.markers.push({
+                      id: String(positions[i].id),
+                      marker: marker,
+                      circle: null
+                  });
 
                   // 정보창 생성
                   var infoWindow = new kakao.maps.InfoWindow({
@@ -1199,8 +1300,8 @@ const HomeScreen: React.FC = () => {
                   });
 
                   // 마커 클릭 이벤트 - React Native로 상세 정보 요청
-                  (function(marker, infoWindow, placeId) {
-                      kakao.maps.event.addListener(marker, 'click', function() {
+                  (function(markerObj, infoWindow, placeId) {
+                      kakao.maps.event.addListener(markerObj.marker, 'click', function() {
                           console.log('🗺️ 마커 클릭됨! Place ID:', placeId);
 
                           // React Native로 장소 ID 전달
@@ -1211,7 +1312,7 @@ const HomeScreen: React.FC = () => {
                               console.log('❌ ReactNativeWebView 없음');
                           }
                       });
-                  })(marker, infoWindow, positions[i].id);
+                  })(window.markers[window.markers.length - 1], infoWindow, positions[i].id);
               }
           }
 
@@ -1287,6 +1388,37 @@ const HomeScreen: React.FC = () => {
               )}
             </View>
           </View>
+
+          {/* 길안내 정보 오버레이 */}
+          {isNavigating && navigationInfo && (
+            <View style={[styles.navigationInfoContainer, { backgroundColor: colors.surface }]}>
+              <View style={styles.navigationInfoContent}>
+                <View style={styles.navigationInfoLeft}>
+                  <Ionicons name="navigate" size={20} color={colors.primary} />
+                  <View style={styles.navigationTextContainer}>
+                    <Text style={[styles.navigationDestination, { fontSize: getFontSize(14), color: colors.text.primary }]} numberOfLines={1}>
+                      {navigationInfo.destinationName}
+                    </Text>
+                    <View style={styles.navigationDetails}>
+                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(12), color: colors.text.secondary }]}>
+                        {navigationInfo.distance}
+                      </Text>
+                      <Text style={[styles.navigationSeparator, { fontSize: getFontSize(12), color: colors.text.light }]}>•</Text>
+                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(12), color: colors.text.secondary }]}>
+                        {navigationInfo.duration}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.navigationCloseButton, { backgroundColor: colors.text.light + '20' }]}
+                  onPress={handleCancelNavigation}
+                >
+                  <Ionicons name="close" size={18} color={colors.text.secondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
           <Animated.View style={[styles.locationButtonContainer, locationButtonStyle]}>
@@ -1706,6 +1838,59 @@ const styles = StyleSheet.create({
         borderLeftWidth: 0,
         borderTopColor: 'transparent',
         borderBottomColor: 'transparent',
+    },
+    navigationInfoContainer: {
+        position: 'absolute',
+        top: 120,
+        left: 20,
+        right: 20,
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        zIndex: 15,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 8,
+        }),
+    },
+    navigationInfoContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    navigationInfoLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 8,
+    },
+    navigationTextContainer: {
+        marginLeft: 10,
+        flex: 1,
+    },
+    navigationDestination: {
+        fontWeight: '700',
+        marginBottom: 2,
+    },
+    navigationDetails: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    navigationDetailText: {
+        fontWeight: '500',
+    },
+    navigationSeparator: {
+        marginHorizontal: 6,
+    },
+    navigationCloseButton: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     shelterCategoryContainer: {
         position: 'absolute',
