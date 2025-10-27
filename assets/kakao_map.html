@@ -14,6 +14,13 @@
             width: 100%;
             height: calc(100% - 70px);
         }
+        /* 카카오맵의 불필요한 POI 레이블 숨기기 */
+        #map .label {
+            display: none !important;
+        }
+        #map .info {
+            display: none !important;
+        }
         .category-container {
             display: flex;
             justify-content: space-around;
@@ -137,7 +144,7 @@
 
                 var options = {
                     center: new kakao.maps.LatLng(37.5665, 126.978),
-                    level: 4
+                    level: 6  // 레벨을 높여서 세부 정보 감소
                 };
 
                 var map = new kakao.maps.Map(container, options);
