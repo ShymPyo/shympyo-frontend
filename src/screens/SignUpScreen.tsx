@@ -14,6 +14,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -45,6 +46,13 @@ const SignUpScreen: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 약관 동의 상태
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [locationAgreed, setLocationAgreed] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [modalContent, setModalContent] = useState({ title: '', content: '' });
+
   // 기본 프로필 이미지들
   const defaultProfiles = [
     require('../../assets/profiles/profile1.png'),
@@ -56,11 +64,81 @@ const SignUpScreen: React.FC = () => {
     require('../../assets/profiles/profile7.png'),
   ];
 
+  // 약관 내용
+  const termsOfService = `제1조 (목적) 본 약관은 "쉼표"가 제공하는 서비스의 이용 조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.
+
+제2조 (이용계약의 성립) 이용자가 본 약관에 동의하고 회원가입 절차를 완료함으로써 서비스 이용계약이 성립됩니다.
+
+제3조 (회원의 의무) 회원은 관계 법령, 본 약관의 규정, 이용안내 및 주의사항 등을 준수해야 하며, 타인의 권리나 명예를 침해해서는 안 됩니다.
+
+제4조 (서비스의 중단) 회사는 서비스 점검, 설비 교체 또는 통신 장애 등의 사유가 발생할 경우 일시적으로 서비스 제공을 중단할 수 있습니다.`;
+
+  const privacyPolicy = `1. 수집하는 개인정보 항목
+    - 회원가입 시: 이름, 이메일, 휴대전화번호, 비밀번호 등
+    - 서비스 이용 시: 기기정보, 접속 로그 등
+
+2. 개인정보 수집 및 이용 목적
+    - 회원 식별 및 서비스 제공
+    - 고객 상담 및 민원 처리
+    - 서비스 개선 및 맞춤형 제공
+
+3. 보유 및 이용기간
+    - 회원 탈퇴 시 즉시 파기
+    - 단, 관계 법령에 따라 일정 기간 보관할 수 있음
+    (전자상거래 기록 5년, 접속 로그 3개월 등)
+
+4. 이용자는 개인정보 수집 및 이용에 동의하지 않을 수 있으나, 이 경우 서비스 이용이 제한될 수 있습니다.`;
+
+  const locationPolicy = `1. 위치정보 수집 및 이용 목적
+    - 주변 쉼터 안내, 지역 기반 서비스 제공
+    - 사용자 맞춤형 콘텐츠 및 혜택 제공
+
+2. 수집하는 위치정보의 항목
+    - GPS, Wi-Fi, 기지국 기반 위치정보
+
+3. 위치정보 보유 및 이용기간
+    - 서비스 이용 목적 달성 후 즉시 파기
+    - 단, 법령에 따라 보존이 필요한 경우 해당 기간 동안 보관
+
+4. 이용자의 권리
+    - 위치정보 이용·제공에 대한 동의 철회 가능
+    - 위치정보 열람·정정 요청 가능`;
+
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
 
+  // 약관 보기 모달 열기
+  const showTermsDetail = (type: 'terms' | 'privacy' | 'location') => {
+    let title = '';
+    let content = '';
+
+    switch (type) {
+      case 'terms':
+        title = '서비스 이용약관';
+        content = termsOfService;
+        break;
+      case 'privacy':
+        title = '개인정보 수집 및 이용';
+        content = privacyPolicy;
+        break;
+      case 'location':
+        title = '위치 정보 이용';
+        content = locationPolicy;
+        break;
+    }
+
+    setModalContent({ title, content });
+    setShowTermsModal(true);
+  };
+
   const validateForm = () => {
+    // 약관 동의 확인
+    if (!termsAgreed || !privacyAgreed || !locationAgreed) {
+      Alert.alert('알림', '모든 필수 약관에 동의해주세요.');
+      return false;
+    }
+
     if (!email || !password || !confirmPassword || !name || !phone || !nickname || !bio) {
       const missing = [];
       if (!email) missing.push('이메일');
@@ -449,6 +527,80 @@ const SignUpScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {/* 약관 동의 */}
+              <View style={styles.termsContainer}>
+                <Text style={[styles.termsTitle, { fontSize: getFontSize(16) }]}>약관 동의</Text>
+
+                {/* 서비스 이용약관 */}
+                <View style={styles.termItem}>
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => setTermsAgreed(!termsAgreed)}
+                  >
+                    <Ionicons
+                      name={termsAgreed ? "checkbox" : "square-outline"}
+                      size={24}
+                      color={termsAgreed ? Colors.primary : Colors.text.light}
+                    />
+                    <Text style={[styles.termText, { fontSize: getFontSize(14) }]}>
+                      [필수] 서비스 이용약관 동의
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => showTermsDetail('terms')}
+                  >
+                    <Text style={[styles.viewButtonText, { fontSize: getFontSize(13) }]}>보기</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 개인정보 수집 및 이용 */}
+                <View style={styles.termItem}>
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => setPrivacyAgreed(!privacyAgreed)}
+                  >
+                    <Ionicons
+                      name={privacyAgreed ? "checkbox" : "square-outline"}
+                      size={24}
+                      color={privacyAgreed ? Colors.primary : Colors.text.light}
+                    />
+                    <Text style={[styles.termText, { fontSize: getFontSize(14) }]}>
+                      [필수] 개인정보 수집 및 이용 동의
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => showTermsDetail('privacy')}
+                  >
+                    <Text style={[styles.viewButtonText, { fontSize: getFontSize(13) }]}>보기</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 위치 정보 이용 */}
+                <View style={styles.termItem}>
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => setLocationAgreed(!locationAgreed)}
+                  >
+                    <Ionicons
+                      name={locationAgreed ? "checkbox" : "square-outline"}
+                      size={24}
+                      color={locationAgreed ? Colors.primary : Colors.text.light}
+                    />
+                    <Text style={[styles.termText, { fontSize: getFontSize(14) }]}>
+                      [필수] 위치 정보 이용 동의
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => showTermsDetail('location')}
+                  >
+                    <Text style={[styles.viewButtonText, { fontSize: getFontSize(13) }]}>보기</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -472,6 +624,41 @@ const SignUpScreen: React.FC = () => {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* 약관 상세 보기 모달 */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showTermsModal}
+          onRequestClose={() => setShowTermsModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: getFontSize(18) }]}>
+                  {modalContent.title}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowTermsModal(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons name="close" size={24} color={Colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalBody}>
+                <Text style={[styles.modalText, { fontSize: getFontSize(14) }]}>
+                  {modalContent.content}
+                </Text>
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowTermsModal(false)}
+              >
+                <Text style={[styles.modalButtonText, { fontSize: getFontSize(16) }]}>확인</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
   );
 };
@@ -613,6 +800,103 @@ const styles = StyleSheet.create({
   copyright: {
     fontSize: 12,
     color: Colors.text.light,
+  },
+  // 약관 동의 스타일
+  termsContainer: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+  },
+  termsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: 15,
+  },
+  termItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  termText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    marginLeft: 8,
+  },
+  viewButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  viewButtonText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+    position: 'relative',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    textAlign: 'center',
+  },
+  modalCloseButton: {
+    padding: 5,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  modalBody: {
+    maxHeight: 400,
+  },
+  modalText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    lineHeight: 22,
+  },
+  modalButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
