@@ -743,8 +743,8 @@ const HomeScreen: React.FC = () => {
             if (markerObj.marker && markerObj.pinImage) {
               var normalImage = new kakao.maps.MarkerImage(
                 markerObj.pinImage,
-                new kakao.maps.Size(36, 45),
-                { offset: new kakao.maps.Point(18, 45) }
+                new kakao.maps.Size(36, 46),
+                { offset: new kakao.maps.Point(18, 46) }
               );
               markerObj.marker.setImage(normalImage);
             }
@@ -758,11 +758,11 @@ const HomeScreen: React.FC = () => {
         }) : null;
 
         if (selectedMarkerObj && selectedMarkerObj.marker && selectedMarkerObj.pinImage) {
-          // 선택된 마커는 크기를 키워서 강조
+          // 선택된 마커는 크기를 키워서 강조 - 비율 301:388 유지
           var highlightImage = new kakao.maps.MarkerImage(
             selectedMarkerObj.pinImage,
-            new kakao.maps.Size(48, 60),
-            { offset: new kakao.maps.Point(24, 60) }
+            new kakao.maps.Size(48, 62),
+            { offset: new kakao.maps.Point(24, 62) }
           );
           selectedMarkerObj.marker.setImage(highlightImage);
         }
@@ -1412,9 +1412,9 @@ const HomeScreen: React.FC = () => {
                             position.type === 'PUBLIC' ? '${pinImages?.politic}' :
                             position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
 
-          // 고해상도 이미지 직접 사용 (그림자는 CSS로)
-          var markerSize = new kakao.maps.Size(36, 45);
-          var markerOffset = new kakao.maps.Point(18, 45);
+          // 고해상도 이미지 직접 사용 (그림자는 CSS로) - 비율 301:388 유지
+          var markerSize = new kakao.maps.Size(36, 46);
+          var markerOffset = new kakao.maps.Point(18, 46);
 
           var markerImage = new kakao.maps.MarkerImage(
             pinImageSrc,
@@ -1677,9 +1677,9 @@ const HomeScreen: React.FC = () => {
                                     positions[i].type === 'PUBLIC' ? '${pinImages?.politic}' :
                                     positions[i].type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
 
-                  // 고해상도 이미지 직접 사용 (그림자는 CSS로)
-                  var markerSize = new kakao.maps.Size(36, 45);
-                  var markerOffset = new kakao.maps.Point(18, 45);
+                  // 고해상도 이미지 직접 사용 (그림자는 CSS로) - 비율 301:388 유지
+                  var markerSize = new kakao.maps.Size(36, 46);
+                  var markerOffset = new kakao.maps.Point(18, 46);
 
                   var markerImage = new kakao.maps.MarkerImage(
                       pinImageSrc,

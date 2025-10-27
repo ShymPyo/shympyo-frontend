@@ -150,36 +150,7 @@
                 var map = new kakao.maps.Map(container, options);
                 console.log('Map initialized successfully');
 
-        var positions = [
-            {
-                title: '카페 빈스',
-                latlng: new kakao.maps.LatLng(37.4485, 126.6584)
-            },
-            {
-                title: '용현노인문화센터',
-                latlng: new kakao.maps.LatLng(37.4505, 126.6564)
-            },
-            {
-                title: '인하대역',
-                latlng: new kakao.maps.LatLng(37.4495, 126.6554)
-            },
-            {
-                title: '스마트쉼터',
-                latlng: new kakao.maps.LatLng(37.4515, 126.6594)
-            },
-            {
-                title: '공공시설',
-                latlng: new kakao.maps.LatLng(37.4475, 126.6534)
-            }
-        ];
-
-                for (var i = 0; i < positions.length; i ++) {
-                    var marker = new kakao.maps.Marker({
-                        map: map,
-                        position: positions[i].latlng,
-                        title: positions[i].title
-                    });
-                }
+                // 하드코딩된 더미 마커들 제거됨 - 실제 쉼터 데이터는 HomeScreen에서 동적으로 표시됨
 
                 // 현위치 마커 관련 변수
                 var currentPositionMarker = null;
