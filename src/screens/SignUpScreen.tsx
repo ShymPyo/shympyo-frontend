@@ -351,15 +351,7 @@ const SignUpScreen: React.FC = () => {
               <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
 
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../../assets/shympyo_logo.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
-
-            <Text style={[styles.title, { fontSize: getFontSize(28) }]} numberOfLines={1}>회원가입</Text>
+            <Text style={[styles.title, { fontSize: getFontSize(28), marginTop: 20, marginBottom: 70 }]} numberOfLines={1}>회원가입</Text>
             
             <View style={styles.inputContainer}>
               {/* 이메일 입력 */}
@@ -681,15 +673,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 30,
     zIndex: 1,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-    marginTop: 40,
-  },
-  logo: {
-    width: 150,
-    height: 80,
   },
   title: {
     fontSize: 28,
