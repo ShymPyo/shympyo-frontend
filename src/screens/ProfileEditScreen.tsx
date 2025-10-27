@@ -12,6 +12,7 @@ import {
   Modal,
   FlatList,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
@@ -59,11 +60,34 @@ const ProfileEditScreen: React.FC = () => {
   const [isImageSourceModalVisible, setImageSourceModalVisible] = useState(false);
   const [statusBarKey, setStatusBarKey] = useState(0);
 
+  // Refs for scrolling
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const nameInputRef = React.useRef<View>(null);
+  const phoneInputRef = React.useRef<View>(null);
+  const nicknameInputRef = React.useRef<View>(null);
+  const bioInputRef = React.useRef<View>(null);
+
   useFocusEffect(
     React.useCallback(() => {
       setStatusBarKey(prev => prev + 1);
     }, [])
   );
+
+  // 입력창 포커스 시 스크롤
+  const scrollToInput = (inputRef: React.RefObject<View>) => {
+    setTimeout(() => {
+      inputRef.current?.measureLayout(
+        scrollViewRef.current as any,
+        (x, y) => {
+          scrollViewRef.current?.scrollTo({
+            y: y - 100,
+            animated: true
+          });
+        },
+        () => {}
+      );
+    }, 100);
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -199,7 +223,17 @@ const ProfileEditScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         {/* 프로필 이미지 섹션 */}
         <View style={styles.profileImageSection}>
           <TouchableOpacity style={styles.profileImageContainer} onPress={showImageSourceOptions}>
@@ -222,7 +256,7 @@ const ProfileEditScreen: React.FC = () => {
           </View>
 
           {/* 이름 */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} ref={nameInputRef}>
             <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>이름</Text>
             <TextInput
               style={[styles.input, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
@@ -231,11 +265,12 @@ const ProfileEditScreen: React.FC = () => {
               placeholder="이름을 입력하세요"
               placeholderTextColor={colors.text.light}
               editable={!loading}
+              onFocus={() => scrollToInput(nameInputRef)}
             />
           </View>
 
           {/* 전화번호 */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} ref={phoneInputRef}>
             <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>전화번호</Text>
             <TextInput
               style={[styles.input, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
@@ -245,11 +280,12 @@ const ProfileEditScreen: React.FC = () => {
               placeholderTextColor={colors.text.light}
               keyboardType="phone-pad"
               editable={!loading}
+              onFocus={() => scrollToInput(phoneInputRef)}
             />
           </View>
 
           {/* 닉네임 */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} ref={nicknameInputRef}>
             <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>닉네임</Text>
             <TextInput
               style={[styles.input, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
@@ -258,11 +294,12 @@ const ProfileEditScreen: React.FC = () => {
               placeholder="닉네임을 입력하세요"
               placeholderTextColor={colors.text.light}
               editable={!loading}
+              onFocus={() => scrollToInput(nicknameInputRef)}
             />
           </View>
 
           {/* 자기소개 */}
-          <View style={styles.inputGroup}>
+          <View style={styles.inputGroup} ref={bioInputRef}>
             <Text style={[styles.label, { fontSize: getFontSize(14), color: colors.text.secondary }]}>자기소개</Text>
             <TextInput
               style={[styles.input, styles.bioInput, { fontSize: getFontSize(16), color: colors.text.primary, backgroundColor: colors.surface, borderColor: colors.surface }]}
@@ -275,11 +312,13 @@ const ProfileEditScreen: React.FC = () => {
               textAlignVertical="top"
               maxLength={200}
               editable={!loading}
+              onFocus={() => scrollToInput(bioInputRef)}
             />
           </View>
 
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* 프로필 이미지 선택 Modal */}
       <Modal
@@ -352,8 +391,14 @@ const styles = StyleSheet.create({
   saveButtonTextDisabled: {
     color: Colors.text.light,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   profileImageSection: {
     alignItems: 'center',
