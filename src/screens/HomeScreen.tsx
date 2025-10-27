@@ -31,6 +31,7 @@ import * as Location from 'expo-location';
 import { Colors, getColors } from '../constants/colors';
 import ShelterDetailModal from '../components/ShelterDetailModal';
 import UserShelterDetailModal from '../components/UserShelterDetailModal';
+import TutorialModal from '../components/TutorialModal';
 import ApiService, { MapLocation, NearbyPlace, WeatherData } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemedStyles } from '../hooks/useThemedStyles';
@@ -345,6 +346,9 @@ const HomeScreen: React.FC = () => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['민간 개방 시설', '스마트 쉼터', '교통 시설', '공공 시설', '기후 동행 쉼터']);
 
+  // 튜토리얼 모달 상태
+  const [showTutorial, setShowTutorial] = useState(false);
+
   // 위치 관련 상태
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
@@ -388,6 +392,20 @@ const HomeScreen: React.FC = () => {
 
   // 선택된 쉼터 ID (마커 강조용)
   const [selectedShelterId, setSelectedShelterId] = useState<string | null>(null);
+
+  // 로그인 시마다 튜토리얼 표시
+  useEffect(() => {
+    if (accessToken) {
+      setTimeout(() => {
+        setShowTutorial(true);
+      }, 500);
+    }
+  }, [accessToken]);
+
+  // 튜토리얼 닫기 핸들러
+  const handleCloseTutorial = () => {
+    setShowTutorial(false);
+  };
 
   // 위치 권한 요청 및 초기 위치 설정
   useEffect(() => {
@@ -1666,6 +1684,16 @@ const HomeScreen: React.FC = () => {
           />
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
 
+          {/* 설명서 버튼 - 우측 상단 */}
+          <View style={styles.tutorialButtonContainer}>
+            <TouchableOpacity
+              style={[styles.tutorialButton, { backgroundColor: colors.surface }]}
+              onPress={() => setShowTutorial(true)}
+            >
+              <Ionicons name="help-circle-outline" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
           {/* 길안내 로딩 오버레이 */}
           <NavigationMessage
             visible={isLoadingRoute}
@@ -2037,6 +2065,12 @@ const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
+
+        {/* 튜토리얼 모달 */}
+        <TutorialModal
+          visible={showTutorial}
+          onClose={handleCloseTutorial}
+        />
       </View>
     </GestureHandlerRootView>
   );
@@ -2335,6 +2369,27 @@ const styles = StyleSheet.create({
     },
     locationButtonLoading: {
         backgroundColor: '#f0f8ff',
+    },
+    tutorialButtonContainer: {
+        position: 'absolute',
+        top: Platform.OS === 'android' ? 60 : 60,
+        right: 20,
+        zIndex: 10,
+    },
+    tutorialButton: {
+        backgroundColor: 'white',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 3,
+        }),
     },
     overlayBottom: {
         position: 'absolute',
