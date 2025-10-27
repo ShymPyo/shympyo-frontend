@@ -675,8 +675,15 @@ const HomeScreen: React.FC = () => {
     // 선택된 쉼터 ID 업데이트
     setSelectedShelterId(shelter.id);
 
-    // 지도에서 해당 마커를 강조 (색상 변경)
-    if (webViewRef.current) {
+    // 리스트를 자연스럽게 내리기 (하단 슬라이드 닫기)
+    translateY.value = withSpring(0, {
+      damping: 40,
+      stiffness: 60,
+    });
+    runOnJS(setShowFade)(false);
+
+    // 지도에서 해당 마커를 강조하고 지도 중심 이동
+    if (webViewRef.current && shelter.latitude && shelter.longitude) {
       const highlightScript = `
         // 모든 마커를 원래 색상으로 복원
         if (window.markers) {
@@ -705,23 +712,33 @@ const HomeScreen: React.FC = () => {
         }) : null;
 
         if (selectedMarkerObj && selectedMarkerObj.marker) {
-          // 밝고 반짝이는 노란색으로 변경
+          // 파란색 테두리로 강조
           var highlightImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="14" fill="#FFD700" stroke="white" stroke-width="3"/>
-              <path d="\${selectedMarkerObj.icon}" fill="white" transform="translate(8, 8) scale(0.7)"/>
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="20" cy="20" r="18" fill="\${selectedMarkerObj.originalColor}" stroke="#4A90E2" stroke-width="4"/>
+              <circle cx="20" cy="20" r="14" fill="\${selectedMarkerObj.originalColor}" stroke="white" stroke-width="2"/>
+              <path d="\${selectedMarkerObj.icon}" fill="white" transform="translate(12, 12) scale(0.7)"/>
             </svg>
           \`);
           var highlightImage = new kakao.maps.MarkerImage(
             highlightImageSrc,
-            new kakao.maps.Size(32, 32),
-            { offset: new kakao.maps.Point(16, 16) }
+            new kakao.maps.Size(40, 40),
+            { offset: new kakao.maps.Point(20, 20) }
           );
           selectedMarkerObj.marker.setImage(highlightImage);
         }
+
+        // 지도 중심을 해당 쉼터로 부드럽게 이동 (약간 위쪽으로 조정하여 화면 중앙에 위치)
+        var shelterPosition = new kakao.maps.LatLng(${shelter.latitude}, ${shelter.longitude});
+        window.map.panTo(shelterPosition);
+
+        // 적절한 줌 레벨로 조정
+        setTimeout(function() {
+          window.map.setLevel(3);
+        }, 300);
       `;
       webViewRef.current.injectJavaScript(highlightScript);
-      console.log('🎯 마커 강조:', shelter.name, shelter.id);
+      console.log('🎯 마커 강조 및 지도 이동:', shelter.name, shelter.id, shelter.latitude, shelter.longitude);
     }
 
     // 백엔드에서 실제 데이터가 있는 경우 상세 정보 조회
@@ -881,6 +898,12 @@ const HomeScreen: React.FC = () => {
           if (window.routeLine) {
             window.routeLine.setMap(null);
           }
+          if (window.routeLineOutline) {
+            window.routeLineOutline.setMap(null);
+          }
+          if (window.routeLineShadow) {
+            window.routeLineShadow.setMap(null);
+          }
           if (window.startMarker) {
             window.startMarker.setMap(null);
           }
@@ -888,17 +911,45 @@ const HomeScreen: React.FC = () => {
             window.endMarker.setMap(null);
           }
 
-          // 실제 보행자 경로 그리기
+          // 실제 보행자 경로 그리기 - 카카오맵 네비 스타일
           var linePath = [${pathString}];
 
-          window.routeLine = new kakao.maps.Polyline({
+          // 고대비 모드 색상
+          var isHighContrast = ${contrastMode === 'high'};
+          var routeColor = isHighContrast ? '#FFD700' : '#4A90E2'; // 고대비: 노란색, 일반: 파란색
+
+          // 그림자/외곽선 (진한 회색)
+          window.routeLineShadow = new kakao.maps.Polyline({
             path: linePath,
-            strokeWeight: 6,
-            strokeColor: '#4A90E2',
-            strokeOpacity: 0.9,
-            strokeStyle: 'solid'
+            strokeWeight: 16,
+            strokeColor: '#000000',
+            strokeOpacity: 0.2,
+            strokeStyle: 'solid',
+            zIndex: 1
           });
 
+          // 외곽선 (하얀색 테두리)
+          window.routeLineOutline = new kakao.maps.Polyline({
+            path: linePath,
+            strokeWeight: 14,
+            strokeColor: isHighContrast ? '#000000' : '#FFFFFF',
+            strokeOpacity: 1.0,
+            strokeStyle: 'solid',
+            zIndex: 2
+          });
+
+          // 메인 라인 (굵은 색상 - 고대비 모드에 따라 변경)
+          window.routeLine = new kakao.maps.Polyline({
+            path: linePath,
+            strokeWeight: 10,
+            strokeColor: routeColor,
+            strokeOpacity: 1.0,
+            strokeStyle: 'solid',
+            zIndex: 3
+          });
+
+          window.routeLineShadow.setMap(window.map);
+          window.routeLineOutline.setMap(window.map);
           window.routeLine.setMap(window.map);
 
           // 출발지 마커 (현재 위치 - 초록색)
@@ -1041,6 +1092,14 @@ const HomeScreen: React.FC = () => {
           if (window.routeLine) {
             window.routeLine.setMap(null);
             window.routeLine = null;
+          }
+          if (window.routeLineOutline) {
+            window.routeLineOutline.setMap(null);
+            window.routeLineOutline = null;
+          }
+          if (window.routeLineShadow) {
+            window.routeLineShadow.setMap(null);
+            window.routeLineShadow = null;
           }
           if (window.startMarker) {
             window.startMarker.setMap(null);
@@ -1687,7 +1746,7 @@ const HomeScreen: React.FC = () => {
           {/* 설명서 버튼 - 우측 상단 */}
           <View style={styles.tutorialButtonContainer}>
             <TouchableOpacity
-              style={[styles.tutorialButton, { backgroundColor: '#FFFFFF' }]}
+              style={[styles.tutorialButton, { backgroundColor: colors.surface }]}
               onPress={() => setShowTutorial(true)}
             >
               <Ionicons name="help-circle-outline" size={24} color={colors.primary} />
@@ -1715,7 +1774,7 @@ const HomeScreen: React.FC = () => {
 
           {/* 길안내 정보 오버레이 */}
           {isNavigating && navigationInfo && !isLoadingRoute && !isEndingRoute && (
-            <Animated.View style={[styles.navigationInfoContainer, { backgroundColor: '#FFFFFF' }, navInfoAnimatedStyle]}>
+            <Animated.View style={[styles.navigationInfoContainer, { backgroundColor: colors.surface }, navInfoAnimatedStyle]}>
               <View style={styles.navigationInfoContent}>
                 <View style={styles.navigationInfoLeft}>
                   <Ionicons name="navigate" size={20} color={colors.primary} />
@@ -1755,7 +1814,7 @@ const HomeScreen: React.FC = () => {
                     <View style={[styles.trianglePointer, { borderRightColor: colors.primary }]} />
                   </View>
                   {weatherData?.weather && (
-                    <Text style={[styles.weatherText, { backgroundColor: '#FFFFFF', color: colors.text.primary }]}>{weatherData.weather}</Text>
+                    <Text style={[styles.weatherText, { backgroundColor: colors.surface, color: colors.text.primary }]}>{weatherData.weather}</Text>
                   )}
                 </View>
               </View>
@@ -1767,7 +1826,7 @@ const HomeScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.locationButton,
-                { backgroundColor: '#FFFFFF' },
+                { backgroundColor: colors.surface },
                 isLoadingLocation && styles.locationButtonLoading
               ]}
               onPress={handleMyLocationPress}
@@ -2245,7 +2304,6 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 16,
         zIndex: 15,
-        backgroundColor: '#FFFFFF',
         ...getShadowStyle({
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
@@ -2361,7 +2419,6 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     locationButton: {
-        backgroundColor: '#FFFFFF',
         width: 44,
         height: 44,
         borderRadius: 22,
@@ -2385,7 +2442,6 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     tutorialButton: {
-        backgroundColor: '#FFFFFF',
         width: 44,
         height: 44,
         borderRadius: 22,
