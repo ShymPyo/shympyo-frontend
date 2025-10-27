@@ -377,16 +377,16 @@ const HomeScreen: React.FC = () => {
   // 길안내 정보 카드 애니메이션 트리거
   useEffect(() => {
     if (isNavigating && !isLoadingRoute && !isEndingRoute) {
-      navInfoOpacity.value = withSpring(1, { damping: 15, stiffness: 100 });
+      navInfoOpacity.value = 1;
       navInfoTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
     } else {
-      navInfoOpacity.value = 0;
+      navInfoOpacity.value = 1;
       navInfoTranslateY.value = -20;
     }
   }, [isNavigating, isLoadingRoute, isEndingRoute]);
 
   const navInfoAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: navInfoOpacity.value,
+    opacity: 1,
     transform: [{ translateY: navInfoTranslateY.value }],
   }));
 
@@ -1687,7 +1687,7 @@ const HomeScreen: React.FC = () => {
           {/* 설명서 버튼 - 우측 상단 */}
           <View style={styles.tutorialButtonContainer}>
             <TouchableOpacity
-              style={[styles.tutorialButton, { backgroundColor: colors.surface }]}
+              style={[styles.tutorialButton, { backgroundColor: '#FFFFFF' }]}
               onPress={() => setShowTutorial(true)}
             >
               <Ionicons name="help-circle-outline" size={24} color={colors.primary} />
@@ -1715,7 +1715,7 @@ const HomeScreen: React.FC = () => {
 
           {/* 길안내 정보 오버레이 */}
           {isNavigating && navigationInfo && !isLoadingRoute && !isEndingRoute && (
-            <Animated.View style={[styles.navigationInfoContainer, { backgroundColor: colors.surface }, navInfoAnimatedStyle]}>
+            <Animated.View style={[styles.navigationInfoContainer, { backgroundColor: '#FFFFFF' }, navInfoAnimatedStyle]}>
               <View style={styles.navigationInfoContent}>
                 <View style={styles.navigationInfoLeft}>
                   <Ionicons name="navigate" size={20} color={colors.primary} />
@@ -1755,7 +1755,7 @@ const HomeScreen: React.FC = () => {
                     <View style={[styles.trianglePointer, { borderRightColor: colors.primary }]} />
                   </View>
                   {weatherData?.weather && (
-                    <Text style={[styles.weatherText, { backgroundColor: contrastMode === 'high' ? colors.surface : 'rgba(255, 255, 255, 0.9)', color: colors.text.primary }]}>{weatherData.weather}</Text>
+                    <Text style={[styles.weatherText, { backgroundColor: '#FFFFFF', color: colors.text.primary }]}>{weatherData.weather}</Text>
                   )}
                 </View>
               </View>
@@ -1767,7 +1767,7 @@ const HomeScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.locationButton,
-                { backgroundColor: colors.surface },
+                { backgroundColor: '#FFFFFF' },
                 isLoadingLocation && styles.locationButtonLoading
               ]}
               onPress={handleMyLocationPress}
@@ -2152,10 +2152,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         ...getShadowStyle({
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.4,
-          shadowRadius: 8,
-          elevation: 10,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.5,
+          shadowRadius: 4,
+          elevation: 12,
         }),
     },
     temperatureText: {
@@ -2171,6 +2171,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 8,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.45,
+          shadowRadius: 4,
+          elevation: 10,
+        }),
     },
     trianglePointer: {
         position: 'absolute',
@@ -2231,19 +2238,20 @@ const styles = StyleSheet.create({
     },
     navigationInfoContainer: {
         position: 'absolute',
-        top: 80,
+        top: 60,
         left: 20,
         right: 20,
         borderRadius: 12,
         paddingVertical: 12,
         paddingHorizontal: 16,
         zIndex: 15,
+        backgroundColor: '#FFFFFF',
         ...getShadowStyle({
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 8,
-          elevation: 8,
+          shadowOpacity: 0.5,
+          shadowRadius: 4,
+          elevation: 12,
         }),
     },
     navigationInfoContent: {
@@ -2348,12 +2356,12 @@ const styles = StyleSheet.create({
     },
     locationButtonContainer: {
         position: 'absolute',
-        bottom: 120,
+        bottom: 100,
         right: 20,
         zIndex: 10,
     },
     locationButton: {
-        backgroundColor: 'white',
+        backgroundColor: '#FFFFFF',
         width: 44,
         height: 44,
         borderRadius: 22,
@@ -2362,9 +2370,9 @@ const styles = StyleSheet.create({
         ...getShadowStyle({
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
+          shadowOpacity: 0.5,
           shadowRadius: 4,
-          elevation: 3,
+          elevation: 12,
         }),
     },
     locationButtonLoading: {
@@ -2377,7 +2385,7 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     tutorialButton: {
-        backgroundColor: 'white',
+        backgroundColor: '#FFFFFF',
         width: 44,
         height: 44,
         borderRadius: 22,
@@ -2386,9 +2394,9 @@ const styles = StyleSheet.create({
         ...getShadowStyle({
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
+          shadowOpacity: 0.5,
           shadowRadius: 4,
-          elevation: 3,
+          elevation: 12,
         }),
     },
     overlayBottom: {
