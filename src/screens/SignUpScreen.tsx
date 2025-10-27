@@ -627,7 +627,7 @@ const SignUpScreen: React.FC = () => {
 
         {/* 약관 상세 보기 모달 */}
         <Modal
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           visible={showTermsModal}
           onRequestClose={() => setShowTermsModal(false)}

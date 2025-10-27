@@ -111,7 +111,7 @@ const SettingsScreen: React.FC = () => {
     ];
 
     return (
-      <Modal visible={showThemeModal} transparent animationType="slide">
+      <Modal visible={showThemeModal} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setShowThemeModal(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>
@@ -160,7 +160,7 @@ const SettingsScreen: React.FC = () => {
     ];
 
     return (
-      <Modal visible={showContrastModal} transparent animationType="slide">
+      <Modal visible={showContrastModal} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setShowContrastModal(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>
@@ -211,7 +211,7 @@ const SettingsScreen: React.FC = () => {
     ];
 
     return (
-      <Modal visible={showFontModal} transparent animationType="slide">
+      <Modal visible={showFontModal} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setShowFontModal(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>

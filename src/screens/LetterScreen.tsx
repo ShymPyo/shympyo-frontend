@@ -463,7 +463,7 @@ const LetterScreen: React.FC = () => {
 
       {/* 편지 작성 모달 */}
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={isModalVisible}
         onRequestClose={() => setModalVisible(false)}
@@ -516,7 +516,7 @@ const LetterScreen: React.FC = () => {
 
       {/* 편지 상세 모달 */}
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={isDetailModalVisible}
         onRequestClose={() => setDetailModalVisible(false)}
