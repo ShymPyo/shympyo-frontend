@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Location from 'expo-location';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import { Colors, getColors } from '../constants/colors';
 import ShelterDetailModal from '../components/ShelterDetailModal';
@@ -359,6 +361,15 @@ const HomeScreen: React.FC = () => {
   // 날씨 관련 상태
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
 
+  // 핀 이미지 base64 상태
+  const [pinImages, setPinImages] = useState<{
+    shelter: string;
+    mingan: string;
+    traffic: string;
+    politic: string;
+    climate: string;
+  } | null>(null);
+
   // 길안내 관련 상태
   const [isNavigating, setIsNavigating] = useState(false);
   const [navigationInfo, setNavigationInfo] = useState<{
@@ -392,6 +403,47 @@ const HomeScreen: React.FC = () => {
 
   // 선택된 쉼터 ID (마커 강조용)
   const [selectedShelterId, setSelectedShelterId] = useState<string | null>(null);
+
+  // 핀 이미지 로드
+  useEffect(() => {
+    const loadPinImages = async () => {
+      try {
+        const shelterAsset = Asset.fromModule(require('../../assets/map_fins/shelter.png'));
+        const minganAsset = Asset.fromModule(require('../../assets/map_fins/mingan.png'));
+        const trafficAsset = Asset.fromModule(require('../../assets/map_fins/traffic.png'));
+        const politicAsset = Asset.fromModule(require('../../assets/map_fins/politic.png'));
+        const climateAsset = Asset.fromModule(require('../../assets/map_fins/climate.png'));
+
+        await Promise.all([
+          shelterAsset.downloadAsync(),
+          minganAsset.downloadAsync(),
+          trafficAsset.downloadAsync(),
+          politicAsset.downloadAsync(),
+          climateAsset.downloadAsync(),
+        ]);
+
+        const shelterBase64 = await FileSystem.readAsStringAsync(shelterAsset.localUri!, { encoding: 'base64' });
+        const minganBase64 = await FileSystem.readAsStringAsync(minganAsset.localUri!, { encoding: 'base64' });
+        const trafficBase64 = await FileSystem.readAsStringAsync(trafficAsset.localUri!, { encoding: 'base64' });
+        const politicBase64 = await FileSystem.readAsStringAsync(politicAsset.localUri!, { encoding: 'base64' });
+        const climateBase64 = await FileSystem.readAsStringAsync(climateAsset.localUri!, { encoding: 'base64' });
+
+        setPinImages({
+          shelter: `data:image/png;base64,${shelterBase64}`,
+          mingan: `data:image/png;base64,${minganBase64}`,
+          traffic: `data:image/png;base64,${trafficBase64}`,
+          politic: `data:image/png;base64,${politicBase64}`,
+          climate: `data:image/png;base64,${climateBase64}`,
+        });
+
+        console.log('✅ 핀 이미지 로드 완료');
+      } catch (error) {
+        console.error('❌ 핀 이미지 로드 실패:', error);
+      }
+    };
+
+    loadPinImages();
+  }, []);
 
   // 로그인 시마다 튜토리얼 표시
   useEffect(() => {
@@ -685,20 +737,14 @@ const HomeScreen: React.FC = () => {
     // 지도에서 해당 마커를 강조하고 지도 중심 이동
     if (webViewRef.current && shelter.latitude && shelter.longitude) {
       const highlightScript = `
-        // 모든 마커를 원래 색상으로 복원
+        // 모든 마커를 원래 크기로 복원
         if (window.markers) {
-          window.markers.forEach(function(markerObj) {
-            if (markerObj.marker && markerObj.originalColor) {
-              var normalImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="16" cy="16" r="14" fill="\${markerObj.originalColor}" stroke="white" stroke-width="2"/>
-                  <path d="\${markerObj.icon}" fill="white" transform="translate(8, 8) scale(0.7)"/>
-                </svg>
-              \`);
+          window.markers.forEach(function(markerObj, idx) {
+            if (markerObj.marker && markerObj.pinImage) {
               var normalImage = new kakao.maps.MarkerImage(
-                normalImageSrc,
-                new kakao.maps.Size(32, 32),
-                { offset: new kakao.maps.Point(16, 16) }
+                markerObj.pinImage,
+                new kakao.maps.Size(36, 45),
+                { offset: new kakao.maps.Point(18, 45) }
               );
               markerObj.marker.setImage(normalImage);
             }
@@ -711,19 +757,12 @@ const HomeScreen: React.FC = () => {
           return m.id === selectedMarkerId;
         }) : null;
 
-        if (selectedMarkerObj && selectedMarkerObj.marker) {
-          // 파란색 테두리로 강조
-          var highlightImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="18" fill="\${selectedMarkerObj.originalColor}" stroke="#4A90E2" stroke-width="4"/>
-              <circle cx="20" cy="20" r="14" fill="\${selectedMarkerObj.originalColor}" stroke="white" stroke-width="2"/>
-              <path d="\${selectedMarkerObj.icon}" fill="white" transform="translate(12, 12) scale(0.7)"/>
-            </svg>
-          \`);
+        if (selectedMarkerObj && selectedMarkerObj.marker && selectedMarkerObj.pinImage) {
+          // 선택된 마커는 크기를 키워서 강조
           var highlightImage = new kakao.maps.MarkerImage(
-            highlightImageSrc,
-            new kakao.maps.Size(40, 40),
-            { offset: new kakao.maps.Point(20, 20) }
+            selectedMarkerObj.pinImage,
+            new kakao.maps.Size(48, 60),
+            { offset: new kakao.maps.Point(24, 60) }
           );
           selectedMarkerObj.marker.setImage(highlightImage);
         }
@@ -1326,7 +1365,7 @@ const HomeScreen: React.FC = () => {
 
   // 필터 변경 시 지도 마커 업데이트
   useEffect(() => {
-    if (webViewRef.current && mapLocations.length > 0) {
+    if (webViewRef.current && mapLocations.length > 0 && pinImages) {
       // JavaScript를 통해 마커만 업데이트
       const filteredPositions = filteredMapLocations.map((location, index) => {
         const place = nearbyPlaces.find(p => p.id === location.id);
@@ -1366,17 +1405,21 @@ const HomeScreen: React.FC = () => {
                           position.type === 'CLIMATE_SHELTER' ? 'M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z' :
                           'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
 
-          var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="14" fill="\${markerColor}" stroke="white" stroke-width="2"/>
-              <path d="\${markerIcon}" fill="white" transform="translate(8, 8) scale(0.7)"/>
-            </svg>
-          \`);
+          // 커스텀 핀 이미지 사용
+          var pinImageSrc = position.type === 'SHELTER' ? '${pinImages?.shelter}' :
+                            position.type === 'USER_SHELTER' ? '${pinImages?.mingan}' :
+                            position.type === 'STATION' ? '${pinImages?.traffic}' :
+                            position.type === 'PUBLIC' ? '${pinImages?.politic}' :
+                            position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
+
+          // 고해상도 이미지 직접 사용 (그림자는 CSS로)
+          var markerSize = new kakao.maps.Size(36, 45);
+          var markerOffset = new kakao.maps.Point(18, 45);
 
           var markerImage = new kakao.maps.MarkerImage(
-            markerImageSrc,
-            new kakao.maps.Size(32, 32),
-            { offset: new kakao.maps.Point(16, 16) }
+            pinImageSrc,
+            markerSize,
+            { offset: markerOffset }
           );
 
           var marker = new kakao.maps.Marker({
@@ -1394,7 +1437,8 @@ const HomeScreen: React.FC = () => {
             circle: null,
             originalColor: markerColor,
             type: position.type,
-            icon: markerIcon
+            icon: markerIcon,
+            pinImage: pinImageSrc
           };
           window.markers.push(markerObj);
 
@@ -1412,7 +1456,7 @@ const HomeScreen: React.FC = () => {
 
       webViewRef.current.injectJavaScript(updateMarkersScript);
     }
-  }, [selectedCategories, filteredMapLocations, nearbyPlaces]);
+  }, [selectedCategories, filteredMapLocations, nearbyPlaces, pinImages]);
 
   // 하드웨어 백 버튼 처리 - Android에서 앱 종료
   useEffect(() => {
@@ -1626,17 +1670,21 @@ const HomeScreen: React.FC = () => {
                                   positions[i].type === 'CLIMATE_SHELTER' ? 'M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z' :
                                   'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
 
-                  var markerImageSrc = 'data:image/svg+xml;base64,' + btoa(\`
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="16" cy="16" r="14" fill="\${markerColor}" stroke="white" stroke-width="2"/>
-                      <path d="\${markerIcon}" fill="white" transform="translate(8, 8) scale(0.7)"/>
-                    </svg>
-                  \`);
+                  // 커스텀 핀 이미지 사용
+                  var pinImageSrc = positions[i].type === 'SHELTER' ? '${pinImages?.shelter}' :
+                                    positions[i].type === 'USER_SHELTER' ? '${pinImages?.mingan}' :
+                                    positions[i].type === 'STATION' ? '${pinImages?.traffic}' :
+                                    positions[i].type === 'PUBLIC' ? '${pinImages?.politic}' :
+                                    positions[i].type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
+
+                  // 고해상도 이미지 직접 사용 (그림자는 CSS로)
+                  var markerSize = new kakao.maps.Size(36, 45);
+                  var markerOffset = new kakao.maps.Point(18, 45);
 
                   var markerImage = new kakao.maps.MarkerImage(
-                      markerImageSrc,
-                      new kakao.maps.Size(32, 32),
-                      { offset: new kakao.maps.Point(16, 16) }
+                      pinImageSrc,
+                      markerSize,
+                      { offset: markerOffset }
                   );
 
                   var marker = new kakao.maps.Marker({
@@ -1653,7 +1701,8 @@ const HomeScreen: React.FC = () => {
                       circle: null,
                       originalColor: markerColor,
                       type: positions[i].type,
-                      icon: markerIcon
+                      icon: markerIcon,
+                      pinImage: pinImageSrc
                   });
 
                   // 정보창 생성
