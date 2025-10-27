@@ -635,15 +635,16 @@ const SignUpScreen: React.FC = () => {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { fontSize: getFontSize(18) }]}>
-                  {modalContent.title}
-                </Text>
                 <TouchableOpacity
                   onPress={() => setShowTermsModal(false)}
                   style={styles.modalCloseButton}
                 >
                   <Ionicons name="close" size={24} color={Colors.text.primary} />
                 </TouchableOpacity>
+                <Text style={[styles.modalTitle, { fontSize: getFontSize(18) }]}>
+                  {modalContent.title}
+                </Text>
+                <View style={{ width: 34 }} />
               </View>
               <ScrollView style={styles.modalBody}>
                 <Text style={[styles.modalText, { fontSize: getFontSize(14) }]}>
@@ -791,7 +792,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   signUpButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
+    backgroundColor: Colors.text.light,
   },
   footer: {
     alignItems: 'center',
@@ -858,25 +860,22 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
     paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
-    position: 'relative',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text.primary,
     textAlign: 'center',
+    flex: 1,
   },
   modalCloseButton: {
     padding: 5,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   modalBody: {
     maxHeight: 400,

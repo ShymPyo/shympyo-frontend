@@ -120,14 +120,15 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
         >
           {/* 헤더 */}
           <View style={[styles.header, { borderBottomColor: colors.surface }]}>
-            <TouchableOpacity onPress={onClose} style={[styles.backButton, { backgroundColor: colors.surface }]}>
-              <Ionicons name="close" size={20} color={colors.text.primary} />
-            </TouchableOpacity>
+            <View style={{ width: 32 }} />
 
             <View style={styles.headerTitleContainer}>
               <Text style={[styles.categoryText, { fontSize: getFontSize(14), color: colors.text.primary }]} numberOfLines={1}>{shelter.category}</Text>
             </View>
-            <View style={{ width: 32 }} />
+
+            <TouchableOpacity onPress={onClose} style={[styles.backButton, { backgroundColor: colors.surface }]}>
+              <Ionicons name="close" size={20} color={colors.text.primary} />
+            </TouchableOpacity>
           </View>
 
           {/* 메인 콘텐츠 */}

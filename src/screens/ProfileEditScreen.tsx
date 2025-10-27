@@ -216,8 +216,8 @@ const ProfileEditScreen: React.FC = () => {
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={[styles.title, { fontSize: getFontSize(18), color: colors.text.primary }]}>프로필 편집</Text>
-        <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveButton}>
-          <Text style={[styles.saveButtonText, { fontSize: getFontSize(16), color: colors.primary }, loading && styles.saveButtonTextDisabled]}>
+        <TouchableOpacity onPress={handleSave} disabled={loading} style={[styles.saveButton, loading && styles.saveButtonDisabled]}>
+          <Text style={[styles.saveButtonText, { fontSize: getFontSize(16), color: loading ? colors.text.light : colors.primary }]}>
             {loading ? '저장 중...' : '저장'}
           </Text>
         </TouchableOpacity>
@@ -322,7 +322,7 @@ const ProfileEditScreen: React.FC = () => {
 
       {/* 프로필 이미지 선택 Modal */}
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={isModalVisible}
         onRequestClose={() => setModalVisible(false)}
@@ -388,8 +388,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primary,
   },
-  saveButtonTextDisabled: {
-    color: Colors.text.light,
+  saveButtonDisabled: {
+    opacity: 0.5,
   },
   keyboardAvoidingView: {
     flex: 1,
