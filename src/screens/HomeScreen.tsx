@@ -832,8 +832,9 @@ const HomeScreen: React.FC = () => {
 
     const myLat = currentLocation.coords.latitude;
     const myLon = currentLocation.coords.longitude;
+    const destinationShelterId = selectedShelter?.id || '';
 
-    console.log('🗺️ 길찾기 시작:', { from: { myLat, myLon }, to: { destLat, destLon }, name: destinationName });
+    console.log('🗺️ 길찾기 시작:', { from: { myLat, myLon }, to: { destLat, destLon }, name: destinationName, shelterId: destinationShelterId });
 
     // 하단 슬라이드 닫기
     translateY.value = withSpring(0, {
@@ -930,10 +931,102 @@ const HomeScreen: React.FC = () => {
 
       // WebView에 경로 그리기
       if (webViewRef.current && pathCoords.length > 0) {
+        // 먼저 목적지 쉼터만 보이도록 마커 업데이트
+        console.log('🎯 목적지 쉼터 ID:', destinationShelterId);
+        console.log('🎯 filteredMapLocations 수:', filteredMapLocations.length);
+        console.log('🎯 filteredMapLocations IDs:', filteredMapLocations.map(loc => String(loc.id)).join(', '));
+
+        const destinationLocation = filteredMapLocations.find(loc => String(loc.id) === destinationShelterId);
+
+        console.log('🎯 destinationLocation 찾기 결과:', destinationLocation ? 'O' : 'X');
+
+        // 경로 그리기 및 마커 업데이트를 하나의 스크립트로 통합
         const pathString = pathCoords.map(coord => `new kakao.maps.LatLng(${coord[0]}, ${coord[1]})`).join(',');
 
+        let destinationMarkerScript = '';
+
+        if (destinationLocation) {
+          const destinationPlace = nearbyPlaces.find(p => p.id === destinationLocation.id);
+          const destinationPosition = {
+            title: destinationPlace ? destinationPlace.name : destinationLocation.type,
+            latlng: [destinationLocation.latitude, destinationLocation.longitude],
+            content: destinationPlace ? destinationPlace.content : '',
+            id: destinationLocation.id,
+            type: destinationLocation.type
+          };
+
+          destinationMarkerScript = `
+            console.log('🎯 목적지 외 마커 제거 시작');
+
+            // 기존 마커들 모두 제거
+            if (window.markers) {
+              console.log('🎯 제거할 마커 수:', window.markers.length);
+              window.markers.forEach(function(markerObj) {
+                if (markerObj.marker) markerObj.marker.setMap(null);
+                if (markerObj.circle) markerObj.circle.setMap(null);
+              });
+            }
+            window.markers = [];
+
+            // 목적지 마커만 다시 생성
+            var position = ${JSON.stringify(destinationPosition)};
+            var markerPosition = new kakao.maps.LatLng(position.latlng[0], position.latlng[1]);
+
+            var markerColor = position.type === 'SHELTER' ? '#4A90E2' :
+                             position.type === 'USER_SHELTER' ? '#FFA500' :
+                             position.type === 'STATION' ? '#27AE60' :
+                             position.type === 'CLIMATE_SHELTER' ? '#9B59B6' : '#7ED321';
+
+            var pinImageSrc = position.type === 'SHELTER' ? '${pinImages?.shelter}' :
+                              position.type === 'USER_SHELTER' ? '${pinImages?.mingan}' :
+                              position.type === 'STATION' ? '${pinImages?.traffic}' :
+                              position.type === 'PUBLIC' ? '${pinImages?.politic}' :
+                              position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
+
+            var markerSize = new kakao.maps.Size(36, 46);
+            var markerOffset = new kakao.maps.Point(18, 46);
+
+            var markerImage = new kakao.maps.MarkerImage(
+              pinImageSrc,
+              markerSize,
+              { offset: markerOffset }
+            );
+
+            var marker = new kakao.maps.Marker({
+              position: markerPosition,
+              image: markerImage,
+              clickable: true
+            });
+
+            marker.setMap(window.map);
+
+            window.markers.push({
+              id: String(position.id),
+              marker: marker,
+              circle: null,
+              originalColor: markerColor,
+              type: position.type,
+              pinImage: pinImageSrc
+            });
+
+            kakao.maps.event.addListener(marker, 'click', function() {
+              if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
+              }
+            });
+
+            console.log('🎯 목적지 마커만 표시 완료:', position.id);
+          `;
+        }
+
         const drawRouteScript = `
-          // 기존 경로 폴리라인 및 마커 제거
+          console.log('🎯 경로 그리기 스크립트 실행됨');
+
+          ${destinationMarkerScript}
+
+          console.log('🎯 마커 처리 완료, 이제 경로 그리기');
+
+          // 기존 경로 폴리라인 제거
           if (window.routeLine) {
             window.routeLine.setMap(null);
           }
@@ -942,12 +1035,6 @@ const HomeScreen: React.FC = () => {
           }
           if (window.routeLineShadow) {
             window.routeLineShadow.setMap(null);
-          }
-          if (window.startMarker) {
-            window.startMarker.setMap(null);
-          }
-          if (window.endMarker) {
-            window.endMarker.setMap(null);
           }
 
           // 실제 보행자 경로 그리기 - 카카오맵 네비 스타일
@@ -991,46 +1078,6 @@ const HomeScreen: React.FC = () => {
           window.routeLineOutline.setMap(window.map);
           window.routeLine.setMap(window.map);
 
-          // 출발지 마커 (현재 위치 - 초록색)
-          var startLatLng = new kakao.maps.LatLng(${myLat}, ${myLon});
-          var startMarkerImage = new kakao.maps.MarkerImage(
-            'data:image/svg+xml;base64,' + btoa(\`
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="20" cy="20" r="18" fill="#22C55E" stroke="white" stroke-width="3"/>
-                <circle cx="20" cy="20" r="8" fill="white"/>
-              </svg>
-            \`),
-            new kakao.maps.Size(40, 40),
-            { offset: new kakao.maps.Point(20, 20) }
-          );
-
-          window.startMarker = new kakao.maps.Marker({
-            position: startLatLng,
-            image: startMarkerImage,
-            zIndex: 100
-          });
-          window.startMarker.setMap(window.map);
-
-          // 목적지 마커 (도착지 - 빨간색 핀)
-          var endLatLng = new kakao.maps.LatLng(${destLat}, ${destLon});
-          var endMarkerImage = new kakao.maps.MarkerImage(
-            'data:image/svg+xml;base64,' + btoa(\`
-              <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 0C11.716 0 5 6.716 5 15c0 11.25 15 35 15 35s15-23.75 15-35c0-8.284-6.716-15-15-15z" fill="#EF4444"/>
-                <circle cx="20" cy="15" r="8" fill="white"/>
-              </svg>
-            \`),
-            new kakao.maps.Size(40, 50),
-            { offset: new kakao.maps.Point(20, 50) }
-          );
-
-          window.endMarker = new kakao.maps.Marker({
-            position: endLatLng,
-            image: endMarkerImage,
-            zIndex: 101
-          });
-          window.endMarker.setMap(window.map);
-
           // 경로가 모두 보이도록 지도 범위 조정
           var bounds = new kakao.maps.LatLngBounds();
           linePath.forEach(function(point) {
@@ -1051,7 +1098,15 @@ const HomeScreen: React.FC = () => {
           console.log('✅ 보행자 경로가 지도에 표시되었습니다');
         `;
 
-        webViewRef.current.injectJavaScript(drawRouteScript);
+        console.log('🎯 생성된 스크립트 길이:', drawRouteScript.length);
+        console.log('🎯 스크립트 앞부분:', drawRouteScript.substring(0, 500));
+
+        try {
+          webViewRef.current.injectJavaScript(drawRouteScript);
+          console.log('🎯 injectJavaScript 호출 완료');
+        } catch (error) {
+          console.error('🎯 injectJavaScript 오류:', error);
+        }
 
         // 거리와 시간 정보 계산
         const distance = totalDistance < 1000
@@ -1126,8 +1181,20 @@ const HomeScreen: React.FC = () => {
         const myLat = currentLocation?.coords.latitude || 37.5665;
         const myLon = currentLocation?.coords.longitude || 126.9780;
 
+        // 모든 마커 복원 (필터 방식 사용)
+        const allPositions = filteredMapLocations.map((location, index) => {
+          const place = nearbyPlaces.find(p => p.id === location.id);
+          return {
+            title: place ? place.name : location.type,
+            latlng: [location.latitude, location.longitude],
+            content: place ? place.content : '',
+            id: location.id,
+            type: location.type
+          };
+        });
+
         const clearRouteScript = `
-          // 경로 및 마커 제거
+          // 경로 제거
           if (window.routeLine) {
             window.routeLine.setMap(null);
             window.routeLine = null;
@@ -1140,14 +1207,69 @@ const HomeScreen: React.FC = () => {
             window.routeLineShadow.setMap(null);
             window.routeLineShadow = null;
           }
-          if (window.startMarker) {
-            window.startMarker.setMap(null);
-            window.startMarker = null;
+
+          console.log('🎯 모든 마커 복원 시작');
+
+          // 기존 마커들 모두 제거
+          if (window.markers) {
+            window.markers.forEach(function(markerObj) {
+              if (markerObj.marker) markerObj.marker.setMap(null);
+              if (markerObj.circle) markerObj.circle.setMap(null);
+            });
           }
-          if (window.endMarker) {
-            window.endMarker.setMap(null);
-            window.endMarker = null;
-          }
+          window.markers = [];
+
+          // 모든 마커들 다시 생성 (필터링된 상태 유지)
+          var positions = ${JSON.stringify(allPositions)};
+          positions.forEach(function(position) {
+            var markerPosition = new kakao.maps.LatLng(position.latlng[0], position.latlng[1]);
+
+            var markerColor = position.type === 'SHELTER' ? '#4A90E2' :
+                             position.type === 'USER_SHELTER' ? '#FFA500' :
+                             position.type === 'STATION' ? '#27AE60' :
+                             position.type === 'CLIMATE_SHELTER' ? '#9B59B6' : '#7ED321';
+
+            var pinImageSrc = position.type === 'SHELTER' ? '${pinImages?.shelter}' :
+                              position.type === 'USER_SHELTER' ? '${pinImages?.mingan}' :
+                              position.type === 'STATION' ? '${pinImages?.traffic}' :
+                              position.type === 'PUBLIC' ? '${pinImages?.politic}' :
+                              position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
+
+            var markerSize = new kakao.maps.Size(36, 46);
+            var markerOffset = new kakao.maps.Point(18, 46);
+
+            var markerImage = new kakao.maps.MarkerImage(
+              pinImageSrc,
+              markerSize,
+              { offset: markerOffset }
+            );
+
+            var marker = new kakao.maps.Marker({
+              position: markerPosition,
+              image: markerImage,
+              clickable: true
+            });
+
+            marker.setMap(window.map);
+
+            window.markers.push({
+              id: String(position.id),
+              marker: marker,
+              circle: null,
+              originalColor: markerColor,
+              type: position.type,
+              pinImage: pinImageSrc
+            });
+
+            kakao.maps.event.addListener(marker, 'click', function() {
+              if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
+              }
+            });
+          });
+
+          console.log('🎯 모든 마커 복원 완료:', positions.length);
+
 
           // 내 위치로 지도 이동 (부드러운 애니메이션)
           var myPosition = new kakao.maps.LatLng(${myLat}, ${myLon});
@@ -1365,6 +1487,12 @@ const HomeScreen: React.FC = () => {
 
   // 필터 변경 시 지도 마커 업데이트
   useEffect(() => {
+    // 길안내 중일 때는 마커 업데이트하지 않음
+    if (isNavigating) {
+      console.log('🎯 길안내 중이므로 마커 업데이트 건너뜀');
+      return;
+    }
+
     if (webViewRef.current && mapLocations.length > 0 && pinImages) {
       // JavaScript를 통해 마커만 업데이트
       const filteredPositions = filteredMapLocations.map((location, index) => {
@@ -1456,7 +1584,7 @@ const HomeScreen: React.FC = () => {
 
       webViewRef.current.injectJavaScript(updateMarkersScript);
     }
-  }, [selectedCategories, filteredMapLocations, nearbyPlaces, pinImages]);
+  }, [isNavigating, selectedCategories, filteredMapLocations, nearbyPlaces, pinImages]);
 
   // 하드웨어 백 버튼 처리 - Android에서 앱 종료
   useEffect(() => {
