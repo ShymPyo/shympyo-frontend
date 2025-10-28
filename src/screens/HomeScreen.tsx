@@ -745,8 +745,8 @@ const HomeScreen: React.FC = () => {
               var normalImageWithShadow = window.createMarkerImageWithShadow(markerObj.pinImage, 36, 46);
               var normalImage = new kakao.maps.MarkerImage(
                 normalImageWithShadow,
-                new kakao.maps.Size(36, 52),
-                { offset: new kakao.maps.Point(18, 49) }
+                new kakao.maps.Size(44, 52),
+                { offset: new kakao.maps.Point(22, 49) }
               );
               markerObj.marker.setImage(normalImage);
             }
@@ -764,8 +764,8 @@ const HomeScreen: React.FC = () => {
           var highlightImageWithShadow = window.createMarkerImageWithShadow(selectedMarkerObj.pinImage, 48, 62);
           var highlightImage = new kakao.maps.MarkerImage(
             highlightImageWithShadow,
-            new kakao.maps.Size(48, 68),
-            { offset: new kakao.maps.Point(24, 65) }
+            new kakao.maps.Size(56, 68),
+            { offset: new kakao.maps.Point(28, 65) }
           );
           selectedMarkerObj.marker.setImage(highlightImage);
         }
@@ -987,8 +987,8 @@ const HomeScreen: React.FC = () => {
                               position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
 
             var markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-            var markerSize = new kakao.maps.Size(36, 52); // 그림자 포함 높이
-            var markerOffset = new kakao.maps.Point(18, 49); // 핀의 끝점 위치 (그림자 고려)
+            var markerSize = new kakao.maps.Size(44, 52); // 페이드 + 그림자 포함 (width: 36+8, height: 46+6)
+            var markerOffset = new kakao.maps.Point(22, 49); // 핀의 끝점 위치 (중앙 정렬)
 
             var markerImage = new kakao.maps.MarkerImage(
               markerImageWithShadow,
@@ -1240,8 +1240,8 @@ const HomeScreen: React.FC = () => {
                               position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
 
             var markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-            var markerSize = new kakao.maps.Size(36, 52); // 그림자 포함 높이
-            var markerOffset = new kakao.maps.Point(18, 49); // 핀의 끝점 위치 (그림자 고려)
+            var markerSize = new kakao.maps.Size(44, 52); // 페이드 + 그림자 포함 (width: 36+8, height: 46+6)
+            var markerOffset = new kakao.maps.Point(22, 49); // 핀의 끝점 위치 (중앙 정렬)
 
             var markerImage = new kakao.maps.MarkerImage(
               markerImageWithShadow,
@@ -1547,8 +1547,8 @@ const HomeScreen: React.FC = () => {
 
           // 그림자가 있는 마커 이미지 생성 - 비율 301:388 유지
           var markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-          var markerSize = new kakao.maps.Size(36, 52); // 그림자 포함 높이
-          var markerOffset = new kakao.maps.Point(18, 49); // 핀의 끝점 위치 (그림자 고려)
+          var markerSize = new kakao.maps.Size(44, 52); // 페이드 + 그림자 포함 (width: 36+8, height: 46+6)
+          var markerOffset = new kakao.maps.Point(22, 49); // 핀의 끝점 위치 (중앙 정렬)
 
           var markerImage = new kakao.maps.MarkerImage(
             markerImageWithShadow,
@@ -1805,13 +1805,30 @@ const HomeScreen: React.FC = () => {
           window.createMarkerImageWithShadow = function(pinImageSrc, width, height) {
             var shadowHeight = 6;
             var totalHeight = height + shadowHeight;
+            var padding = 4;
+            var totalWidth = width + padding * 2;
 
             var svg = \`
-              <svg width="\${width}" height="\${totalHeight}" viewBox="0 0 \${width} \${totalHeight}" xmlns="http://www.w3.org/2000/svg">
+              <svg width="\${totalWidth}" height="\${totalHeight}" viewBox="0 0 \${totalWidth} \${totalHeight}" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <filter id="bgShadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                    <feOffset dx="0" dy="1" result="offsetblur"/>
+                    <feComponentTransfer>
+                      <feFuncA type="linear" slope="0.3"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                <!-- 배경 페이드 (핀 주변으로 살짝 보이게) -->
+                <circle cx="\${totalWidth/2}" cy="\${height * 0.37}" r="\${width * 0.48}" fill="white" opacity="0.75" filter="url(#bgShadow)"/>
                 <!-- 둥근 그림자 (타원) -->
-                <ellipse cx="\${width/2}" cy="\${height + 3}" rx="\${width * 0.25}" ry="2" fill="black" opacity="0.2"/>
-                <!-- 핀 이미지 -->
-                <image href="\${pinImageSrc}" x="0" y="0" width="\${width}" height="\${height}"/>
+                <ellipse cx="\${totalWidth/2}" cy="\${height + 3}" rx="\${width * 0.25}" ry="2" fill="black" opacity="0.2"/>
+                <!-- 핀 이미지 - 선명하게 유지 (filter 제거) -->
+                <image href="\${pinImageSrc}" x="\${padding}" y="0" width="\${width}" height="\${height}"/>
               </svg>
             \`;
 
@@ -1840,8 +1857,8 @@ const HomeScreen: React.FC = () => {
 
                   // 그림자가 있는 마커 이미지 생성 - 비율 301:388 유지
                   var markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-                  var markerSize = new kakao.maps.Size(36, 52); // 그림자 포함 높이
-                  var markerOffset = new kakao.maps.Point(18, 49); // 핀의 끝점 위치 (그림자 고려)
+                  var markerSize = new kakao.maps.Size(44, 52); // 페이드 + 그림자 포함 (width: 36+8, height: 46+6)
+                  var markerOffset = new kakao.maps.Point(22, 49); // 핀의 끝점 위치 (중앙 정렬)
 
                   var markerImage = new kakao.maps.MarkerImage(
                       markerImageWithShadow,
