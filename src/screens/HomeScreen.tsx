@@ -840,10 +840,7 @@ const HomeScreen: React.FC = () => {
         }) : null;
 
         if (selectedMarkerObj && selectedMarkerObj.marker && selectedMarkerObj.pinImage) {
-          // 깜빡임 효과 시작 (느리게 1초마다)
-          var isHighlighted = true;
-
-          // 첫 프레임은 밝게
+          // 강조 이미지로 고정 (깜빡임 없이)
           var highlightImageWithShadow = window.createHighlightMarkerImage(selectedMarkerObj.pinImage, 48, 62);
           var highlightImage = new kakao.maps.MarkerImage(
             highlightImageWithShadow,
@@ -851,40 +848,7 @@ const HomeScreen: React.FC = () => {
             { offset: new kakao.maps.Point(36, 65) }
           );
           selectedMarkerObj.marker.setImage(highlightImage);
-
-          // 1초마다 밝은 버전 <-> 일반 버전 교체
-          window.blinkInterval = setInterval(function() {
-            if (isHighlighted) {
-              // 일반 버전으로 변경
-              var normalImageWithShadow = window.createMarkerImageWithShadow(selectedMarkerObj.pinImage, 48, 62);
-              var normalImage = new kakao.maps.MarkerImage(
-                normalImageWithShadow,
-                new kakao.maps.Size(56, 68),
-                { offset: new kakao.maps.Point(28, 65) }
-              );
-              selectedMarkerObj.marker.setImage(normalImage);
-            } else {
-              // 밝은 버전으로 변경
-              var highlightImageWithShadow = window.createHighlightMarkerImage(selectedMarkerObj.pinImage, 48, 62);
-              var highlightImage = new kakao.maps.MarkerImage(
-                highlightImageWithShadow,
-                new kakao.maps.Size(72, 68),
-                { offset: new kakao.maps.Point(36, 65) }
-              );
-              selectedMarkerObj.marker.setImage(highlightImage);
-            }
-            isHighlighted = !isHighlighted;
-          }, 1000);
         }
-
-        // 지도 중심을 해당 쉼터로 부드럽게 이동 (약간 위쪽으로 조정하여 화면 중앙에 위치)
-        var shelterPosition = new kakao.maps.LatLng(${shelter.latitude}, ${shelter.longitude});
-        window.map.panTo(shelterPosition);
-
-        // 적절한 줌 레벨로 조정
-        setTimeout(function() {
-          window.map.setLevel(3);
-        }, 300);
       `;
       webViewRef.current.injectJavaScript(highlightScript);
       console.log('🎯 마커 강조 및 지도 이동:', shelter.name, shelter.id, shelter.latitude, shelter.longitude);
@@ -1039,8 +1003,9 @@ const HomeScreen: React.FC = () => {
       console.log('🗺️ 총 거리:', totalDistance, 'm, 총 시간:', totalTime, '초');
       console.log('🗺️ 경로 시작:', pathCoords[0], '경로 끝:', pathCoords[pathCoords.length - 1]);
 
-      // WebView에 경로 그리기
-      if (webViewRef.current && pathCoords.length > 0) {
+      // 500ms 후에 WebView에 경로 그리기 (메시지 표시 직후)
+      setTimeout(() => {
+        if (webViewRef.current && pathCoords.length > 0) {
         // 먼저 목적지 쉼터만 보이도록 마커 업데이트
         console.log('🎯 목적지 쉼터 ID:', destinationShelterId);
         console.log('🎯 filteredMapLocations 수:', filteredMapLocations.length);
@@ -1195,10 +1160,10 @@ const HomeScreen: React.FC = () => {
             bounds.extend(point);
           });
 
-          // 지도 범위 설정 및 강제 리렌더링
+          // 지도 범위 설정 (두 번 호출하여 확실하게 적용)
           window.map.setBounds(bounds);
 
-          // 약간의 딜레이 후 다시 한 번 bounds 설정 (렌더링 버그 방지)
+          // 약간의 딜레이 후 다시 한 번 bounds 설정 및 리렌더링 (렌더링 버그 방지)
           setTimeout(function() {
             window.map.setBounds(bounds);
             if (window.map.relayout) {
@@ -1225,7 +1190,7 @@ const HomeScreen: React.FC = () => {
           : `${(totalDistance / 1000).toFixed(1)}km`;
         const duration = Math.round(totalTime / 60); // 분
 
-        // 애니메이션과 함께 길안내 시작 (2초 후)
+        // 애니메이션과 함께 길안내 시작 (1.5초 후 - 총 2초)
         setTimeout(() => {
           setIsNavigating(true);
           setNavigationInfo({
@@ -1236,8 +1201,9 @@ const HomeScreen: React.FC = () => {
           setDestinationCoords({ lat: destLat, lon: destLon }); // 목적지 좌표 저장
           setIsLoadingRoute(false);
           console.log('✅ 길안내 시작:', { destinationName, distance, duration });
-        }, 2000);
-      }
+        }, 1500);
+        }
+      }, 500);
     } catch (error) {
       console.error('❌ 경로 탐색 실패:', error);
       setIsLoadingRoute(false);
@@ -1381,23 +1347,30 @@ const HomeScreen: React.FC = () => {
           });
 
           console.log('🎯 모든 마커 복원 완료:', positions.length);
-
-
-          // 내 위치로 지도 이동 (부드러운 애니메이션)
-          var myPosition = new kakao.maps.LatLng(${myLat}, ${myLon});
-          window.map.panTo(myPosition);
-
-          // 적절한 줌 레벨로 설정
-          setTimeout(function() {
-            window.map.setLevel(4);
-          }, 300);
-
-          console.log('📍 내 위치로 포커스:', ${myLat}, ${myLon});
         `;
         webViewRef.current.injectJavaScript(clearRouteScript);
+
+        // 1000ms 후에 내 위치로 돌아가기 (메시지가 거의 끝날 때쯤)
+        setTimeout(() => {
+          if (webViewRef.current) {
+            const returnScript = `
+              // 내 위치로 지도 이동
+              var myPosition = new kakao.maps.LatLng(${myLat}, ${myLon});
+              window.map.panTo(myPosition);
+
+              // 적절한 줌 레벨로 설정
+              setTimeout(function() {
+                window.map.setLevel(4);
+              }, 300);
+
+              console.log('📍 내 위치로 포커스:', ${myLat}, ${myLon});
+            `;
+            webViewRef.current.injectJavaScript(returnScript);
+          }
+        }, 1000);
       }
 
-      // 상태 초기화
+      // 상태 초기화 (1.5초 후 - 총 1.5초)
       setIsNavigating(false);
       setNavigationInfo(null);
       setDestinationCoords(null);
@@ -1411,7 +1384,7 @@ const HomeScreen: React.FC = () => {
       runOnJS(setShowFade)(true);
 
       console.log('✅ 길안내 종료됨');
-    }, 2000); // 2초 후 종료
+    }, 1500); // 1.5초 후 종료
   };
 
   // 하단 슬라이드 애니메이션을 위한 값들
@@ -2234,25 +2207,6 @@ const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* 길안내 로딩 오버레이 */}
-          <NavigationMessage
-            visible={isLoadingRoute}
-            icon="navigate"
-            message="길안내를 시작하겠습니다"
-            colors={colors}
-            getFontSize={getFontSize}
-            showDots={true}
-          />
-
-          {/* 길안내 종료 오버레이 */}
-          <NavigationMessage
-            visible={isEndingRoute}
-            icon="checkmark-circle"
-            message="길안내를 종료하겠습니다"
-            colors={colors}
-            getFontSize={getFontSize}
-          />
-
           {/* 길안내 정보 오버레이 */}
           {isNavigating && navigationInfo && !isLoadingRoute && !isEndingRoute && (
             <Animated.View style={[styles.navigationInfoContainer, { backgroundColor: colors.surface }, navInfoAnimatedStyle]}>
@@ -2627,6 +2581,39 @@ const HomeScreen: React.FC = () => {
           onClose={handleCloseTutorial}
         />
       </View>
+
+      {/* 길안내 로딩 오버레이 */}
+      <Modal
+        visible={isLoadingRoute}
+        transparent={true}
+        animationType="none"
+        statusBarTranslucent={true}
+      >
+        <NavigationMessage
+          visible={isLoadingRoute}
+          icon="navigate"
+          message="길안내를 시작하겠습니다"
+          colors={colors}
+          getFontSize={getFontSize}
+          showDots={true}
+        />
+      </Modal>
+
+      {/* 길안내 종료 오버레이 */}
+      <Modal
+        visible={isEndingRoute}
+        transparent={true}
+        animationType="none"
+        statusBarTranslucent={true}
+      >
+        <NavigationMessage
+          visible={isEndingRoute}
+          icon="checkmark-circle"
+          message="길안내를 종료하겠습니다"
+          colors={colors}
+          getFontSize={getFontSize}
+        />
+      </Modal>
     </GestureHandlerRootView>
   );
 };
@@ -2759,7 +2746,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 100,
+        zIndex: 9999,
+        elevation: 9999,
     },
     loadingCard: {
         borderRadius: 20,
@@ -2771,7 +2759,7 @@ const styles = StyleSheet.create({
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 12,
-          elevation: 12,
+          elevation: 10000,
         }),
     },
     loadingText: {
