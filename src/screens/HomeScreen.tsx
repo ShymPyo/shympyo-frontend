@@ -486,38 +486,80 @@ const HomeScreen: React.FC = () => {
     try {
       setIsLoadingLocation(true);
 
-      // 고정 위치 사용 (서울 시청)
-      const fixedLat = 37.5665;
-      const fixedLon = 126.978;
-
-      // 고정 위치를 Location 객체 형식으로 생성
-      const location = {
-        coords: {
-          latitude: fixedLat,
-          longitude: fixedLon,
-          altitude: null,
-          accuracy: null,
-          altitudeAccuracy: null,
-          heading: null,
-          speed: null,
-        },
-        timestamp: Date.now(),
-      } as Location.LocationObject;
+      // 실제 위치 가져오기
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
 
       setCurrentLocation(location);
-      console.log('✅ 고정 위치 (서울 시청):', fixedLat, fixedLon);
+      console.log('✅ 실제 위치:', location.coords.latitude, location.coords.longitude);
 
       // 주변 장소 및 날씨 조회
       await Promise.all([
-        loadNearbyPlaces(fixedLat, fixedLon),
-        loadWeather(fixedLat, fixedLon)
+        loadNearbyPlaces(location.coords.latitude, location.coords.longitude),
+        loadWeather(location.coords.latitude, location.coords.longitude)
       ]);
     } catch (error) {
       console.error('❌ 현재 위치 가져오기 실패:', error);
+      Alert.alert('위치 오류', '현재 위치를 가져올 수 없습니다. 위치 권한을 확인해주세요.');
     } finally {
       setIsLoadingLocation(false);
     }
   };
+
+  // 실시간 위치 추적
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | null = null;
+
+    const startTracking = async () => {
+      try {
+        // 위치 권한 확인
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('❌ 위치 권한 없음');
+          return;
+        }
+
+        // 실시간 위치 추적 시작 (최적화된 설정)
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 1000, // 1초마다 갱신 (바로바로 반응)
+            distanceInterval: 2, // 2m 이상 이동 시 갱신 (부드러운 트래킹)
+          },
+          (location) => {
+            console.log('📍 위치 업데이트:', location.coords.latitude, location.coords.longitude);
+            setCurrentLocation(location);
+
+            // 웹뷰에 위치 업데이트 전송
+            if (webViewRef.current) {
+              const message = JSON.stringify({
+                type: 'LOCATION_UPDATE',
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                heading: location.coords.heading || 0,
+              });
+              webViewRef.current.postMessage(message);
+            }
+          }
+        );
+
+        console.log('✅ 실시간 위치 추적 시작');
+      } catch (error) {
+        console.error('❌ 위치 추적 시작 실패:', error);
+      }
+    };
+
+    startTracking();
+
+    // 클린업: 컴포넌트 언마운트 시 위치 추적 중지
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+        console.log('🛑 실시간 위치 추적 중지');
+      }
+    };
+  }, []);
 
   // 날씨 정보 조회
   const loadWeather = async (lat: number, lon: number) => {
@@ -1749,35 +1791,19 @@ const HomeScreen: React.FC = () => {
               }
           }, 500);
 
-          // 내 위치 마커 - 카카오맵 스타일로 강조
+          // 내 위치 마커 (전역으로 저장)
           ${currentLocation ? `
-          // 내 위치 원형 범위 표시 (정확도 범위)
-          var myLocationCircle = new kakao.maps.Circle({
-              center: new kakao.maps.LatLng(${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}),
-              radius: 15, // 15m 반경으로 축소
-              strokeWeight: 1,
-              strokeColor: '#FF0000',
-              strokeOpacity: 0.6,
-              fillColor: '#FF0000',
-              fillOpacity: 0.1
-          });
-          myLocationCircle.setMap(map);
-
-          // 내 위치 마커 - 빨간색 원형
-          var myLocationMarker = new kakao.maps.Marker({
+          // 내 위치 마커 - 펄스 효과와 함께 강조
+          window.myLocationMarker = new kakao.maps.Marker({
               map: map,
               position: new kakao.maps.LatLng(${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}),
               title: '내 위치',
               image: new kakao.maps.MarkerImage(
-                  'data:image/svg+xml;base64,' + btoa(\`
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="10" cy="10" r="9" fill="#FF0000" stroke="white" stroke-width="2"/>
-                      <circle cx="10" cy="10" r="3" fill="white"/>
-                    </svg>
-                  \`),
-                  new kakao.maps.Size(20, 20),
-                  { offset: new kakao.maps.Point(10, 10) }
-              )
+                  'data:image/svg+xml;base64,' + btoa('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><defs><filter id="myLocationShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="1"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="20" cy="20" r="18" fill="#FF0000" opacity="0.2"><animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.35;0.15;0.35" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="15" fill="#FF0000" opacity="0.3"><animate attributeName="r" values="12;15;12" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.25;0.5" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="10" fill="#FF0000" stroke="white" stroke-width="3" filter="url(#myLocationShadow)"/><circle cx="20" cy="20" r="4" fill="white"/></svg>'),
+                  new kakao.maps.Size(40, 40),
+                  { offset: new kakao.maps.Point(20, 20) }
+              ),
+              zIndex: 1000
           });
           ` : ''}
   
@@ -1911,14 +1937,74 @@ const HomeScreen: React.FC = () => {
               }
           }
 
+          // 실시간 위치 업데이트를 위한 변수
+          var lastUpdateTime = 0;
+          var lastCenterUpdatePosition = null;
+
           // React Native에서 메시지를 받을 리스너 추가
           window.addEventListener('message', function(event) {
             try {
-              eval(event.data);
+              var data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+
+              // 실시간 위치 업데이트 처리
+              if (data.type === 'LOCATION_UPDATE') {
+                var now = Date.now();
+
+                // 너무 빠른 갱신 방지 (최소 1초 간격)
+                if (now - lastUpdateTime < 1000) {
+                  return;
+                }
+                lastUpdateTime = now;
+
+                var newPosition = new kakao.maps.LatLng(data.latitude, data.longitude);
+
+                // 내 위치 마커 업데이트 또는 생성
+                if (window.myLocationMarker) {
+                  window.myLocationMarker.setPosition(newPosition);
+                  console.log('📍 마커 위치 업데이트:', data.latitude, data.longitude);
+                } else {
+                  // 마커가 없으면 생성
+                  window.myLocationMarker = new kakao.maps.Marker({
+                    map: map,
+                    position: newPosition,
+                    title: '내 위치',
+                    image: new kakao.maps.MarkerImage(
+                      'data:image/svg+xml;base64,' + btoa('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><defs><filter id="myLocationShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="1"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="20" cy="20" r="18" fill="#FF0000" opacity="0.2"><animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.35;0.15;0.35" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="15" fill="#FF0000" opacity="0.3"><animate attributeName="r" values="12;15;12" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.25;0.5" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="10" fill="#FF0000" stroke="white" stroke-width="3" filter="url(#myLocationShadow)"/><circle cx="20" cy="20" r="4" fill="white"/></svg>'),
+                      new kakao.maps.Size(40, 40),
+                      { offset: new kakao.maps.Point(20, 20) }
+                    ),
+                    zIndex: 1000
+                  });
+                  console.log('✅ 내 위치 마커 생성:', data.latitude, data.longitude);
+                }
+
+                // 지도 중심 이동 (3m 이상 이동했을 때만 - 부드러운 추적)
+                if (!lastCenterUpdatePosition ||
+                    calculateDistance(lastCenterUpdatePosition, newPosition) > 3) {
+                  map.panTo(newPosition);
+                  lastCenterUpdatePosition = newPosition;
+                  console.log('🗺️ 지도 중심 이동');
+                }
+              } else {
+                // 기존 JavaScript 실행
+                eval(event.data);
+              }
             } catch (e) {
-              console.error('메시지 실행 오류:', e);
+              console.error('메시지 처리 오류:', e);
             }
           });
+
+          // 두 좌표 간 거리 계산 (미터 단위)
+          function calculateDistance(pos1, pos2) {
+            var R = 6371000; // 지구 반지름 (m)
+            var dLat = (pos2.getLat() - pos1.getLat()) * Math.PI / 180;
+            var dLon = (pos2.getLng() - pos1.getLng()) * Math.PI / 180;
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(pos1.getLat() * Math.PI / 180) * Math.cos(pos2.getLat() * Math.PI / 180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          }
 
       </script>
   </body>
