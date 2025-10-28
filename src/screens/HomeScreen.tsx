@@ -354,6 +354,7 @@ const HomeScreen: React.FC = () => {
 
   // 위치 관련 상태
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
+  const [initialLocation, setInitialLocation] = useState<Location.LocationObject | null>(null); // WebView 초기화용
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
   const [mapLocations, setMapLocations] = useState<MapLocation[]>([]);
@@ -492,6 +493,12 @@ const HomeScreen: React.FC = () => {
       });
 
       setCurrentLocation(location);
+
+      // 첫 번째 위치 로드 시에만 initialLocation 설정 (WebView 초기화용)
+      if (!initialLocation) {
+        setInitialLocation(location);
+      }
+
       console.log('✅ 실제 위치:', location.coords.latitude, location.coords.longitude);
 
       // 주변 장소 및 날씨 조회
@@ -670,19 +677,32 @@ const HomeScreen: React.FC = () => {
       return;
     }
 
-    // 현재 위치 갱신
-    await getCurrentLocation();
+    // 길찾기 중이 아닐 때만 현재 위치 갱신 (주변 장소 다시 로드)
+    if (!isNavigating && currentLocation) {
+      await getCurrentLocation();
+    }
 
-    // WebView의 지도를 실제 현재 위치로 이동하고 줌 레벨 초기화
+    // WebView의 지도를 실제 현재 위치로 이동
     if (webViewRef.current && currentLocation) {
       const lat = currentLocation.coords.latitude;
       const lon = currentLocation.coords.longitude;
 
       const moveScript = `
         if (typeof map !== 'undefined') {
+          // 추적 모드 재활성화
+          isUserInteracting = false;
+          if (interactionTimeout) {
+            clearTimeout(interactionTimeout);
+            interactionTimeout = null;
+          }
+          console.log('✅ 내 위치 버튼 - 자동 추적 모드 재활성화');
+
+          // 지도 중심 이동 (경로는 유지됨)
           var moveLatLon = new kakao.maps.LatLng(${lat}, ${lon});
-          map.setCenter(moveLatLon);
-          map.setLevel(3);
+          map.panTo(moveLatLon);
+
+          // 마지막 중심 업데이트 위치 갱신
+          lastCenterUpdatePosition = moveLatLon;
         }
       `;
       webViewRef.current.injectJavaScript(moveScript);
@@ -780,6 +800,24 @@ const HomeScreen: React.FC = () => {
     // 지도에서 해당 마커를 강조하고 지도 중심 이동
     if (webViewRef.current && shelter.latitude && shelter.longitude) {
       const highlightScript = `
+        // 쉼터 선택 시 자동 추적 중지 (쉼터 위치를 보기 위해)
+        isUserInteracting = true;
+        if (interactionTimeout) {
+          clearTimeout(interactionTimeout);
+        }
+        // 15초 후 자동으로 추적 모드 재개
+        interactionTimeout = setTimeout(function() {
+          isUserInteracting = false;
+          console.log('✅ 자동 추적 모드 재개');
+        }, 15000);
+        console.log('🏠 쉼터 선택 - 자동 추적 중지 (15초)');
+
+        // 기존 깜빡임 효과 중지
+        if (window.blinkInterval) {
+          clearInterval(window.blinkInterval);
+          window.blinkInterval = null;
+        }
+
         // 모든 마커를 원래 크기로 복원
         if (window.markers) {
           window.markers.forEach(function(markerObj, idx) {
@@ -802,14 +840,41 @@ const HomeScreen: React.FC = () => {
         }) : null;
 
         if (selectedMarkerObj && selectedMarkerObj.marker && selectedMarkerObj.pinImage) {
-          // 선택된 마커는 크기를 키워서 강조 - 비율 301:388 유지 (그림자 포함)
-          var highlightImageWithShadow = window.createMarkerImageWithShadow(selectedMarkerObj.pinImage, 48, 62);
+          // 깜빡임 효과 시작 (느리게 1초마다)
+          var isHighlighted = true;
+
+          // 첫 프레임은 밝게
+          var highlightImageWithShadow = window.createHighlightMarkerImage(selectedMarkerObj.pinImage, 48, 62);
           var highlightImage = new kakao.maps.MarkerImage(
             highlightImageWithShadow,
-            new kakao.maps.Size(56, 68),
-            { offset: new kakao.maps.Point(28, 65) }
+            new kakao.maps.Size(72, 68),
+            { offset: new kakao.maps.Point(36, 65) }
           );
           selectedMarkerObj.marker.setImage(highlightImage);
+
+          // 1초마다 밝은 버전 <-> 일반 버전 교체
+          window.blinkInterval = setInterval(function() {
+            if (isHighlighted) {
+              // 일반 버전으로 변경
+              var normalImageWithShadow = window.createMarkerImageWithShadow(selectedMarkerObj.pinImage, 48, 62);
+              var normalImage = new kakao.maps.MarkerImage(
+                normalImageWithShadow,
+                new kakao.maps.Size(56, 68),
+                { offset: new kakao.maps.Point(28, 65) }
+              );
+              selectedMarkerObj.marker.setImage(normalImage);
+            } else {
+              // 밝은 버전으로 변경
+              var highlightImageWithShadow = window.createHighlightMarkerImage(selectedMarkerObj.pinImage, 48, 62);
+              var highlightImage = new kakao.maps.MarkerImage(
+                highlightImageWithShadow,
+                new kakao.maps.Size(72, 68),
+                { offset: new kakao.maps.Point(36, 65) }
+              );
+              selectedMarkerObj.marker.setImage(highlightImage);
+            }
+            isHighlighted = !isHighlighted;
+          }, 1000);
         }
 
         // 지도 중심을 해당 쉼터로 부드럽게 이동 (약간 위쪽으로 조정하여 화면 중앙에 위치)
@@ -1729,7 +1794,10 @@ const HomeScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  const mapHtml = `
+  // mapHtml을 useMemo로 메모이제이션하여 불필요한 WebView 리로드 방지
+  const mapHtml = useMemo(() => {
+    console.log('🗺️ mapHtml 재생성 중... (pinImages 로드됨)');
+    return `
   <!DOCTYPE html>
   <html>
   <head>
@@ -1763,9 +1831,9 @@ const HomeScreen: React.FC = () => {
       <script>
           var container = document.getElementById('map');
 
-          // 현재 위치 사용 (기본값 서울)
-          var centerLat = ${currentLocation?.coords.latitude || 37.5665};
-          var centerLng = ${currentLocation?.coords.longitude || 126.9780};
+          // 초기 위치 사용 (기본값 서울) - 이후 위치는 실시간 업데이트로 처리
+          var centerLat = ${initialLocation?.coords.latitude || 37.5665};
+          var centerLng = ${initialLocation?.coords.longitude || 126.9780};
 
           var options = {
               center: new kakao.maps.LatLng(centerLat, centerLng),
@@ -1773,6 +1841,49 @@ const HomeScreen: React.FC = () => {
           };
 
           var map = new kakao.maps.Map(container, options);
+
+          // 사용자 인터랙션 플래그 (지도를 직접 조작 중인지)
+          var isUserInteracting = false;
+          var interactionTimeout = null;
+
+          // 지도 드래그 이벤트 - 사용자가 지도를 움직이면 자동 추적 중지
+          kakao.maps.event.addListener(map, 'dragstart', function() {
+            isUserInteracting = true;
+            console.log('🖐️ 사용자가 지도 드래그 시작 - 자동 추적 중지');
+
+            // 기존 타이머 취소
+            if (interactionTimeout) {
+              clearTimeout(interactionTimeout);
+            }
+          });
+
+          // 지도 드래그 종료 - 10초 후 자동 추적 재개
+          kakao.maps.event.addListener(map, 'dragend', function() {
+            console.log('🖐️ 지도 드래그 종료 - 10초 후 자동 추적 재개');
+
+            // 10초 후 자동으로 추적 모드 재개
+            interactionTimeout = setTimeout(function() {
+              isUserInteracting = false;
+              console.log('✅ 자동 추적 모드 재개');
+            }, 10000);
+          });
+
+          // 줌 레벨 변경 이벤트 - 사용자가 줌을 조작하면 자동 추적 중지
+          kakao.maps.event.addListener(map, 'zoom_changed', function() {
+            isUserInteracting = true;
+            console.log('🔍 사용자가 줌 변경 - 자동 추적 중지');
+
+            // 기존 타이머 취소
+            if (interactionTimeout) {
+              clearTimeout(interactionTimeout);
+            }
+
+            // 10초 후 자동으로 추적 모드 재개
+            interactionTimeout = setTimeout(function() {
+              isUserInteracting = false;
+              console.log('✅ 자동 추적 모드 재개');
+            }, 10000);
+          });
 
           // POI 숨기기를 위한 스타일 적용
           setTimeout(function() {
@@ -1791,18 +1902,24 @@ const HomeScreen: React.FC = () => {
               }
           }, 500);
 
+          // 내 위치 마커 이미지 생성 (전역, 한 번만)
+          if (!window.myLocationMarkerImageObj) {
+            window.myLocationMarkerImageObj = new kakao.maps.MarkerImage(
+              'data:image/svg+xml;base64,' + btoa('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><defs><filter id="myLocationShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="1"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="20" cy="20" r="18" fill="#FF0000" opacity="0.2"><animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.35;0.15;0.35" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="15" fill="#FF0000" opacity="0.3"><animate attributeName="r" values="12;15;12" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.25;0.5" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="10" fill="#FF0000" stroke="white" stroke-width="3" filter="url(#myLocationShadow)"/><circle cx="20" cy="20" r="4" fill="white"/></svg>'),
+              new kakao.maps.Size(40, 40),
+              { offset: new kakao.maps.Point(20, 20) }
+            );
+          }
+
           // 내 위치 마커 (전역으로 저장)
-          ${currentLocation ? `
-          // 내 위치 마커 - 펄스 효과와 함께 강조
+          ${initialLocation ? `
+          // 내 위치 마커 - 펄스 효과와 함께 강조 (이미지 재사용)
+          // 초기 위치로 생성, 이후 실시간 업데이트로 위치 변경
           window.myLocationMarker = new kakao.maps.Marker({
               map: map,
-              position: new kakao.maps.LatLng(${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}),
+              position: new kakao.maps.LatLng(${initialLocation.coords.latitude}, ${initialLocation.coords.longitude}),
               title: '내 위치',
-              image: new kakao.maps.MarkerImage(
-                  'data:image/svg+xml;base64,' + btoa('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><defs><filter id="myLocationShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="1"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="20" cy="20" r="18" fill="#FF0000" opacity="0.2"><animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.35;0.15;0.35" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="15" fill="#FF0000" opacity="0.3"><animate attributeName="r" values="12;15;12" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.25;0.5" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="10" fill="#FF0000" stroke="white" stroke-width="3" filter="url(#myLocationShadow)"/><circle cx="20" cy="20" r="4" fill="white"/></svg>'),
-                  new kakao.maps.Size(40, 40),
-                  { offset: new kakao.maps.Point(20, 20) }
-              ),
+              image: window.myLocationMarkerImageObj,
               zIndex: 1000
           });
           ` : ''}
@@ -1854,6 +1971,49 @@ const HomeScreen: React.FC = () => {
                 <!-- 둥근 그림자 (타원) -->
                 <ellipse cx="\${totalWidth/2}" cy="\${height + 3}" rx="\${width * 0.25}" ry="2" fill="black" opacity="0.2"/>
                 <!-- 핀 이미지 - 선명하게 유지 (filter 제거) -->
+                <image href="\${pinImageSrc}" x="\${padding}" y="0" width="\${width}" height="\${height}"/>
+              </svg>
+            \`;
+
+            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+          };
+
+          // 선택된 마커용 강조 이미지 생성 헬퍼 함수 (큰 후광과 빛나는 효과)
+          window.createHighlightMarkerImage = function(pinImageSrc, width, height) {
+            var shadowHeight = 6;
+            var totalHeight = height + shadowHeight;
+            var padding = 12;
+            var totalWidth = width + padding * 2;
+
+            var svg = \`
+              <svg width="\${totalWidth}" height="\${totalHeight}" viewBox="0 0 \${totalWidth} \${totalHeight}" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <filter id="highlightShadow" x="-100%" y="-100%" width="300%" height="300%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+                    <feOffset dx="0" dy="2" result="offsetblur"/>
+                    <feComponentTransfer>
+                      <feFuncA type="linear" slope="0.6"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                  <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="70%" style="stop-color:white;stop-opacity:0.5" />
+                    <stop offset="100%" style="stop-color:white;stop-opacity:0" />
+                  </radialGradient>
+                </defs>
+                <!-- 가장 큰 외곽 후광 (반투명) -->
+                <circle cx="\${totalWidth/2}" cy="\${height * 0.37}" r="\${width * 0.85}" fill="url(#glowGradient)" opacity="0.6" filter="url(#highlightShadow)"/>
+                <!-- 중간 후광 -->
+                <circle cx="\${totalWidth/2}" cy="\${height * 0.37}" r="\${width * 0.65}" fill="white" opacity="0.5" filter="url(#highlightShadow)"/>
+                <!-- 배경 페이드 (핵심 후광, 더 밝게) -->
+                <circle cx="\${totalWidth/2}" cy="\${height * 0.37}" r="\${width * 0.5}" fill="white" opacity="0.95" filter="url(#highlightShadow)"/>
+                <!-- 둥근 그림자 (더 크고 진하게) -->
+                <ellipse cx="\${totalWidth/2}" cy="\${height + 3}" rx="\${width * 0.35}" ry="4" fill="black" opacity="0.4"/>
+                <!-- 핀 이미지 - 선명하게 유지 -->
                 <image href="\${pinImageSrc}" x="\${padding}" y="0" width="\${width}" height="\${height}"/>
               </svg>
             \`;
@@ -1950,40 +2110,42 @@ const HomeScreen: React.FC = () => {
               if (data.type === 'LOCATION_UPDATE') {
                 var now = Date.now();
 
-                // 너무 빠른 갱신 방지 (최소 1초 간격)
-                if (now - lastUpdateTime < 1000) {
-                  return;
-                }
-                lastUpdateTime = now;
-
+                // 업데이트 빈도 제한 제거 - 부드러운 이동을 위해
                 var newPosition = new kakao.maps.LatLng(data.latitude, data.longitude);
 
                 // 내 위치 마커 업데이트 또는 생성
                 if (window.myLocationMarker) {
+                  // 기존 마커의 위치만 변경 (깜빡임 없이 부드럽게)
                   window.myLocationMarker.setPosition(newPosition);
-                  console.log('📍 마커 위치 업데이트:', data.latitude, data.longitude);
                 } else {
-                  // 마커가 없으면 생성
+                  // 마커가 없으면 한 번만 생성 (이미지 재사용)
                   window.myLocationMarker = new kakao.maps.Marker({
                     map: map,
                     position: newPosition,
                     title: '내 위치',
-                    image: new kakao.maps.MarkerImage(
-                      'data:image/svg+xml;base64,' + btoa('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><defs><filter id="myLocationShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="1"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="20" cy="20" r="18" fill="#FF0000" opacity="0.2"><animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.35;0.15;0.35" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="15" fill="#FF0000" opacity="0.3"><animate attributeName="r" values="12;15;12" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.25;0.5" dur="2s" repeatCount="indefinite"/></circle><circle cx="20" cy="20" r="10" fill="#FF0000" stroke="white" stroke-width="3" filter="url(#myLocationShadow)"/><circle cx="20" cy="20" r="4" fill="white"/></svg>'),
-                      new kakao.maps.Size(40, 40),
-                      { offset: new kakao.maps.Point(20, 20) }
-                    ),
+                    image: window.myLocationMarkerImageObj,
                     zIndex: 1000
                   });
                   console.log('✅ 내 위치 마커 생성:', data.latitude, data.longitude);
                 }
 
+                // 지도 중심 이동 체크는 여전히 유지 (불필요한 지도 이동 방지)
+                if (now - lastUpdateTime < 1000) {
+                  return;
+                }
+                lastUpdateTime = now;
+
                 // 지도 중심 이동 (3m 이상 이동했을 때만 - 부드러운 추적)
-                if (!lastCenterUpdatePosition ||
-                    calculateDistance(lastCenterUpdatePosition, newPosition) > 3) {
-                  map.panTo(newPosition);
-                  lastCenterUpdatePosition = newPosition;
-                  console.log('🗺️ 지도 중심 이동');
+                // 단, 사용자가 지도를 직접 조작 중이면 중심 이동하지 않음
+                if (!isUserInteracting) {
+                  if (!lastCenterUpdatePosition ||
+                      calculateDistance(lastCenterUpdatePosition, newPosition) > 3) {
+                    map.panTo(newPosition);
+                    lastCenterUpdatePosition = newPosition;
+                    console.log('🗺️ 지도 중심 이동');
+                  }
+                } else {
+                  console.log('🖐️ 사용자 조작 중 - 지도 중심 이동 건너뜀');
                 }
               } else {
                 // 기존 JavaScript 실행
@@ -2010,6 +2172,7 @@ const HomeScreen: React.FC = () => {
   </body>
   </html>
   `;
+  }, [initialLocation, filteredMapLocations, nearbyPlaces, pinImages]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -2017,6 +2180,7 @@ const HomeScreen: React.FC = () => {
         <StatusBar key={statusBarKey} style="dark" translucent backgroundColor="transparent" />
         <View style={styles.mapContainer}>
           <WebView
+            key="kakao-map-webview"
             ref={webViewRef}
             originWhitelist={['*']}
             source={{ html: mapHtml, baseUrl: '' }}
@@ -2030,6 +2194,9 @@ const HomeScreen: React.FC = () => {
             showsVerticalScrollIndicator={false}
             automaticallyAdjustContentInsets={false}
             contentInset={{ top: 0, left: 0, bottom: 0, right: 0 }}
+            setSupportMultipleWindows={false}
+            allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
             onMessage={(event) => {
               const message = event.nativeEvent.data;
               console.log('📱 WebView 메시지 수신:', message);
