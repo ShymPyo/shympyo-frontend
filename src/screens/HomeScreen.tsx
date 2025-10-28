@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   BackHandler,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -1633,9 +1634,19 @@ const HomeScreen: React.FC = () => {
       ]}
       onPress={() => handleShelterPress(item)} // 카드 선택 시 상세 정보 로드 후 모달 열기
     >
-      {/* 쉼터 타입별 색상 아이콘 */}
-      <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
-        <Ionicons name={item.icon as any} size={20} color="white" />
+      {/* 쉼터 타입별 맵 핀 이미지 */}
+      <View style={styles.iconContainer}>
+        <Image
+          source={
+            item.category === '스마트 쉼터' ? require('../../assets/map_fins/shelter.png') :
+            item.category === '민간 개방 시설' ? require('../../assets/map_fins/mingan.png') :
+            item.category === '교통 시설' ? require('../../assets/map_fins/traffic.png') :
+            item.category === '공공 시설' ? require('../../assets/map_fins/politic.png') :
+            item.category === '기후 동행 쉼터' ? require('../../assets/map_fins/climate.png') :
+            require('../../assets/map_fins/shelter.png')
+          }
+          style={{ width: 28, height: 36, resizeMode: 'contain' }}
+        />
       </View>
       {/* 쉼터 정보 텍스트 영역 */}
       <View style={styles.shelterInfo}>
@@ -2070,8 +2081,11 @@ const HomeScreen: React.FC = () => {
                   ]}
                   onPress={() => toggleCategory('스마트 쉼터')}
                 >
-                  <View style={[styles.filterChipIcon, { backgroundColor: '#4A90E2' }]}>
-                    <Ionicons name="medical" size={14} color="white" />
+                  <View style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                    <Image
+                      source={require('../../assets/map_fins/shelter.png')}
+                      style={{ width: 26, height: 34, resizeMode: 'contain', marginTop: 8 }}
+                    />
                   </View>
                   <Text style={[
                     styles.filterChipText,
@@ -2087,8 +2101,11 @@ const HomeScreen: React.FC = () => {
                   ]}
                   onPress={() => toggleCategory('민간 개방 시설')}
                 >
-                  <View style={[styles.filterChipIcon, { backgroundColor: '#FFA500' }]}>
-                    <Ionicons name="business" size={14} color="white" />
+                  <View style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                    <Image
+                      source={require('../../assets/map_fins/mingan.png')}
+                      style={{ width: 26, height: 34, resizeMode: 'contain', marginTop: 8 }}
+                    />
                   </View>
                   <Text style={[
                     styles.filterChipText,
@@ -2104,8 +2121,11 @@ const HomeScreen: React.FC = () => {
                   ]}
                   onPress={() => toggleCategory('교통 시설')}
                 >
-                  <View style={[styles.filterChipIcon, { backgroundColor: '#27AE60' }]}>
-                    <Ionicons name="car" size={14} color="white" />
+                  <View style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                    <Image
+                      source={require('../../assets/map_fins/traffic.png')}
+                      style={{ width: 26, height: 34, resizeMode: 'contain', marginTop: 8 }}
+                    />
                   </View>
                   <Text style={[
                     styles.filterChipText,
@@ -2121,8 +2141,11 @@ const HomeScreen: React.FC = () => {
                   ]}
                   onPress={() => toggleCategory('공공 시설')}
                 >
-                  <View style={[styles.filterChipIcon, { backgroundColor: '#E74C3C' }]}>
-                    <Ionicons name="library" size={14} color="white" />
+                  <View style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                    <Image
+                      source={require('../../assets/map_fins/politic.png')}
+                      style={{ width: 26, height: 34, resizeMode: 'contain', marginTop: 8 }}
+                    />
                   </View>
                   <Text style={[
                     styles.filterChipText,
@@ -2138,8 +2161,11 @@ const HomeScreen: React.FC = () => {
                   ]}
                   onPress={() => toggleCategory('기후 동행 쉼터')}
                 >
-                  <View style={[styles.filterChipIcon, { backgroundColor: '#9B59B6' }]}>
-                    <Ionicons name="sunny" size={14} color="white" />
+                  <View style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                    <Image
+                      source={require('../../assets/map_fins/climate.png')}
+                      style={{ width: 26, height: 34, resizeMode: 'contain', marginTop: 8 }}
+                    />
                   </View>
                   <Text style={[
                     styles.filterChipText,
@@ -2715,13 +2741,14 @@ const styles = StyleSheet.create({
     filterChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 20,
         marginRight: 6,
         borderWidth: 1,
         borderColor: '#E0E0E0',
         backgroundColor: 'white',
+        gap: 6,
     },
     filterChipSelected: {
         backgroundColor: '#F5F5F5',

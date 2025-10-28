@@ -137,10 +137,15 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
             <View style={styles.topSection}>
               {/* 왼쪽: 시설 이미지 */}
               <View style={[styles.imageContainer, { backgroundColor: colors.surface }]}>
-                <Ionicons
-                  name={shelter.icon as any}
-                  size={32}
-                  color={shelter.color}
+                <Image
+                  source={
+                    shelter.category === '스마트 쉼터' ? require('../../assets/map_fins/shelter.png') :
+                    shelter.category === '교통 시설' ? require('../../assets/map_fins/traffic.png') :
+                    shelter.category === '공공 시설' ? require('../../assets/map_fins/politic.png') :
+                    shelter.category === '기후 동행 쉼터' ? require('../../assets/map_fins/climate.png') :
+                    require('../../assets/map_fins/shelter.png')
+                  }
+                  style={{ width: 32, height: 41, resizeMode: 'contain' }}
                 />
               </View>
 

@@ -149,19 +149,24 @@ const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
           <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={false}>
             {/* 상단 정보 섹션 */}
             <View style={styles.topSection}>
-              {/* 왼쪽: 시설 이미지 - 이미지가 있을 때만 표시 */}
-              {shelter.imageUrl && (
-                <View style={[styles.imageContainer, { backgroundColor: colors.surface }]}>
+              {/* 왼쪽: 시설 이미지 - 이미지가 있으면 표시, 없으면 맵 핀 표시 */}
+              <View style={[styles.imageContainer, { backgroundColor: colors.surface }]}>
+                {shelter.imageUrl ? (
                   <Image
                     source={{ uri: shelter.imageUrl }}
                     style={styles.shelterImage}
                     resizeMode="cover"
                   />
-                </View>
-              )}
+                ) : (
+                  <Image
+                    source={require('../../assets/map_fins/mingan.png')}
+                    style={{ width: 32, height: 41, resizeMode: 'contain' }}
+                  />
+                )}
+              </View>
 
               {/* 오른쪽: 시설명과 기본 정보 */}
-              <View style={[styles.infoContainer, !shelter.imageUrl && { marginLeft: 0 }]}>
+              <View style={styles.infoContainer}>
                 <Text style={[styles.shelterName, { fontSize: getFontSize(20), color: colors.text.primary }]} numberOfLines={2}>
                   {shelter.name}
                 </Text>
