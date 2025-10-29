@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootStackParamList, MainTabParamList } from '../types';
 import { Colors, getColors } from '../constants/colors';
@@ -30,6 +31,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabNavigator = () => {
   const { colors, getFontSize } = useThemedStyles();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -61,8 +63,8 @@ const MainTabNavigator = () => {
           borderTopWidth: 1,
           borderTopColor: colors.text.light + '20',
           paddingTop: 10,
-          paddingBottom: 25,
-          height: 70,
+          paddingBottom: Math.max(insets.bottom, 10),
+          height: 70 + Math.max(insets.bottom - 15, 0),
         },
         tabBarLabelStyle: {
           fontSize: getFontSize(12),

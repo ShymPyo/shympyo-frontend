@@ -2212,17 +2212,17 @@ const HomeScreen: React.FC = () => {
             <Animated.View style={[styles.navigationInfoContainer, { backgroundColor: colors.surface }, navInfoAnimatedStyle]}>
               <View style={styles.navigationInfoContent}>
                 <View style={styles.navigationInfoLeft}>
-                  <Ionicons name="navigate" size={20} color={colors.primary} />
+                  <Ionicons name="navigate" size={28} color={colors.primary} />
                   <View style={styles.navigationTextContainer}>
-                    <Text style={[styles.navigationDestination, { fontSize: getFontSize(14), color: colors.text.primary }]} numberOfLines={1}>
+                    <Text style={[styles.navigationDestination, { fontSize: getFontSize(18), color: colors.text.primary }]} numberOfLines={1}>
                       {navigationInfo.destinationName}
                     </Text>
                     <View style={styles.navigationDetails}>
-                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(12), color: colors.text.secondary }]}>
+                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
                         {navigationInfo.distance}
                       </Text>
-                      <Text style={[styles.navigationSeparator, { fontSize: getFontSize(12), color: colors.text.light }]}>•</Text>
-                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(12), color: colors.text.secondary }]}>
+                      <Text style={[styles.navigationSeparator, { fontSize: getFontSize(16), color: colors.text.light }]}>•</Text>
+                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
                         {navigationInfo.duration}
                       </Text>
                     </View>
@@ -2232,7 +2232,7 @@ const HomeScreen: React.FC = () => {
                   style={[styles.navigationCloseButton, { backgroundColor: colors.text.light + '20' }]}
                   onPress={handleCancelNavigation}
                 >
-                  <Ionicons name="close" size={18} color={colors.text.secondary} />
+                  <Ionicons name="close" size={24} color={colors.text.secondary} />
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -2819,16 +2819,16 @@ const styles = StyleSheet.create({
         top: 60,
         left: 20,
         right: 20,
-        borderRadius: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        zIndex: 15,
+        borderRadius: 16,
+        paddingVertical: 18,
+        paddingHorizontal: 20,
+        zIndex: 20,
         ...getShadowStyle({
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
+          shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.5,
-          shadowRadius: 4,
-          elevation: 12,
+          shadowRadius: 8,
+          elevation: 15,
         }),
     },
     navigationInfoContent: {
