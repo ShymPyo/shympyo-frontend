@@ -33,6 +33,7 @@ interface TutorialPage {
     text: string;
   }>;
   sideBySideImages?: boolean;
+  showStartButton?: boolean;
 }
 
 interface TutorialModalProps {
@@ -114,6 +115,7 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
       title: '이제, 쉼표 찍으러 가볼까요?',
       description: '내 주변 쉼터를 바로 찾아보고,\n가장 가까운 휴식처로 쉼표 찍으러 가요.',
       image: require('../../assets/shympyo_logo.png'),
+      showStartButton: true,
     },
   ];
 
@@ -217,9 +219,20 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
       <View style={styles.bottomFixedSection}>
         {/* 설명 */}
         <View style={styles.descriptionContainer}>
-          <Text style={[styles.description, { fontSize: getFontSize(14), color: colors.text.primary }]}>
-            {item.description}
-          </Text>
+          {item.showStartButton ? (
+            <View style={styles.descriptionWithButton}>
+              <Text style={[styles.description, styles.descriptionFlex, { fontSize: getFontSize(14), color: colors.text.primary }]}>
+                {item.description}
+              </Text>
+              <TouchableOpacity onPress={onClose} style={styles.startButton}>
+                <Ionicons name="arrow-forward-circle" size={40} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Text style={[styles.description, { fontSize: getFontSize(14), color: colors.text.primary }]}>
+              {item.description}
+            </Text>
+          )}
         </View>
       </View>
       </View>
@@ -459,6 +472,20 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'left',
     paddingHorizontal: 10,
+  },
+  descriptionWithButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+  },
+  descriptionFlex: {
+    flex: 1,
+    paddingHorizontal: 0,
+  },
+  startButton: {
+    marginLeft: 15,
+    padding: 5,
   },
   indicatorsFixed: {
     flexDirection: 'row',
