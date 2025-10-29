@@ -67,7 +67,7 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
     {
       id: '2',
       number: '',
-      title: '쉼표는 이런 앱이에요.',
+      title: '쉼표는 이런 앱이에요',
       description: '쉼표는 내 주변 500m 안,\n부담 없이 들를 수 있는 쉼터를 안내해주는 앱이에요.\n\n3가지 쉼터 유형을 소개해드릴게요.',
       image: require('../../assets/shympyo_logo.png'),
     },
