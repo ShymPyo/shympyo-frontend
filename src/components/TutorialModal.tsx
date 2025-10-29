@@ -22,6 +22,7 @@ interface TutorialPage {
   number: string;
   title: string;
   description: string;
+  topDescription?: string;
   image?: any;
   pinImage?: any;
   secondaryImage?: any;
@@ -59,28 +60,28 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
       id: '1',
       number: '',
       title: '혹시 지금, 쉴 곳이 필요하세요?',
-      description: '찌는 듯한 더위, 살을 에는 추위를 피해 잠시 쉬고 싶을 때.\n약속 시간은 남았는데 갈 곳은 마땅치 않을 때.',
+      description: '더위와 추위를 피해 잠시 쉴 곳이 필요할 때.\n약속 시간은 남았는데 갈 곳은 마땅치 않을 때.\n\n당신이 몰랐던 우리 동네의 숨은 휴식처,\n쉼표가 알려드릴게요.',
       image: require('../../assets/tutorial/tuto-1.png'),
     },
     {
       id: '2',
       number: '',
-      title: '쉼표는 이런 앱이에요',
-      description: '쉼표는 당신이 몰랐던 우리 동네의 숨은 쉼터를 찾아드립니다.\n\n내 주변 500m 안, 가장 가까운 휴식처로 안내할게요.',
+      title: '쉼표는 이런 앱이에요.',
+      description: '쉼표는 내 주변 500m 안,\n부담 없이 들를 수 있는 쉼터를 안내해주는 앱이에요.\n\n3가지 쉼터 유형을 소개해드릴게요.',
       image: require('../../assets/shympyo_logo.png'),
     },
     {
       id: '3',
       number: '',
-      title: '어떤 쉼터들이 있나요?',
-      description: '쉼표에는 누구나 편히 이용할 수 있는 다양한 쉼터가 있어요.',
+      title: '✔︎  든든한 공공쉼터',
+      description: '주민센터, 도서관, 지하철역처럼 우리에게 익숙한\n열린 공공장소들이에요.\n\n누구든 편안하게 머물다 갈 수 있어요.',
       showMultiplePins: true,
     },
     {
       id: '4',
       number: '',
-      title: '고마운 기후동행쉼터',
-      description: '폭염과 한파를 피할 수 있도록 서울시가 마련한 고마운 쉼터예요.\n가까운 편의점, 은행 등에서 잠시 쉬어가세요.\n\n운영시간 내 자유롭게 이용할 수 있습니다.',
+      title: '✔︎  고마운 기후동행쉼터',
+      description: '서울시가 지정한 우리 동네 공식 쉼터에요.\n혹독한 날씨를 피할 수 있도록 편의점, 은행 등을 \n휴식 공간으로 마련했어요.\n\n운영 시간 내에는 누구나 편히 이용할 수 있어요.',
       pinImage: require('../../assets/map_fins/climate.png'),
       secondaryImage: require('../../assets/tutorial/tuto-3.png'),
       sideBySideImages: true,
@@ -88,8 +89,8 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
     {
       id: '5',
       number: '',
-      title: '따뜻한 나눔쉼터',
-      description: '우리 동네 사장님들이 기꺼이 내어주신 따뜻한 공간이에요.\n사장님의 따뜻한 마음을 생각하며, 조용히 머물다 가주세요.',
+      title: '✔︎  따뜻한 나눔쉼터',
+      description: '우리 동네 사장님들이 내어주신 따뜻한 공간이에요.\n잠시 머무는 동안 서로를 배려해 주세요.\n\n나눔쉼터 이용 방법도 알려드릴게요.',
       pinImage: require('../../assets/map_fins/mingan.png'),
       secondaryImage: require('../../assets/tutorial/tuto-4.png'),
       sideBySideImages: true,
@@ -97,13 +98,14 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
     {
       id: '6',
       number: '',
-      title: '나눔쉼터 이용 방법',
-      description: '따뜻한 공간을 내어주신 사장님께\n감사 메시지 한 줄 남겨보는 건 어떨까요?',
+      title: '✔︎  나눔쉼터 이용 방법',
+      topDescription: '사장님을 위한 최소한의 안전장치이니,\n잠시만 시간을 내어 협조를 부탁드립니다.',
+      description: '이곳에서의 쉼이 당신에게 힘이 되었다면,\n사장님께도 응원의 메시지를 보내주세요.\n\n당신의 따뜻한 한마디가 더 많은 나눔을 이어갑니다.',
       showStepIcons: true,
       steps: [
-        { icon: 'qr-code', text: '입장 시 쉼터 QR코드를 스캔하고,' },
+        { icon: 'qr-code', text: '입장 시 쉼터 QR코드를 스캔해 주세요.' },
         { icon: 'time', text: '타이머 시간 동안 편안하게 휴식을 취하세요.' },
-        { icon: 'sparkles', text: '이용 후에는 다음 사람을 위해 자리 정돈은 필수!' },
+        { icon: 'sparkles', text: '이용 후에는 자리 정돈 부탁드려요.' },
       ],
     },
     {
@@ -155,8 +157,6 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
         <View style={styles.imageContainer}>
           {item.showMultiplePins ? (
             <View style={styles.multiplePinsContainer}>
-              <Text style={[styles.sectionTitle, { fontSize: getFontSize(16), color: colors.text.primary }]}>든든한 공공쉼터</Text>
-              <Text style={[styles.sectionSubtitle, { fontSize: getFontSize(13), color: colors.text.secondary }]}>누구나 편하게 이용할 수 있는 우리의 공간이에요.</Text>
               <View style={styles.pinRow}>
                 <Image source={require('../../assets/map_fins/shelter.png')} style={styles.pinIcon} resizeMode="contain" />
                 <View style={styles.pinInfo}>
@@ -186,6 +186,14 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
             </View>
           ) : item.showStepIcons && item.steps ? (
             <View style={styles.stepsContainer}>
+              {item.topDescription && (
+                <View style={styles.topDescriptionContainer}>
+                  <Text style={[styles.topDescriptionIcon, { color: colors.primary }]}>※</Text>
+                  <Text style={[styles.topDescription, { fontSize: getFontSize(12), color: colors.text.secondary }]}>
+                    {item.topDescription}
+                  </Text>
+                </View>
+              )}
               {item.steps.map((step, index) => (
                 <View key={index} style={styles.stepRow}>
                   <Ionicons name={step.icon as any} size={28} color={colors.primary} style={styles.stepIcon} />
@@ -194,12 +202,6 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
                   </Text>
                 </View>
               ))}
-              <View style={styles.specialMessageContainer}>
-                <Ionicons name="mail" size={24} color={colors.primary} style={styles.mailIcon} />
-                <Text style={[styles.specialMessage, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                  {item.description}
-                </Text>
-              </View>
             </View>
           ) : item.image ? (
             <Image
@@ -215,26 +217,9 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
       <View style={styles.bottomFixedSection}>
         {/* 설명 */}
         <View style={styles.descriptionContainer}>
-          {!item.showStepIcons && (
-            <Text style={[styles.description, { fontSize: getFontSize(14), color: colors.text.primary }]}>
-              {item.description}
-            </Text>
-          )}
-        </View>
-
-        {/* 인디케이터 */}
-        <View style={styles.indicators}>
-          {pages.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.indicator,
-                {
-                  backgroundColor: currentPage === index ? colors.primary : colors.text.light,
-                },
-              ]}
-            />
-          ))}
+          <Text style={[styles.description, { fontSize: getFontSize(14), color: colors.text.primary }]}>
+            {item.description}
+          </Text>
         </View>
       </View>
       </View>
@@ -276,6 +261,21 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
           >
             {pages.map((page, index) => renderPage(page, index))}
           </ScrollView>
+
+          {/* 인디케이터 - 하단 고정 */}
+          <View style={styles.indicatorsFixed}>
+            {pages.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.indicator,
+                  {
+                    backgroundColor: currentPage === index ? colors.primary : colors.text.light,
+                  },
+                ]}
+              />
+            ))}
+          </View>
         </View>
       </View>
     </Modal>
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     paddingHorizontal: 20,
-    paddingTop: 15,
+    paddingTop: 50,
     paddingBottom: 15,
     justifyContent: 'space-between',
   },
@@ -337,11 +337,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomFixedSection: {
-    minHeight: 90,
+    minHeight: 60,
   },
   descriptionContainer: {
-    minHeight: 45,
-    marginBottom: 12,
+    minHeight: 40,
+    marginBottom: 10,
   },
   mainImage: {
     width: '100%',
@@ -385,8 +385,8 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   pinIcon: {
-    width: 48,
-    height: 48,
+    width: 70,
+    height: 70,
     marginRight: 15,
   },
   pinInfo: {
@@ -422,38 +422,36 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 10,
   },
+  topDescriptionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -20,
+    marginBottom: 60,
+  },
+  topDescriptionIcon: {
+    fontSize: 28,
+    marginRight: 8,
+    marginTop: -3,
+  },
+  topDescription: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'left',
+  },
   stepRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 18,
   },
   stepIcon: {
     marginRight: 12,
-    marginTop: 2,
   },
   stepText: {
     flex: 1,
     fontSize: 14,
+    fontWeight: 'bold',
     lineHeight: 22,
-    textAlign: 'left',
-  },
-  specialMessageContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 15,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  mailIcon: {
-    marginRight: 10,
-    marginTop: 2,
-  },
-  specialMessage: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 20,
-    fontStyle: 'italic',
     textAlign: 'left',
   },
   description: {
@@ -462,12 +460,14 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     paddingHorizontal: 10,
   },
-  indicators: {
+  indicatorsFixed: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 7,
     flexWrap: 'nowrap',
+    paddingVertical: 20,
+    paddingBottom: 25,
   },
   indicator: {
     width: 7,
