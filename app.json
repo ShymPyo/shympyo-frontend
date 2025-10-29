@@ -37,8 +37,10 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "plugins": [
-      "expo-barcode-scanner"
-    ]
+    "extra": {
+      "eas": {
+        "projectId": "dc23be83-312e-476c-aae8-06df5b0f3b4f"
+      }
+    }
   }
 }

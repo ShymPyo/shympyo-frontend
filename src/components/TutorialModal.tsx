@@ -7,17 +7,28 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
-  ScrollView,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemedStyles } from '../hooks/useThemedStyles';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface TutorialPage {
   id: string;
+  number: string;
   title: string;
-  content: React.ReactNode;
+  description: string;
+  image?: any;
+  pinImage?: any;
+  secondaryImage?: any;
+  showMultiplePins?: boolean;
+  showStepIcons?: boolean;
+  steps?: Array<{
+    icon: string;
+    text: string;
+  }>;
+  sideBySideImages?: boolean;
 }
 
 interface TutorialModalProps {
@@ -30,215 +41,67 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
+  // 모달이 열릴 때마다 첫 페이지로 초기화
+  React.useEffect(() => {
+    if (visible) {
+      setCurrentPage(0);
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({ index: 0, animated: false });
+      }, 100);
+    }
+  }, [visible]);
+
   const pages: TutorialPage[] = [
     {
       id: '1',
-      title: '앱 소개 및 주요 기능',
-      content: (
-        <View style={styles.pageContent}>
-          <Text style={[styles.description, { fontSize: getFontSize(15), color: colors.text.primary }]}>
-            쉼표 앱은 시민들이 여름철·겨울철에 안전하고 편리하게 쉴 수 있는 장소를 안내하는 서비스입니다.
-          </Text>
-
-          <Text style={[styles.sectionTitle, { fontSize: getFontSize(16), color: colors.text.primary }]}>주요 기능</Text>
-
-          <View style={styles.featureItem}>
-            <Text style={[styles.featureBullet, { fontSize: getFontSize(14), color: colors.primary }]}>•</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={[styles.featureTitle, { fontSize: getFontSize(14), color: colors.text.primary }]}>주변 쉼터 찾기</Text>
-              <Text style={[styles.featureDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                내 위치 기반으로 가까운 쉼터를 확인해요!
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <Text style={[styles.featureBullet, { fontSize: getFontSize(14), color: colors.primary }]}>•</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={[styles.featureTitle, { fontSize: getFontSize(14), color: colors.text.primary }]}>필터 검색</Text>
-              <Text style={[styles.featureDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                기후동행쉼터, 스마트쉼터 등 유형별 구분을 할 수 있어요!
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <Text style={[styles.featureBullet, { fontSize: getFontSize(14), color: colors.primary }]}>•</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={[styles.featureTitle, { fontSize: getFontSize(14), color: colors.text.primary }]}>시설 사용 후 편지 보내기</Text>
-              <Text style={[styles.featureDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                시설에 대한 리뷰, 혹은 감사한 마음을 담아 장소 제공자에게 편지를 보내요!
-              </Text>
-            </View>
-          </View>
-
-          <Text style={[styles.footerText, { fontSize: getFontSize(14), color: colors.text.secondary }]}>
-            이렇게 무더위·한파 등 기후위기 상황에서 시민들에게 안전한 휴식 공간을 제공하고 있습니다 :)
-          </Text>
-        </View>
-      ),
+      number: '①',
+      title: '쉼표는 어떤 앱인가요?',
+      description: '쉼표는 내 주변 500m 안,\n부담 없이 들를 수 있는 쉼터를 안내해주는 앱이에요.\n\n덥거나 추울 때,\n잠시 머물며 편히 쉴 수 있는 공간을 찾아드립니다.',
+      image: require('../../assets/tutorial/tuto-1.png'),
     },
     {
       id: '2',
-      title: '메인 화면 구성 및 기능 설명',
-      content: (
-        <View style={styles.pageContent}>
-          <View style={styles.featureItem}>
-            <Text style={[styles.emoji, { fontSize: getFontSize(20) }]}>🔍</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={[styles.featureTitle, { fontSize: getFontSize(14), color: colors.text.primary }]}>검색창</Text>
-              <Text style={[styles.featureDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                원하는 지역/주소 입력
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <Text style={[styles.emoji, { fontSize: getFontSize(20) }]}>🗺️</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={[styles.featureTitle, { fontSize: getFontSize(14), color: colors.text.primary }]}>지도</Text>
-              <Text style={[styles.featureDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                쉼터 위치를 한눈에 확인
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <Text style={[styles.emoji, { fontSize: getFontSize(20) }]}>📌</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={[styles.featureTitle, { fontSize: getFontSize(14), color: colors.text.primary }]}>마커(아이콘)</Text>
-              <Text style={[styles.featureDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                쉼터의 종류별 표시
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <Text style={[styles.emoji, { fontSize: getFontSize(20) }]}>☰</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={[styles.featureTitle, { fontSize: getFontSize(14), color: colors.text.primary }]}>필터 버튼</Text>
-              <Text style={[styles.featureDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                원하는 쉼터 유형만 선택 가능
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <Text style={[styles.emoji, { fontSize: getFontSize(20) }]}>🏷️</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={[styles.featureTitle, { fontSize: getFontSize(14), color: colors.text.primary }]}>상세 정보</Text>
-              <Text style={[styles.featureDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                마커 클릭 시 시설 정보와 이용 시간 확인
-              </Text>
-            </View>
-          </View>
-        </View>
-      ),
+      number: '②',
+      title: '쉼터는 어떤 종류가 있나요?',
+      description: '쉼표에는 5가지 쉼터 유형이 있어요.\n\n먼저 바로 이용 가능한 3가지 공공쉼터부터 알려드릴게요',
+      showMultiplePins: true,
     },
     {
       id: '3',
-      title: '기타 기능',
-      content: (
-        <View style={styles.pageContent}>
-          <Text style={[styles.sectionTitle, { fontSize: getFontSize(16), color: colors.text.primary }]}>나눔쉼터란?</Text>
-
-          <Text style={[styles.description, { fontSize: getFontSize(14), color: colors.text.secondary }]}>
-            카페, 음식점 등 쉼터를 제공하는 매장에서 20분 동안 쉬어갈 수 있어요
-          </Text>
-
-          <View style={[styles.warningBox, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
-            <Text style={[styles.warningTitle, { fontSize: getFontSize(14), color: colors.error }]}>
-              주의사항
-            </Text>
-            <Text style={[styles.warningText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-              20분을 지키지 않거나 매너없는 행동을 할 경우 다음과 같은 패널티가 생겨요!
-            </Text>
-          </View>
-
-          <View style={styles.penaltyItem}>
-            <Text style={[styles.penaltyNumber, { fontSize: getFontSize(13), color: colors.primary }]}>1.</Text>
-            <Text style={[styles.penaltyText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-              신고 3번을 당하면 나눔 쉼터가 내 지도에서 아예 볼 수 없어요
-            </Text>
-          </View>
-
-          <View style={styles.penaltyItem}>
-            <Text style={[styles.penaltyNumber, { fontSize: getFontSize(13), color: colors.primary }]}>2.</Text>
-            <Text style={[styles.penaltyText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-              사용한 가게 주인이 차단을 할 경우, 내 지도에서 해당 가게는 볼 수 없어요
-            </Text>
-          </View>
-
-          <Text style={[styles.footerText, { fontSize: getFontSize(14), color: colors.primary }]}>
-            매너 있는 행동으로 서로 행복한 쉼터를 만들어가요
-          </Text>
-        </View>
-      ),
+      number: '③',
+      title: '기후동행쉼터',
+      description: '기후동행쉼터는 폭염이나 한파 같은 기후 위기 속에서\n시민이 잠시 머물며 쉴 수 있도록 서울시가 마련한 쉼터예요.\n\n편의점·은행 등과 협업해 운영되며,\n운영시간 내 자유롭게 이용할 수 있습니다.',
+      pinImage: require('../../assets/map_fins/climate.png'),
+      secondaryImage: require('../../assets/tutorial/tuto-3.png'),
+      sideBySideImages: true,
     },
     {
       id: '4',
-      title: '쉼터 종류 안내',
-      content: (
-        <View style={styles.pageContent}>
-          <Text style={[styles.description, { fontSize: getFontSize(14), color: colors.text.secondary }]}>
-            필터를 통해 두 가지 주요 쉼터를 구분할 수 있습니다!
-          </Text>
-
-          <View style={[styles.shelterTypeBox, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.shelterTypeTitle, { fontSize: getFontSize(15), color: colors.primary }]}>
-              기후동행쉼터
-            </Text>
-            <View style={styles.shelterTypeItem}>
-              <Text style={[styles.featureBullet, { fontSize: getFontSize(12), color: colors.text.secondary }]}>•</Text>
-              <Text style={[styles.shelterTypeText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                무더위, 한파 등 기후위기 대응을 위해 마련된 공공 쉼터
-              </Text>
-            </View>
-            <View style={styles.shelterTypeItem}>
-              <Text style={[styles.featureBullet, { fontSize: getFontSize(12), color: colors.text.secondary }]}>•</Text>
-              <Text style={[styles.shelterTypeText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                주민센터, 도서관, 경로당 등 공공시설을 활용
-              </Text>
-            </View>
-            <View style={styles.shelterTypeItem}>
-              <Text style={[styles.featureBullet, { fontSize: getFontSize(12), color: colors.text.secondary }]}>•</Text>
-              <Text style={[styles.shelterTypeText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                누구나 무료로 이용 가능
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.shelterTypeBox, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.shelterTypeTitle, { fontSize: getFontSize(15), color: colors.primary }]}>
-              스마트 쉼터
-            </Text>
-            <View style={styles.shelterTypeItem}>
-              <Text style={[styles.featureBullet, { fontSize: getFontSize(12), color: colors.text.secondary }]}>•</Text>
-              <Text style={[styles.shelterTypeText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                버스정류장 등에 설치된 첨단 기술 기반 쉼터
-              </Text>
-            </View>
-            <View style={styles.shelterTypeItem}>
-              <Text style={[styles.featureBullet, { fontSize: getFontSize(12), color: colors.text.secondary }]}>•</Text>
-              <Text style={[styles.shelterTypeText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                냉난방 시스템, 공기청정, 와이파이, 스마트 안전 기능 제공
-              </Text>
-            </View>
-            <View style={styles.shelterTypeItem}>
-              <Text style={[styles.featureBullet, { fontSize: getFontSize(12), color: colors.text.secondary }]}>•</Text>
-              <Text style={[styles.shelterTypeText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
-                날씨와 교통정보까지 확인 가능
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.summaryBox, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-            <Text style={[styles.summaryText, { fontSize: getFontSize(13), color: colors.text.primary }]}>
-              👉 기후동행쉼터는 공공시설 중심, 스마트쉼터는 첨단 편의시설 중심이라는 차이가 있어요!
-            </Text>
-          </View>
-        </View>
-      ),
+      number: '④',
+      title: '나눔쉼터',
+      description: '나눔쉼터는\n지역의 사장님들이 공간을 나눔해주신 쉼터예요.\n\n민간 공간이므로,\n사장님을 배려하며 조용히 이용해주세요',
+      pinImage: require('../../assets/map_fins/mingan.png'),
+      secondaryImage: require('../../assets/tutorial/tuto-4.png'),
+      sideBySideImages: true,
+    },
+    {
+      id: '5',
+      number: '⑤',
+      title: '나눔쉼터 이용 방법',
+      description: '쉼의 여운으로,\n\n감사의 마음 한 줄 남겨보는건 어떨까요?',
+      showStepIcons: true,
+      steps: [
+        { icon: 'qr-code', text: '입장 시 쉼터 QR코드를 스캔해요.' },
+        { icon: 'time', text: '타이머 시간 동안 자유롭게 휴식!' },
+        { icon: 'sparkles', text: '이용 후에는 자리 정돈을 꼭 해주세요.' },
+      ],
+    },
+    {
+      id: '6',
+      number: '⑥',
+      title: '이제 쉼표를 이용해볼까요?',
+      description: '내 주변 쉼터를 바로 찾아보고,\n가장 가까운 휴식처로 쉼표 찍으러 가요.',
+      image: require('../../assets/shympyo_logo.png'),
     },
   ];
 
@@ -252,28 +115,119 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
     }
   };
 
-  const handleScroll = (event: any) => {
+  const handleSkip = () => {
+    onClose();
+  };
+
+  // modalContainer의 실제 너비 계산
+  const modalContainerWidth = screenWidth * 0.9;
+
+  const handleMomentumScrollEnd = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const page = Math.round(offsetX / screenWidth);
-    setCurrentPage(page);
+    const page = Math.round(offsetX / modalContainerWidth);
+    if (page >= 0 && page < pages.length) {
+      setCurrentPage(page);
+    }
   };
 
   const renderPage = ({ item }: { item: TutorialPage }) => (
-    <TouchableOpacity
-      style={[styles.page, { width: screenWidth - 40 }]}
-      activeOpacity={1}
-      onPress={handleNext}
-    >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.pageScrollContent}
-      >
-        <Text style={[styles.pageTitle, { fontSize: getFontSize(20), color: colors.text.primary }]}>
-          {item.title}
-        </Text>
-        {item.content}
-      </ScrollView>
-    </TouchableOpacity>
+    <View style={[styles.pageContainer, { width: modalContainerWidth }]}>
+      <View style={styles.page}>
+      {/* 상단 영역 */}
+      <View style={styles.topSection}>
+        {/* 제목 */}
+        <View style={styles.titleContainer}>
+          <Text style={[styles.title, { fontSize: getFontSize(20), color: colors.text.primary }]}>
+            {item.title}
+          </Text>
+        </View>
+
+        {/* 이미지 영역 */}
+        <View style={styles.imageContainer}>
+          {item.showMultiplePins ? (
+            <View style={styles.multiplePinsContainer}>
+              <View style={styles.pinRow}>
+                <Image source={require('../../assets/map_fins/shelter.png')} style={styles.pinIcon} resizeMode="contain" />
+                <View style={styles.pinInfo}>
+                  <Text style={[styles.pinTitle, { fontSize: getFontSize(15), color: colors.text.primary }]}>스마트쉘터</Text>
+                  <Text style={[styles.pinDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>버스정류장형 냉·난방 쉼터</Text>
+                </View>
+              </View>
+              <View style={styles.pinRow}>
+                <Image source={require('../../assets/map_fins/traffic.png')} style={styles.pinIcon} resizeMode="contain" />
+                <View style={styles.pinInfo}>
+                  <Text style={[styles.pinTitle, { fontSize: getFontSize(15), color: colors.text.primary }]}>교통 시설</Text>
+                  <Text style={[styles.pinDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>지하철역, 역사 등 시민 개방 시설</Text>
+                </View>
+              </View>
+              <View style={styles.pinRow}>
+                <Image source={require('../../assets/map_fins/politic.png')} style={styles.pinIcon} resizeMode="contain" />
+                <View style={styles.pinInfo}>
+                  <Text style={[styles.pinTitle, { fontSize: getFontSize(15), color: colors.text.primary }]}>공공 시설</Text>
+                  <Text style={[styles.pinDesc, { fontSize: getFontSize(13), color: colors.text.secondary }]}>주민센터, 도서관, 복지관 등 누구나 이용 가능</Text>
+                </View>
+              </View>
+            </View>
+          ) : item.sideBySideImages && item.pinImage && item.secondaryImage ? (
+            <View style={styles.sideBySideContainer}>
+              <Image source={item.pinImage} style={styles.pinImageMedium} resizeMode="contain" />
+              <Image source={item.secondaryImage} style={styles.secondaryImageSide} resizeMode="contain" />
+            </View>
+          ) : item.showStepIcons && item.steps ? (
+            <View style={styles.stepsContainer}>
+              {item.steps.map((step, index) => (
+                <View key={index} style={styles.stepRow}>
+                  <Ionicons name={step.icon as any} size={32} color={colors.primary} style={styles.stepIcon} />
+                  <Text style={[styles.stepText, { fontSize: getFontSize(14), color: colors.text.primary }]}>
+                    {index + 1}. {step.text}
+                  </Text>
+                </View>
+              ))}
+              <View style={styles.specialMessageContainer}>
+                <Ionicons name="mail" size={24} color={colors.primary} style={styles.mailIcon} />
+                <Text style={[styles.specialMessage, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
+                  {item.description}
+                </Text>
+              </View>
+            </View>
+          ) : item.image ? (
+            <Image
+              source={item.image}
+              style={item.id === '6' ? styles.logoImage : styles.mainImage}
+              resizeMode="contain"
+            />
+          ) : null}
+        </View>
+      </View>
+
+      {/* 하단 고정 영역 */}
+      <View style={styles.bottomFixedSection}>
+        {/* 설명 */}
+        <View style={styles.descriptionContainer}>
+          {!item.showStepIcons && (
+            <Text style={[styles.description, { fontSize: getFontSize(14), color: colors.text.primary }]}>
+              {item.description}
+            </Text>
+          )}
+        </View>
+
+        {/* 인디케이터 */}
+        <View style={styles.indicators}>
+          {pages.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.indicator,
+                {
+                  backgroundColor: currentPage === index ? colors.primary : colors.text.light,
+                },
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+      </View>
+    </View>
   );
 
   return (
@@ -288,52 +242,35 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
         activeOpacity={1}
         onPress={onClose}
       >
-        <TouchableOpacity
+        <View
           style={[styles.modalContainer, { backgroundColor: colors.background }]}
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
+          onStartShouldSetResponder={() => true}
         >
-          {/* 헤더 */}
-          <View style={[styles.header, { borderBottomColor: colors.surface }]}>
-            <Text style={[styles.headerTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>
-              앱 사용 설명서
-            </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text.primary} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={handleSkip} style={styles.closeButton}>
+            <Ionicons name="close" size={28} color={colors.text.secondary} />
+          </TouchableOpacity>
 
-          {/* 페이지 */}
-          <View style={styles.pagesWrapper}>
-            <FlatList
-              ref={flatListRef}
-              data={pages}
-              renderItem={renderPage}
-              keyExtractor={(item) => item.id}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              contentContainerStyle={styles.pagesContainer}
-            />
-          </View>
-
-          {/* 페이지 인디케이터 */}
-          <View style={styles.footer}>
-            <View style={styles.indicators}>
-              {pages.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicator,
-                    { backgroundColor: currentPage === index ? colors.primary : colors.text.light },
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
-        </TouchableOpacity>
+          <FlatList
+            ref={flatListRef}
+            data={pages}
+            renderItem={renderPage}
+            keyExtractor={(item) => item.id}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
+            bounces={false}
+            decelerationRate="fast"
+            scrollEnabled={true}
+            snapToInterval={modalContainerWidth}
+            snapToAlignment="start"
+            getItemLayout={(_, index) => ({
+              length: modalContainerWidth,
+              offset: modalContainerWidth * index,
+              index,
+            })}
+          />
+        </View>
       </TouchableOpacity>
     </Modal>
   );
@@ -342,171 +279,185 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContainer: {
     width: '90%',
-    height: '75%',
+    height: '68%',
     borderRadius: 20,
+    paddingVertical: 20,
     overflow: 'hidden',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   closeButton: {
-    padding: 5,
+    position: 'absolute',
+    top: 10,
+    right: 15,
+    zIndex: 10,
+    padding: 8,
   },
-  pagesWrapper: {
-    flex: 1,
-  },
-  pagesContainer: {
-    paddingHorizontal: 20,
-  },
-  page: {
-    paddingVertical: 15,
-    paddingHorizontal: 5,
-  },
-  pageScrollContent: {
-    paddingBottom: 20,
-  },
-  pageTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  pageContent: {
-    gap: 15,
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  sectionTitle: {
+  closeText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 5,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  featureBullet: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginRight: 10,
-    marginTop: 2,
-  },
-  emoji: {
-    fontSize: 20,
-    marginRight: 10,
-    marginTop: 2,
-  },
-  featureTextContainer: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  featureDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  footerText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 10,
-    fontStyle: 'italic',
-  },
-  warningBox: {
-    padding: 15,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginVertical: 10,
-  },
-  warningTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  warningText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  penaltyItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginLeft: 10,
-    marginBottom: 8,
-  },
-  penaltyNumber: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
-  penaltyText: {
-    fontSize: 13,
-    lineHeight: 18,
-    flex: 1,
-  },
-  shelterTypeBox: {
-    padding: 15,
-    borderRadius: 10,
-    marginVertical: 5,
-  },
-  shelterTypeTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  shelterTypeItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 5,
-  },
-  shelterTypeText: {
-    fontSize: 13,
-    lineHeight: 18,
-    flex: 1,
-  },
-  summaryBox: {
-    padding: 15,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 10,
-  },
-  summaryText: {
-    fontSize: 13,
-    lineHeight: 20,
     fontWeight: '500',
   },
-  footer: {
-    paddingVertical: 15,
+  pageContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  page: {
+    flex: 1,
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 15,
+    justifyContent: 'space-between',
+  },
+  topSection: {
+    flex: 1,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  imageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomFixedSection: {
+    minHeight: 90,
+  },
+  descriptionContainer: {
+    minHeight: 45,
+    marginBottom: 12,
+  },
+  mainImage: {
+    width: '100%',
+    height: 200,
+  },
+  logoImage: {
+    width: 150,
+    height: 150,
+  },
+  pinContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  pinImageLarge: {
+    width: 80,
+    height: 80,
+    marginBottom: 15,
+  },
+  secondaryImage: {
+    width: '90%',
+    height: 120,
+    marginTop: 15,
+  },
+  multiplePinsContainer: {
+    width: '100%',
+  },
+  pinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  pinIcon: {
+    width: 48,
+    height: 48,
+    marginRight: 15,
+  },
+  pinInfo: {
+    flex: 1,
+  },
+  pinTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginBottom: 3,
+    textAlign: 'left',
+  },
+  pinDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'left',
+  },
+  sideBySideContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    gap: 20,
+  },
+  pinImageMedium: {
+    width: 65,
+    height: 65,
+  },
+  secondaryImageSide: {
+    width: 130,
+    height: 130,
+  },
+  stepsContainer: {
+    width: '100%',
+    paddingVertical: 10,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 18,
+  },
+  stepIcon: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'left',
+  },
+  specialMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  mailIcon: {
+    marginRight: 10,
+    marginTop: 2,
+  },
+  specialMessage: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+    fontStyle: 'italic',
+    textAlign: 'left',
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'left',
+    paddingHorizontal: 10,
   },
   indicators: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
+    flexWrap: 'nowrap',
   },
   indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
 });
 
