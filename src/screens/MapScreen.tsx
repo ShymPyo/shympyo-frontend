@@ -108,8 +108,9 @@ const MapScreen: React.FC = () => {
         domStorageEnabled={true}
         allowFileAccess={true}
         allowUniversalAccessFromFileURLs={true}
-        mixedContentMode="compatibility"
+        mixedContentMode="always"
         geolocationEnabled={false}
+        cacheEnabled={true}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           console.warn('WebView error: ', nativeEvent);
