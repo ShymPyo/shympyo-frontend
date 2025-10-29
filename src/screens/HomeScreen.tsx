@@ -2238,23 +2238,27 @@ const HomeScreen: React.FC = () => {
             </Animated.View>
           )}
 
-          {/* 온도계 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
-          <Animated.View style={[styles.thermometerBottomContainer, locationButtonStyle]}>
-            <View style={styles.thermometerCard}>
-              <View style={styles.thermometerRow}>
-                <AnimatedThermometer temperature={weatherData?.temperature || 25} colors={colors} contrastMode={contrastMode} />
-                <View style={styles.temperatureLabelContainer}>
-                  <View style={[styles.temperatureLabel, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.temperatureText, { color: colors.text.white }]}>{weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}</Text>
-                    <View style={[styles.trianglePointer, { borderRightColor: colors.primary }]} />
-                  </View>
-                  {weatherData?.weather && (
-                    <Text style={[styles.weatherText, { backgroundColor: colors.surface, color: colors.text.primary }]}>{weatherData.weather}</Text>
-                  )}
-                </View>
-              </View>
+          {/* 날씨 위젯 - 좌측 상단 */}
+          <View style={styles.weatherWidgetContainer}>
+            <View style={[styles.weatherCard, { backgroundColor: colors.surface }]}>
+              <Ionicons
+                name={weatherData?.weather?.includes('맑음') ? 'sunny' :
+                      weatherData?.weather?.includes('흐림') ? 'cloudy' :
+                      weatherData?.weather?.includes('비') ? 'rainy' :
+                      'partly-sunny'}
+                size={24}
+                color={colors.primary}
+              />
+              <Text style={[styles.weatherCardTemp, { color: colors.text.primary }]}>
+                {weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}
+              </Text>
+              {weatherData?.weather && (
+                <Text style={[styles.weatherCardDesc, { color: colors.text.secondary }]}>
+                  {weatherData.weather}
+                </Text>
+              )}
             </View>
-          </Animated.View>
+          </View>
 
           {/* 내 위치 버튼 - 우측 하단 (하단 슬라이드와 함께 움직임) */}
           <Animated.View style={[styles.locationButtonContainer, locationButtonStyle]}>
@@ -2643,6 +2647,37 @@ const styles = StyleSheet.create({
           shadowRadius: 8,
           elevation: 10,
         }),
+    },
+    weatherWidgetContainer: {
+        position: 'absolute',
+        left: 20,
+        top: 60,
+        zIndex: 10,
+    },
+    weatherCard: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        minWidth: 60,
+        ...getShadowStyle({
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 10,
+          elevation: 12,
+        }),
+    },
+    weatherCardTemp: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginTop: 3,
+    },
+    weatherCardDesc: {
+        fontSize: 9,
+        fontWeight: '500',
+        marginTop: 1,
     },
     thermometerBottomContainer: {
         position: 'absolute',
