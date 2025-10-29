@@ -8,26 +8,8 @@ import { useThemedStyles } from '../hooks/useThemedStyles';
 
 const MapScreen: React.FC = () => {
   const { colors, getFontSize, statusBarStyle } = useThemedStyles();
-  const [htmlUri, setHtmlUri] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const webViewRef = useRef<WebView>(null);
-
-  useEffect(() => {
-    const loadAsset = async () => {
-      try {
-        const asset = Asset.fromModule(require('../../assets/kakao_map.html'));
-        await asset.downloadAsync();
-        setHtmlUri(asset.localUri || asset.uri);
-        setLoading(false);
-      } catch (err) {
-        setError('맵 파일을 불러오는데 실패했습니다.');
-        setLoading(false);
-      }
-    };
-
-    loadAsset();
-  }, []);
+  const [error, setError] = useState<string | null>(null);
 
   const sendFixedLocation = () => {
     // 고정된 위치 (서울 시청)로 설정
@@ -50,20 +32,11 @@ const MapScreen: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (error) {
     return (
       <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
         <StatusBar style={statusBarStyle as any} />
-        <Text style={[styles.loadingText, { fontSize: getFontSize(16), color: colors.text.primary }]}>맵 로딩 중...</Text>
-      </View>
-    );
-  }
-
-  if (error || !htmlUri) {
-    return (
-      <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
-        <StatusBar style={statusBarStyle as any} />
-        <Text style={[styles.errorText, { fontSize: getFontSize(16), color: colors.text.error }]}>{error || '맵을 불러올 수 없습니다.'}</Text>
+        <Text style={[styles.errorText, { fontSize: getFontSize(16), color: colors.text.error }]}>{error}</Text>
       </View>
     );
   }
@@ -102,7 +75,7 @@ const MapScreen: React.FC = () => {
       <WebView
         ref={webViewRef}
         originWhitelist={['*']}
-        source={{ uri: htmlUri }}
+        source={{ uri: 'https://map-deploy-olive.vercel.app/' }}
         style={styles.webview}
         javaScriptEnabled={true}
         domStorageEnabled={true}
