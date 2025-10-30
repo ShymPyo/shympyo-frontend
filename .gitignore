@@ -50,3 +50,5 @@ SSE_FIX_REPORT.md
 OAUTH_IMPLEMENTATION.md
 도보_길안내_구현.md
 REALTIME_TRACKING.md
+resources/xml/network_security_config.xml
+assets/kakao_map_final.html
