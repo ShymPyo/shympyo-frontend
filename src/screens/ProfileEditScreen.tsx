@@ -203,20 +203,43 @@ const ProfileEditScreen: React.FC = () => {
   };
 
   const showImageSourceOptions = () => {
-    Alert.alert(
-      '프로필 이미지 선택',
-      '이미지를 선택하는 방법을 고르세요',
-      [
-        { text: '갤러리에서 선택', onPress: pickImage },
-        { text: '사진 촬영', onPress: takePhoto },
-        { text: '취소', style: 'cancel' },
-      ]
-    );
+    setImageSourceModalVisible(true);
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar key={statusBarKey} style={statusBarStyle as any} />
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isImageSourceModalVisible}
+        onRequestClose={() => setImageSourceModalVisible(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>프로필 이미지 선택</Text>
+            <TouchableOpacity
+              style={[styles.modalOptionButton, { backgroundColor: colors.primary }]}
+              onPress={pickImage}
+            >
+              <Text style={[styles.modalOptionButtonText, { color: Colors.white }]}>갤러리에서 선택</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalOptionButton, { backgroundColor: colors.primary }]}
+              onPress={takePhoto}
+            >
+              <Text style={[styles.modalOptionButtonText, { color: Colors.white }]}>사진 촬영</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.text.light }]}
+              onPress={() => setImageSourceModalVisible(false)}
+            >
+              <Text style={[styles.closeButtonText, { color: colors.text.primary }]}>취소</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* 헤더 */}
       <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
@@ -243,7 +266,7 @@ const ProfileEditScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
         {/* 프로필 이미지 섹션 */}
-        <View style={styles.profileImageSection}>
+        <View style={[styles.profileImageSection, { backgroundColor: colors.surface }]}>
           <TouchableOpacity style={styles.profileImageContainer} onPress={showImageSourceOptions}>
             <Image source={profileImage} style={styles.profileImage} />
             <View style={styles.cameraIconContainer}>
@@ -450,10 +473,8 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -486,6 +507,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-});
+  modalOptionButton: {
+    width: '100%',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  modalOptionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },});
 
 export default ProfileEditScreen;
