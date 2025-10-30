@@ -10,6 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -169,7 +170,6 @@ const AdminLetterListScreen: React.FC = () => {
       }
     }
 
-    setSelectedLetter(null);
   };
 
   const renderLetter = (letter: ReceivedLetter) => (
@@ -185,7 +185,10 @@ const AdminLetterListScreen: React.FC = () => {
         </View>
         <View style={styles.letterMain}>
           <View style={[styles.profileCircle, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.profileText, { fontSize: getFontSize(20) }]}>😊</Text>
+            <Image
+              source={letter.writerInfo.imageUrl && letter.writerInfo.imageUrl.startsWith('http') ? { uri: letter.writerInfo.imageUrl } : require('../../assets/profiles/user_profile.png')}
+              style={styles.profileImage}
+            />
           </View>
           <View style={styles.letterTextContainer}>
             <Text style={[styles.customerName, { fontSize: getFontSize(16), color: colors.text.primary }]}>{letter.writerInfo.nickname}</Text>
@@ -328,7 +331,10 @@ const AdminLetterListScreen: React.FC = () => {
 
             <View style={styles.modalLetterContent}>
               <View style={[styles.modalProfile, { backgroundColor: colors.background }]}>
-                <Text style={[styles.modalProfileText, { fontSize: getFontSize(36) }]}>😊</Text>
+                <Image
+                  source={selectedLetter?.writerInfo.imageUrl && selectedLetter.writerInfo.imageUrl.startsWith('http') ? { uri: selectedLetter.writerInfo.imageUrl } : require('../../assets/profiles/user_profile.png')}
+                  style={styles.modalProfileImage}
+                />
               </View>
               <View style={styles.modalTextSection}>
 
@@ -467,6 +473,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
   profileText: {
   },
@@ -521,6 +532,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+    overflow: 'hidden',
+  },
+  modalProfileImage: {
+    width: '100%',
+    height: '100%',
   },
   modalProfileText: {
   },
