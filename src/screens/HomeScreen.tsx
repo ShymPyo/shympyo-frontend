@@ -382,6 +382,8 @@ const HomeScreen: React.FC = () => {
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [isEndingRoute, setIsEndingRoute] = useState(false);
   const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [navigationPath, setNavigationPath] = useState<[number, number][] | null>(null); // 경로 이탈 감지를 위한 경로 좌표
+  const [isRerouting, setIsRerouting] = useState(false); // 중복 재탐색 방지 플래그
 
   // 길안내 정보 카드 애니메이션
   const navInfoOpacity = useSharedValue(0);
@@ -514,56 +516,66 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  // 실시간 위치 추적
+  const headingRef = React.useRef(0);
+
+  // 실시간 위치 및 방향 추적
   useEffect(() => {
     let locationSubscription: Location.LocationSubscription | null = null;
+    let headingSubscription: Location.LocationSubscription | null = null;
 
     const startTracking = async () => {
       try {
-        // 위치 권한 확인
-        const { status } = await Location.getForegroundPermissionsAsync();
+        const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           console.log('❌ 위치 권한 없음');
           return;
         }
 
-        // 실시간 위치 추적 시작 (최적화된 설정)
+        // 1. 나침반 방향 추적 시작
+        headingSubscription = await Location.watchHeadingAsync((heading) => {
+          headingRef.current = heading.trueHeading; // trueHeading 사용
+        });
+        console.log('✅ 나침반 방향 추적 시작');
+
+        // 2. GPS 위치 추적 시작
         locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
-            timeInterval: 1000, // 1초마다 갱신 (바로바로 반응)
-            distanceInterval: 2, // 2m 이상 이동 시 갱신 (부드러운 트래킹)
+            timeInterval: 500,
+            distanceInterval: 1,
           },
           (location) => {
-            console.log('📍 위치 업데이트:', location.coords.latitude, location.coords.longitude);
             setCurrentLocation(location);
 
-            // 웹뷰에 위치 업데이트 전송
             if (webViewRef.current) {
               const message = JSON.stringify({
-                type: 'LOCATION_UPDATE',
+                type: 'location',
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
-                heading: location.coords.heading || 0,
+                heading: headingRef.current, // 나침반 방향 값 사용
               });
               webViewRef.current.postMessage(message);
             }
           }
         );
+        console.log('✅ GPS 위치 추적 시작');
 
-        console.log('✅ 실시간 위치 추적 시작');
       } catch (error) {
-        console.error('❌ 위치 추적 시작 실패:', error);
+        console.error('❌ 위치/방향 추적 시작 실패:', error);
       }
     };
 
     startTracking();
 
-    // 클린업: 컴포넌트 언마운트 시 위치 추적 중지
+    // 클린업
     return () => {
       if (locationSubscription) {
         locationSubscription.remove();
-        console.log('🛑 실시간 위치 추적 중지');
+        console.log('🛑 GPS 위치 추적 중지');
+      }
+      if (headingSubscription) {
+        headingSubscription.remove();
+        console.log('🛑 나침반 방향 추적 중지');
       }
     };
   }, []);
@@ -664,10 +676,8 @@ const HomeScreen: React.FC = () => {
             text: '설정으로 이동',
             onPress: () => {
               if (Platform.OS === 'ios') {
-                // iOS에서는 설정 앱으로 직접 이동하기 어려우므로 안내만
                 Alert.alert('설정 안내', '설정 > 개인정보 보호 및 보안 > 위치 서비스에서 권한을 허용해주세요.');
               } else {
-                // Android에서는 앱 설정으로 이동 가능
                 Location.requestForegroundPermissionsAsync();
               }
             }
@@ -677,34 +687,16 @@ const HomeScreen: React.FC = () => {
       return;
     }
 
-    // 길찾기 중이 아닐 때만 현재 위치 갱신 (주변 장소 다시 로드)
     if (!isNavigating && currentLocation) {
       await getCurrentLocation();
     }
 
-    // WebView의 지도를 실제 현재 위치로 이동
     if (webViewRef.current && currentLocation) {
       const lat = currentLocation.coords.latitude;
       const lon = currentLocation.coords.longitude;
 
-      const moveScript = `
-        if (typeof map !== 'undefined') {
-          // 추적 모드 재활성화
-          isUserInteracting = false;
-          if (interactionTimeout) {
-            clearTimeout(interactionTimeout);
-            interactionTimeout = null;
-          }
-          console.log('✅ 내 위치 버튼 - 자동 추적 모드 재활성화');
-
-          // 지도 중심 이동 (경로는 유지됨)
-          var moveLatLon = new kakao.maps.LatLng(${lat}, ${lon});
-          map.panTo(moveLatLon);
-
-          // 마지막 중심 업데이트 위치 갱신
-          lastCenterUpdatePosition = moveLatLon;
-        }
-      `;
+      const heading = currentLocation.coords.heading ?? 0;
+      const moveScript = `window.focusOnLocation(${lat}, ${lon}, ${heading});`;
       webViewRef.current.injectJavaScript(moveScript);
     }
   };
@@ -799,58 +791,8 @@ const HomeScreen: React.FC = () => {
 
     // 지도에서 해당 마커를 강조하고 지도 중심 이동
     if (webViewRef.current && shelter.latitude && shelter.longitude) {
-      const highlightScript = `
-        // 쉼터 선택 시 자동 추적 중지 (쉼터 위치를 보기 위해)
-        isUserInteracting = true;
-        if (interactionTimeout) {
-          clearTimeout(interactionTimeout);
-        }
-        // 15초 후 자동으로 추적 모드 재개
-        interactionTimeout = setTimeout(function() {
-          isUserInteracting = false;
-          console.log('✅ 자동 추적 모드 재개');
-        }, 15000);
-        console.log('🏠 쉼터 선택 - 자동 추적 중지 (15초)');
-
-        // 기존 깜빡임 효과 중지
-        if (window.blinkInterval) {
-          clearInterval(window.blinkInterval);
-          window.blinkInterval = null;
-        }
-
-        // 모든 마커를 원래 크기로 복원
-        if (window.markers) {
-          window.markers.forEach(function(markerObj, idx) {
-            if (markerObj.marker && markerObj.pinImage) {
-              var normalImageWithShadow = window.createMarkerImageWithShadow(markerObj.pinImage, 36, 46);
-              var normalImage = new kakao.maps.MarkerImage(
-                normalImageWithShadow,
-                new kakao.maps.Size(44, 52),
-                { offset: new kakao.maps.Point(22, 49) }
-              );
-              markerObj.marker.setImage(normalImage);
-            }
-          });
-        }
-
-        // 선택된 마커 찾기
-        var selectedMarkerId = "${shelter.id}";
-        var selectedMarkerObj = window.markers ? window.markers.find(function(m) {
-          return m.id === selectedMarkerId;
-        }) : null;
-
-        if (selectedMarkerObj && selectedMarkerObj.marker && selectedMarkerObj.pinImage) {
-          // 강조 이미지로 고정 (깜빡임 없이)
-          var highlightImageWithShadow = window.createHighlightMarkerImage(selectedMarkerObj.pinImage, 48, 62);
-          var highlightImage = new kakao.maps.MarkerImage(
-            highlightImageWithShadow,
-            new kakao.maps.Size(72, 68),
-            { offset: new kakao.maps.Point(36, 65) }
-          );
-          selectedMarkerObj.marker.setImage(highlightImage);
-        }
-      `;
-      webViewRef.current.injectJavaScript(highlightScript);
+      const script = `window.highlightShelter('${shelter.id}', ${shelter.latitude}, ${shelter.longitude});`;
+      webViewRef.current.injectJavaScript(script);
       console.log('🎯 마커 강조 및 지도 이동:', shelter.name, shelter.id, shelter.latitude, shelter.longitude);
     }
 
@@ -1002,6 +944,8 @@ const HomeScreen: React.FC = () => {
       console.log('🗺️ 경로 좌표 개수:', pathCoords.length);
       console.log('🗺️ 총 거리:', totalDistance, 'm, 총 시간:', totalTime, '초');
       console.log('🗺️ 경로 시작:', pathCoords[0], '경로 끝:', pathCoords[pathCoords.length - 1]);
+
+      setNavigationPath(pathCoords); // 경로 이탈 감지를 위해 경로 저장
 
       // 500ms 후에 WebView에 경로 그리기 (메시지 표시 직후)
       setTimeout(() => {
@@ -1247,6 +1191,42 @@ const HomeScreen: React.FC = () => {
     }
   }, [currentLocation, isNavigating, destinationCoords]);
 
+  // 경로 이탈 감지 및 재탐색 (10초마다)
+  useEffect(() => {
+    const rerouteTimer = setTimeout(() => {
+      if (!isNavigating || !currentLocation || !navigationPath || !destinationCoords || isRerouting) {
+        return;
+      }
+
+      // 경로상의 모든 점과 현재 위치 사이의 최소 거리를 계산
+      let minDistance = Infinity;
+      for (const point of navigationPath) {
+        const distance = calculateDistance(
+          currentLocation.coords.latitude,
+          currentLocation.coords.longitude,
+          point[0],
+          point[1]
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+        }
+      }
+
+      // 최소 거리가 20미터를 초과하면 경로 재탐색
+      if (minDistance > 20) {
+        console.log(`🗺️ 경로 이탈 감지 (거리: ${Math.round(minDistance)}m). 재탐색 시작...`);
+        setIsRerouting(true); // 재탐색 플래그 설정
+        handleNavigation(destinationCoords.lat, destinationCoords.lon, navigationInfo?.destinationName)
+          .finally(() => {
+            // 15초 후에 다시 재탐색 허용
+            setTimeout(() => setIsRerouting(false), 15000);
+          });
+      }
+    }, 10000);
+
+    return () => clearTimeout(rerouteTimer);
+  }, [currentLocation, isNavigating, navigationPath, destinationCoords, isRerouting]);
+
   // 길안내 취소 함수
   const handleCancelNavigation = () => {
     // 종료 메시지 표시
@@ -1374,6 +1354,7 @@ const HomeScreen: React.FC = () => {
       setIsNavigating(false);
       setNavigationInfo(null);
       setDestinationCoords(null);
+      setNavigationPath(null); // 저장된 경로 삭제
       setIsEndingRoute(false);
 
       // 하단 슬라이드 다시 중간 상태로 열기
@@ -1657,12 +1638,12 @@ const HomeScreen: React.FC = () => {
           window.markers.push(markerObj);
 
           kakao.maps.event.addListener(marker, 'click', function() {
-            console.log('🗺️ 동적 마커 클릭됨! Place ID:', position.id);
+            // 핀을 강조하고 지도를 중심으로 이동시킵니다.
+            window.highlightShelter(String(position.id), position.latlng[0], position.latlng[1]);
+
+            // React Native로 메시지를 보내 모달을 엽니다.
             if (window.ReactNativeWebView) {
-              console.log('📤 React Native로 메시지 전송:', 'MARKER_CLICK:' + position.id);
               window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
-            } else {
-              console.log('❌ ReactNativeWebView 없음');
             }
           });
         });
@@ -1885,17 +1866,14 @@ const HomeScreen: React.FC = () => {
           }
 
           // 내 위치 마커 (전역으로 저장)
-          ${initialLocation ? `
-          // 내 위치 마커 - 펄스 효과와 함께 강조 (이미지 재사용)
           // 초기 위치로 생성, 이후 실시간 업데이트로 위치 변경
           window.myLocationMarker = new kakao.maps.Marker({
               map: map,
-              position: new kakao.maps.LatLng(${initialLocation.coords.latitude}, ${initialLocation.coords.longitude}),
+              position: new kakao.maps.LatLng(centerLat, centerLng),
               title: '내 위치',
               image: window.myLocationMarkerImageObj,
               zIndex: 1000
           });
-          ` : ''}
   
           // 필터링된 주변 장소들로 마커 생성
           var positions = [
@@ -2145,7 +2123,7 @@ const HomeScreen: React.FC = () => {
   </body>
   </html>
   `;
-  }, [initialLocation, filteredMapLocations, nearbyPlaces, pinImages]);
+  }, [initialLocation, pinImages]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -2156,7 +2134,7 @@ const HomeScreen: React.FC = () => {
             key="kakao-map-webview"
             ref={webViewRef}
             originWhitelist={['*']}
-            source={{ html: mapHtml, baseUrl: '' }}
+            source={{ uri: `https://map-deploy-olive.vercel.app/?lat=${initialLocation?.coords.latitude || ''}&lng=${initialLocation?.coords.longitude || ''}` }} // 초기 위치를 URL 파라미터로 전달
             style={styles.map}
             javaScriptEnabled={true}
             domStorageEnabled={true}
@@ -2170,30 +2148,17 @@ const HomeScreen: React.FC = () => {
             setSupportMultipleWindows={false}
             allowsInlineMediaPlayback={true}
             mediaPlaybackRequiresUserAction={false}
-            onMessage={(event) => {
-              const message = event.nativeEvent.data;
-              console.log('📱 WebView 메시지 수신:', message);
-
-              // 문자열 메시지 처리
-              if (message.startsWith('MARKER_CLICK:')) {
-                const placeId = message.replace('MARKER_CLICK:', '');
-                console.log('🔍 마커 클릭 감지, Place ID:', placeId);
-                handleMarkerClick(parseInt(placeId));
-                return;
-              }
-
-              // JSON 메시지 처리
-              try {
-                const jsonMessage = JSON.parse(message);
-                if (jsonMessage.type === 'markerClick') {
-                  console.log('🔍 JSON 마커 클릭 감지, Place ID:', jsonMessage.id);
-                  handleMarkerClick(parseInt(jsonMessage.id));
-                }
-              } catch (e) {
-                // JSON이 아닌 경우 무시
-                console.log('📱 일반 메시지:', message);
-              }
-            }}
+            cacheEnabled={false} // 캐시 비활성화
+            incognito={true} // 캐시 및 데이터 저장 방지
+          onMessage={(event) => {
+            const message = event.nativeEvent.data;
+            if (message.startsWith('CONSOLE:')) {
+              console.log('WebView Console:', message.substring(8));
+            } else if (message.startsWith('MARKER_CLICK:')) {
+              const placeId = parseInt(message.split(':')[1]);
+              handleMarkerClick(placeId);
+            }
+          }}
           />
           {/* 상단 오버레이를 미니멀하게 변경 - 내 위치 버튼과 미세먼지 정보만 표시 */}
 

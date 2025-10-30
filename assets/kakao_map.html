@@ -3,16 +3,14 @@
 <head>
 	<meta charset="utf-8"/>
 	<title>Kakao Maps</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <style>
-        html, body {
+        html, body, #map {
             width: 100%;
             height: 100%;
             margin: 0;
             padding: 0;
-        }
-        #map {
-            width: 100%;
-            height: calc(100% - 70px);
+            overflow: hidden;
         }
         /* 카카오맵의 불필요한 POI 레이블 숨기기 */
         #map .label {
@@ -21,257 +19,221 @@
         #map .info {
             display: none !important;
         }
-        .category-container {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 15px 20px;
-            background-color: #FFFFFF;
-            border-bottom: 1px solid #E5E5E5;
-            height: 70px;
-            box-sizing: border-box;
-        }
-        .category-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .category-pin {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 4px;
-            position: relative;
-        }
-        .category-pin::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 8px solid currentColor;
-        }
-        .category-pin.shelter {
-            background-color: #7B7BF7;
-        }
-        .category-pin.shelter::after {
-            border-top-color: #7B7BF7;
-        }
-        .category-pin.private {
-            background-color: #A5A5E8;
-        }
-        .category-pin.private::after {
-            border-top-color: #A5A5E8;
-        }
-        .category-pin.transport {
-            background-color: #4A90E2;
-        }
-        .category-pin.transport::after {
-            border-top-color: #4A90E2;
-        }
-        .category-pin.public {
-            background-color: #8A8A8A;
-        }
-        .category-pin.public::after {
-            border-top-color: #8A8A8A;
-        }
-        .category-text {
-            font-size: 12px;
-            color: #666666;
-            font-weight: 500;
-        }
-        .pin-icon {
-            color: white;
-            font-size: 16px;
-        }
     </style>
 </head>
 <body>
-    <!-- 핀 카테고리 -->
-    <div class="category-container">
-        <div class="category-item">
-            <div class="category-pin shelter">
-                <span class="pin-icon">+</span>
-            </div>
-            <span class="category-text">쉘터</span>
-        </div>
-        <div class="category-item">
-            <div class="category-pin private">
-                <span class="pin-icon">🏢</span>
-            </div>
-            <span class="category-text">민간</span>
-        </div>
-        <div class="category-item">
-            <div class="category-pin transport">
-                <span class="pin-icon">🚗</span>
-            </div>
-            <span class="category-text">교통</span>
-        </div>
-        <div class="category-item">
-            <div class="category-pin public">
-                <span class="pin-icon">🏛️</span>
-            </div>
-            <span class="category-text">공공</span>
-        </div>
-    </div>
     <div id="map"></div>
     <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985"></script>
     <script>
-        // 브라우저의 Geolocation API 차단
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition = function() {
-                console.log('Geolocation blocked');
+        try {
+            // URL 파라미터 파싱 함수
+            function getQueryParam(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+
+            // URL 파라미터에서 초기 위치 가져오기
+            const urlLat = parseFloat(getQueryParam('lat'));
+            const urlLng = parseFloat(getQueryParam('lng'));
+
+            // 유효한 파라미터가 없으면 서울 시청을 기본값으로 사용
+            const initialLat = isNaN(urlLat) ? 37.5665 : urlLat;
+            const initialLng = isNaN(urlLng) ? 126.978 : urlLng;
+
+            const container = document.getElementById('map');
+            const options = {
+                center: new kakao.maps.LatLng(initialLat, initialLng), // URL 파라미터 또는 기본값 사용
+                level: 3 // 지도 레벨을 3으로 다시 설정
             };
-            navigator.geolocation.watchPosition = function() {
-                console.log('Geolocation watch blocked');
+            const map = new kakao.maps.Map(container, options);
+            map.relayout(); // 지도 크기 재계산
+
+            // --- 전역 변수 및 상태 초기화 ---
+            window.map = map; // 지도 객체 전역화
+            window.markers = []; // 쉼터 마커 배열 전역화
+            window.routeLine = null;
+            window.routeLineOutline = null;
+            window.routeLineShadow = null;
+            window.blinkInterval = null; // 마커 깜빡임 인터벌 전역화
+            let currentPositionMarker = null;
+
+            // --- 애니메이션 및 상태 관련 변수 ---
+            let animState = {
+                currentLat: initialLat,
+                currentLng: initialLng,
+                currentHeading: 0,
+                targetLat: initialLat,
+                targetLng: initialLng,
+                targetHeading: 0,
+                isAnimating: false
             };
-        }
 
-        window.addEventListener('load', function() {
-            try {
-                var container = document.getElementById('map');
-                if (!container) {
-                    console.error('Map container not found');
-                    return;
-                }
+            // --- 사용자 인터랙션 관련 ---
+            let isUserInteracting = false; // 사용자가 지도를 직접 조작 중인지
+            let interactionTimeout = null; // 자동 추적 재개 타이머
 
-                var options = {
-                    center: new kakao.maps.LatLng(37.5665, 126.978),
-                    level: 6  // 레벨을 높여서 세부 정보 감소
-                };
+            // 지도 드래그 이벤트 - 사용자가 지도를 움직이면 자동 추적 중지
+            kakao.maps.event.addListener(map, 'dragstart', () => {
+                isUserInteracting = true;
+                if(interactionTimeout) clearTimeout(interactionTimeout);
+            });
 
-                var map = new kakao.maps.Map(container, options);
-                console.log('Map initialized successfully');
+            // 지도 드래그 종료 - 10초 후 자동 추적 재개
+            kakao.maps.event.addListener(map, 'dragend', () => {
+                interactionTimeout = setTimeout(() => { isUserInteracting = false; }, 10000);
+            });
 
-                // 하드코딩된 더미 마커들 제거됨 - 실제 쉼터 데이터는 HomeScreen에서 동적으로 표시됨
+            // 줌 레벨 변경 이벤트 - 사용자가 줌을 조작하면 자동 추적 중지
+            kakao.maps.event.addListener(map, 'zoom_changed', () => {
+                isUserInteracting = true;
+                if(interactionTimeout) clearTimeout(interactionTimeout);
+                interactionTimeout = setTimeout(() => { isUserInteracting = false; }, 10000);
+            });
 
-                // 현위치 마커 관련 변수
-                var currentPositionMarker = null;
-                var currentHeading = 0;
+            // --- 헬퍼 함수 ---
+            window.createMarkerImageWithShadow = function(pinImageSrc, width, height) {
+                const svg = `<svg width="${width+8}" height="${height+6}" viewBox="0 0 ${width+8} ${height+6}" xmlns="http://www.w3.org/2000/svg"><ellipse cx="${(width+8)/2}" cy="${height+3}" rx="${width*0.25}" ry="2" fill="black" opacity="0.2"/><image href="${pinImageSrc}" x="4" y="0" width="${width}" height="${height}"/></svg>`;
+                return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+            };
+            window.createHighlightMarkerImage = function(pinImageSrc, width, height) {
+                const svg = `<svg width="${width+24}" height="${height+6}" viewBox="0 0 ${width+24} ${height+6}" xmlns="http://www.w3.org/2000/svg"><ellipse cx="${(width+24)/2}" cy="${height+3}" rx="${width*0.35}" ry="4" fill="black" opacity="0.4"/><image href="${pinImageSrc}" x="12" y="0" width="${width}" height="${height}"/></svg>`;
+                return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+            };
 
-                // 현위치 마커 이미지 생성 (방향 표시 포함)
-                function createCurrentLocationMarker(heading) {
-                    var svg = `
-                        <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                                    <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
-                                    <feOffset dx="0" dy="1" result="offsetblur"/>
-                                    <feComponentTransfer>
-                                        <feFuncA type="linear" slope="0.3"/>
-                                    </feComponentTransfer>
-                                    <feMerge>
-                                        <feMergeNode/>
-                                        <feMergeNode in="SourceGraphic"/>
-                                    </feMerge>
-                                </filter>
-                            </defs>
-                            <g transform="translate(20, 20) rotate(${heading})">
-                                <!-- 외곽 원 -->
-                                <circle cx="0" cy="0" r="12" fill="#4285F4" opacity="0.3" filter="url(#shadow)"/>
-                                <!-- 내부 원 -->
-                                <circle cx="0" cy="0" r="8" fill="#4285F4" stroke="white" stroke-width="2"/>
-                                <!-- 방향 표시 화살표 -->
-                                <path d="M 0,-8 L 4,-2 L 0,0 L -4,-2 Z" fill="white"/>
+            // --- 내 위치 마커 SVG 생성 (빨간색 + 그림자 + 방향) ---
+            function createMyLocationSvg(heading) {
+                const rotation = heading || 0;
+                const svg = `
+                    <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <filter id="myLocationShadow" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+                                <feOffset in="blur" dx="0" dy="2" result="offsetBlur"/>
+                                <feComponentTransfer><feFuncA type="linear" slope="0.6"/></feComponentTransfer>
+                                <feMerge> 
+                                    <feMergeNode in="offsetBlur"/>
+                                    <feMergeNode in="SourceGraphic"/> 
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        
+                        <g filter="url(#myLocationShadow)">
+                            <!-- Pulsing circles -->
+                            <circle cx="30" cy="30" r="22" fill="#FF4136" opacity="0.3">
+                                <animate attributeName="r" values="18;22;18" dur="2s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="30" cy="30" r="18" fill="#FF4136" opacity="0.4">
+                                <animate attributeName="r" values="15;18;15" dur="2s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0.4;0.2;0.4" dur="2s" repeatCount="indefinite"/>
+                            </circle>
+
+                            <!-- Main dot -->
+                            <circle cx="30" cy="30" r="12" fill="#FF4136" stroke="white" stroke-width="3"/>
+
+                            <!-- Rotating Heading Indicator -->
+                            <g transform="rotate(${rotation} 30 30)">
+                                <path d="M30,12 L35,22 L30,20 L25,22 Z" fill="white"/>
                             </g>
-                        </svg>
-                    `;
+                        </g>
+                    </svg>
+                `;
+                return 'data:image/svg+xml;base64,' + btoa(svg);
+            }
 
-                    var svgBlob = new Blob([svg], {type: 'image/svg+xml'});
-                    return URL.createObjectURL(svgBlob);
+            // --- 애니메이션 루프 ---
+            function animationLoop() {
+                if (!animState.isAnimating) return;
+
+                const easing = 0.2; // 부드러움 조절 (값이 클수록 빠르게 반응)
+                animState.currentLat += (animState.targetLat - animState.currentLat) * easing;
+                animState.currentLng += (animState.targetLng - animState.currentLng) * easing;
+                
+                let angleDiff = animState.targetHeading - animState.currentHeading;
+                while (angleDiff < -180) angleDiff += 360;
+                while (angleDiff > 180) angleDiff -= 360;
+                animState.currentHeading += angleDiff * easing;
+
+                const locPosition = new kakao.maps.LatLng(animState.currentLat, animState.currentLng);
+                const markerImage = new kakao.maps.MarkerImage(
+                    createMyLocationSvg(animState.currentHeading),
+                    new kakao.maps.Size(60, 60),
+                    { offset: new kakao.maps.Point(30, 30) }
+                );
+
+                if (currentPositionMarker) {
+                    currentPositionMarker.setPosition(locPosition);
+                    currentPositionMarker.setImage(markerImage);
+                } else {
+                    currentPositionMarker = new kakao.maps.Marker({ map, position: locPosition, image: markerImage, zIndex: 1000 });
                 }
 
-                // 현위치 마커 업데이트
-                function updateCurrentLocation(position) {
-                    console.log('updateCurrentLocation called with:', position);
-                    var lat = position.coords.latitude;
-                    var lng = position.coords.longitude;
-                    var heading = position.coords.heading || currentHeading;
-
-                    console.log('lat:', lat, 'lng:', lng, 'heading:', heading);
-
-                    // heading이 null이 아니면 업데이트
-                    if (heading !== null && heading !== undefined) {
-                        currentHeading = heading;
-                    }
-
-                    var locPosition = new kakao.maps.LatLng(lat, lng);
-
-                    if (currentPositionMarker) {
-                        console.log('Updating existing marker');
-                        // 기존 마커 위치와 이미지 업데이트
-                        currentPositionMarker.setPosition(locPosition);
-
-                        var markerImageUrl = createCurrentLocationMarker(currentHeading);
-                        var markerImageSize = new kakao.maps.Size(40, 40);
-                        var markerImageOption = {offset: new kakao.maps.Point(20, 20)};
-                        var markerImage = new kakao.maps.MarkerImage(markerImageUrl, markerImageSize, markerImageOption);
-                        currentPositionMarker.setImage(markerImage);
-                    } else {
-                        console.log('Creating new marker');
-                        // 새 마커 생성
-                        var markerImageUrl = createCurrentLocationMarker(currentHeading);
-                        console.log('Marker image URL:', markerImageUrl);
-                        var markerImageSize = new kakao.maps.Size(40, 40);
-                        var markerImageOption = {offset: new kakao.maps.Point(20, 20)};
-                        var markerImage = new kakao.maps.MarkerImage(markerImageUrl, markerImageSize, markerImageOption);
-
-                        currentPositionMarker = new kakao.maps.Marker({
-                            map: map,
-                            position: locPosition,
-                            image: markerImage,
-                            zIndex: 1000
-                        });
-
-                        console.log('Marker created, centering map');
-                        // 첫 위치로 지도 중심 이동
-                        map.setCenter(locPosition);
-                    }
-                }
-
-                // 위치 오류 처리
-                function handleLocationError(error) {
-                    console.error('위치 정보 오류:', error);
-                }
-
-                // 고정 위치 설정 (서울 시청)
-                var fixedPosition = {
-                    coords: {
-                        latitude: 37.5665,
-                        longitude: 126.978,
-                        heading: 0
-                    }
-                };
-
-                // 고정 위치로 현위치 마커 생성
-                updateCurrentLocation(fixedPosition);
-
-                // React Native에서 위치 데이터 받기 (무시)
-                window.addEventListener('message', function(event) {
-                    console.log('Message ignored:', event.data);
-                });
-
-                // Android용 메시지 리스너 (무시)
-                document.addEventListener('message', function(event) {
-                    console.log('Message ignored:', event.data);
-                });
-
-            } catch (error) {
-                console.error('Error initializing map:', error);
-                var container = document.getElementById('map');
-                if (container) {
-                    container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:red;">맵을 불러오는데 실패했습니다.</div>';
+                const dist = Math.abs(animState.targetLat - animState.currentLat) + Math.abs(animState.targetLng - animState.targetLng);
+                if (dist < 0.000001 && Math.abs(angleDiff) < 0.1) {
+                    animState.isAnimating = false;
+                } else {
+                    requestAnimationFrame(animationLoop);
                 }
             }
-        });
 
+            // --- React Native 메시지 핸들러 ---
+            function handleReactNativeMessage(event) {
+                try {
+                    const messageData = JSON.parse(event.data);
+                    if (messageData && messageData.type === 'location') {
+                        animState.targetLat = messageData.latitude;
+                        animState.targetLng = messageData.longitude;
+                        animState.targetHeading = messageData.heading;
+
+                        if (animState.currentLat === 37.5665 && animState.currentLng === 126.978) { // 초기값일 경우 즉시 동기화
+                            animState.currentLat = messageData.latitude;
+                            animState.currentLng = messageData.longitude;
+                            animState.currentHeading = messageData.heading;
+                        }
+
+                        // 자동 이동 로직: 사용자가 지도를 조작 중이 아니고, 현재 지도의 중심과 사용자 위치가 멀리 떨어져 있을 때만
+                        if (!isUserInteracting) {
+                            const currentMapCenter = map.getCenter();
+                            const userLocation = new kakao.maps.LatLng(messageData.latitude, messageData.longitude);
+                            const distanceThreshold = 0.0005; // 약 50미터 (위도/경도 차이)
+                            const distLat = Math.abs(currentMapCenter.getLat() - userLocation.getLat());
+                            const distLng = Math.abs(currentMapCenter.getLng() - userLocation.getLng());
+
+                            if (distLat > distanceThreshold || distLng > distanceThreshold) {
+                                map.panTo(userLocation);
+                            }
+                        }
+
+                        if (!animState.isAnimating) {
+                            animState.isAnimating = true;
+                            requestAnimationFrame(animationLoop);
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            window.addEventListener('message', handleReactNativeMessage);
+            document.addEventListener('message', handleReactNativeMessage);
+
+            // 웹뷰 콘솔 로그를 React Native로 전달
+            ['log', 'warn', 'error'].forEach(level => {
+              const original = console[level];
+              console[level] = function() {
+                const message = Array.from(arguments).map(arg => {
+                  if (typeof arg === 'object' && arg !== null) {
+                    try { return JSON.stringify(arg); } catch (e) { return String(arg); }
+                  } else { return String(arg); }
+                }).join(' ');
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage(`CONSOLE:${level}:${message}`);
+                }
+                original.apply(console, arguments);
+              };
+            });
+
+        } catch (error) {
+            console.error('Error initializing map:', error);
+        }
     </script>
 </body>
 </html>

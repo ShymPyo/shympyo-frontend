@@ -83,6 +83,8 @@ const MapScreen: React.FC = () => {
         allowUniversalAccessFromFileURLs={true}
         mixedContentMode="always"
         geolocationEnabled={false}
+        scalesPageToFit={false}
+        contentMode="mobile"
         cacheEnabled={true}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
