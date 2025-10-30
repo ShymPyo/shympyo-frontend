@@ -1,239 +1,203 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="utf-8"/>
-	<title>Kakao Maps</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <style>
-        html, body, #map {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-        /* 카카오맵의 불필요한 POI 레이블 숨기기 */
-        #map .label {
-            display: none !important;
-        }
-        #map .info {
-            display: none !important;
-        }
-    </style>
+  <meta charset="utf-8"/>
+  <title>Kakao Maps</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <style>
+    html, body, #map {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #map .label, #map .info { display: none !important; }
+  </style>
 </head>
 <body>
-    <div id="map"></div>
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985"></script>
-    <script>
-        try {
-            // URL 파라미터 파싱 함수
-            function getQueryParam(name) {
-                const urlParams = new URLSearchParams(window.location.search);
-                return urlParams.get(name);
-            }
+  <div id="map"></div>
 
-            // URL 파라미터에서 초기 위치 가져오기
-            const urlLat = parseFloat(getQueryParam('lat'));
-            const urlLng = parseFloat(getQueryParam('lng'));
-
-            // 유효한 파라미터가 없으면 서울 시청을 기본값으로 사용
-            const initialLat = isNaN(urlLat) ? 37.5665 : urlLat;
-            const initialLng = isNaN(urlLng) ? 126.978 : urlLng;
-
-            const container = document.getElementById('map');
-            const options = {
-                center: new kakao.maps.LatLng(initialLat, initialLng), // URL 파라미터 또는 기본값 사용
-                level: 3 // 지도 레벨을 3으로 다시 설정
-            };
-            const map = new kakao.maps.Map(container, options);
-            map.relayout(); // 지도 크기 재계산
-
-            // --- 전역 변수 및 상태 초기화 ---
-            window.map = map; // 지도 객체 전역화
-            window.markers = []; // 쉼터 마커 배열 전역화
-            window.routeLine = null;
-            window.routeLineOutline = null;
-            window.routeLineShadow = null;
-            window.blinkInterval = null; // 마커 깜빡임 인터벌 전역화
-            let currentPositionMarker = null;
-
-            // --- 애니메이션 및 상태 관련 변수 ---
-            let animState = {
-                currentLat: initialLat,
-                currentLng: initialLng,
-                currentHeading: 0,
-                targetLat: initialLat,
-                targetLng: initialLng,
-                targetHeading: 0,
-                isAnimating: false
-            };
-
-            // --- 사용자 인터랙션 관련 ---
-            let isUserInteracting = false; // 사용자가 지도를 직접 조작 중인지
-            let interactionTimeout = null; // 자동 추적 재개 타이머
-
-            // 지도 드래그 이벤트 - 사용자가 지도를 움직이면 자동 추적 중지
-            kakao.maps.event.addListener(map, 'dragstart', () => {
-                isUserInteracting = true;
-                if(interactionTimeout) clearTimeout(interactionTimeout);
-            });
-
-            // 지도 드래그 종료 - 10초 후 자동 추적 재개
-            kakao.maps.event.addListener(map, 'dragend', () => {
-                interactionTimeout = setTimeout(() => { isUserInteracting = false; }, 10000);
-            });
-
-            // 줌 레벨 변경 이벤트 - 사용자가 줌을 조작하면 자동 추적 중지
-            kakao.maps.event.addListener(map, 'zoom_changed', () => {
-                isUserInteracting = true;
-                if(interactionTimeout) clearTimeout(interactionTimeout);
-                interactionTimeout = setTimeout(() => { isUserInteracting = false; }, 10000);
-            });
-
-            // --- 헬퍼 함수 ---
-            window.createMarkerImageWithShadow = function(pinImageSrc, width, height) {
-                const svg = `<svg width="${width+8}" height="${height+6}" viewBox="0 0 ${width+8} ${height+6}" xmlns="http://www.w3.org/2000/svg"><ellipse cx="${(width+8)/2}" cy="${height+3}" rx="${width*0.25}" ry="2" fill="black" opacity="0.2"/><image href="${pinImageSrc}" x="4" y="0" width="${width}" height="${height}"/></svg>`;
-                return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
-            };
-            window.createHighlightMarkerImage = function(pinImageSrc, width, height) {
-                const svg = `<svg width="${width+24}" height="${height+6}" viewBox="0 0 ${width+24} ${height+6}" xmlns="http://www.w3.org/2000/svg"><ellipse cx="${(width+24)/2}" cy="${height+3}" rx="${width*0.35}" ry="4" fill="black" opacity="0.4"/><image href="${pinImageSrc}" x="12" y="0" width="${width}" height="${height}"/></svg>`;
-                return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
-            };
-
-            // --- 내 위치 마커 SVG 생성 (빨간색 + 그림자 + 방향) ---
-            function createMyLocationSvg(heading) {
-                const rotation = heading || 0;
-                const svg = `
-                    <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <filter id="myLocationShadow" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
-                                <feOffset in="blur" dx="0" dy="2" result="offsetBlur"/>
-                                <feComponentTransfer><feFuncA type="linear" slope="0.6"/></feComponentTransfer>
-                                <feMerge> 
-                                    <feMergeNode in="offsetBlur"/>
-                                    <feMergeNode in="SourceGraphic"/> 
-                                </feMerge>
-                            </filter>
-                        </defs>
-                        
-                        <g filter="url(#myLocationShadow)">
-                            <!-- Pulsing circles -->
-                            <circle cx="30" cy="30" r="22" fill="#FF4136" opacity="0.3">
-                                <animate attributeName="r" values="18;22;18" dur="2s" repeatCount="indefinite"/>
-                                <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite"/>
-                            </circle>
-                            <circle cx="30" cy="30" r="18" fill="#FF4136" opacity="0.4">
-                                <animate attributeName="r" values="15;18;15" dur="2s" repeatCount="indefinite"/>
-                                <animate attributeName="opacity" values="0.4;0.2;0.4" dur="2s" repeatCount="indefinite"/>
-                            </circle>
-
-                            <!-- Main dot -->
-                            <circle cx="30" cy="30" r="12" fill="#FF4136" stroke="white" stroke-width="3"/>
-
-                            <!-- Rotating Heading Indicator -->
-                            <g transform="rotate(${rotation} 30 30)">
-                                <path d="M30,12 L35,22 L30,20 L25,22 Z" fill="white"/>
-                            </g>
-                        </g>
-                    </svg>
-                `;
-                return 'data:image/svg+xml;base64,' + btoa(svg);
-            }
-
-            // --- 애니메이션 루프 ---
-            function animationLoop() {
-                if (!animState.isAnimating) return;
-
-                const easing = 0.2; // 부드러움 조절 (값이 클수록 빠르게 반응)
-                animState.currentLat += (animState.targetLat - animState.currentLat) * easing;
-                animState.currentLng += (animState.targetLng - animState.currentLng) * easing;
-                
-                let angleDiff = animState.targetHeading - animState.currentHeading;
-                while (angleDiff < -180) angleDiff += 360;
-                while (angleDiff > 180) angleDiff -= 360;
-                animState.currentHeading += angleDiff * easing;
-
-                const locPosition = new kakao.maps.LatLng(animState.currentLat, animState.currentLng);
-                const markerImage = new kakao.maps.MarkerImage(
-                    createMyLocationSvg(animState.currentHeading),
-                    new kakao.maps.Size(60, 60),
-                    { offset: new kakao.maps.Point(30, 30) }
-                );
-
-                if (currentPositionMarker) {
-                    currentPositionMarker.setPosition(locPosition);
-                    currentPositionMarker.setImage(markerImage);
-                } else {
-                    currentPositionMarker = new kakao.maps.Marker({ map, position: locPosition, image: markerImage, zIndex: 1000 });
-                }
-
-                const dist = Math.abs(animState.targetLat - animState.currentLat) + Math.abs(animState.targetLng - animState.targetLng);
-                if (dist < 0.000001 && Math.abs(angleDiff) < 0.1) {
-                    animState.isAnimating = false;
-                } else {
-                    requestAnimationFrame(animationLoop);
-                }
-            }
-
-            // --- React Native 메시지 핸들러 ---
-            function handleReactNativeMessage(event) {
-                try {
-                    const messageData = JSON.parse(event.data);
-                    if (messageData && messageData.type === 'location') {
-                        animState.targetLat = messageData.latitude;
-                        animState.targetLng = messageData.longitude;
-                        animState.targetHeading = messageData.heading;
-
-                        if (animState.currentLat === 37.5665 && animState.currentLng === 126.978) { // 초기값일 경우 즉시 동기화
-                            animState.currentLat = messageData.latitude;
-                            animState.currentLng = messageData.longitude;
-                            animState.currentHeading = messageData.heading;
-                        }
-
-                        // 자동 이동 로직: 사용자가 지도를 조작 중이 아니고, 현재 지도의 중심과 사용자 위치가 멀리 떨어져 있을 때만
-                        if (!isUserInteracting) {
-                            const currentMapCenter = map.getCenter();
-                            const userLocation = new kakao.maps.LatLng(messageData.latitude, messageData.longitude);
-                            const distanceThreshold = 0.0005; // 약 50미터 (위도/경도 차이)
-                            const distLat = Math.abs(currentMapCenter.getLat() - userLocation.getLat());
-                            const distLng = Math.abs(currentMapCenter.getLng() - userLocation.getLng());
-
-                            if (distLat > distanceThreshold || distLng > distanceThreshold) {
-                                map.panTo(userLocation);
-                            }
-                        }
-
-                        if (!animState.isAnimating) {
-                            animState.isAnimating = true;
-                            requestAnimationFrame(animationLoop);
-                        }
-                    }
-                } catch (e) {}
-            }
-
-            window.addEventListener('message', handleReactNativeMessage);
-            document.addEventListener('message', handleReactNativeMessage);
-
-            // 웹뷰 콘솔 로그를 React Native로 전달
-            ['log', 'warn', 'error'].forEach(level => {
-              const original = console[level];
-              console[level] = function() {
-                const message = Array.from(arguments).map(arg => {
-                  if (typeof arg === 'object' && arg !== null) {
-                    try { return JSON.stringify(arg); } catch (e) { return String(arg); }
-                  } else { return String(arg); }
-                }).join(' ');
-                if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage(`CONSOLE:${level}:${message}`);
-                }
-                original.apply(console, arguments);
-              };
-            });
-
-        } catch (error) {
-            console.error('Error initializing map:', error);
+  <!-- ✅ autoload=false 로 수정 -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985&autoload=false"></script>
+  <script>
+    kakao.maps.load(function() {
+      try {
+        // --- 초기화 ---
+        function getQueryParam(name) {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get(name);
         }
-    </script>
+        const urlLat = parseFloat(getQueryParam('lat'));
+        const urlLng = parseFloat(getQueryParam('lng'));
+        const initialLat = isNaN(urlLat) ? 37.5665 : urlLat;
+        const initialLng = isNaN(urlLng) ? 126.9780 : urlLng;
+
+        const map = new kakao.maps.Map(document.getElementById('map'), {
+          center: new kakao.maps.LatLng(initialLat, initialLng),
+          level: 3
+        });
+        map.relayout();
+
+        // --- 전역 변수 ---
+        window.map = map;
+        window.markers = [];
+        window.currentPositionMarker = null;
+        window.animState = {
+          currentLat: initialLat,
+          currentLng: initialLng,
+          currentHeading: 0,
+          targetLat: initialLat,
+          targetLng: initialLng,
+          targetHeading: 0,
+          isAnimating: false
+        };
+
+        // --- 헬퍼 함수 (쉼터 핀용) ---
+        window.createMarkerImageWithShadow = function(pinImageSrc, width, height) {
+          const svg = `<svg width="${width+8}" height="${height+6}" viewBox="0 0 ${width+8} ${height+6}" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="${(width+8)/2}" cy="${height+3}" rx="${width*0.25}" ry="2" fill="black" opacity="0.2"/>
+            <image href="${pinImageSrc}" x="4" y="0" width="${width}" height="${height}"/>
+          </svg>`;
+          return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        };
+
+        window.createHighlightMarkerImage = function(pinImageSrc, width, height) {
+          const svg = `<svg width="${width+24}" height="${height+6}" viewBox="0 0 ${width+24} ${height+6}" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="${(width+24)/2}" cy="${height+3}" rx="${width*0.35}" ry="4" fill="black" opacity="0.4"/>
+            <image href="${pinImageSrc}" x="12" y="0" width="${width}" height="${height}"/>
+          </svg>`;
+          return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        };
+
+        // --- 내 위치 마커 ---
+        function createMyLocationSvg(heading) {
+          const rotation = heading || 0;
+          const svg = `
+            <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <filter id="markerShadow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="1" flood-color="rgba(0,0,0,0.5)" />
+                </filter>
+              </defs>
+              <g filter="url(#markerShadow)">
+                <circle cx="26" cy="26" r="11" fill="#FF2B2B" stroke="white" stroke-width="3"/>
+                <g transform="rotate(${rotation} 26 26) translate(0, -6)">
+                  <path d="M26 8 L30.5 17 L26 14.5 L21.5 17 Z" fill="white"/>
+                </g>
+              </g>
+            </svg>`;
+          return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        }
+
+        // --- 애니메이션 루프 ---
+        function animationLoop() {
+          if (!window.animState.isAnimating) return;
+          const easing = 0.2;
+          const s = window.animState;
+          s.currentLat += (s.targetLat - s.currentLat) * easing;
+          s.currentLng += (s.targetLng - s.currentLng) * easing;
+          let diff = s.targetHeading - s.currentHeading;
+          while (diff < -180) diff += 360;
+          while (diff > 180) diff -= 360;
+          s.currentHeading += diff * easing;
+
+          const pos = new kakao.maps.LatLng(s.currentLat, s.currentLng);
+          const markerImage = new kakao.maps.MarkerImage(
+            createMyLocationSvg(s.currentHeading),
+            new kakao.maps.Size(52, 52),
+            { offset: new kakao.maps.Point(26, 26) }
+          );
+
+          if (window.currentPositionMarker) {
+            window.currentPositionMarker.setPosition(pos);
+            window.currentPositionMarker.setImage(markerImage);
+          } else {
+            window.currentPositionMarker = new kakao.maps.Marker({
+              map: window.map,
+              position: pos,
+              image: markerImage,
+              zIndex: 1000
+            });
+          }
+
+          const dist = Math.abs(s.targetLat - s.currentLat) + Math.abs(s.targetLng - s.currentLng);
+          if (dist < 0.000001 && Math.abs(diff) < 0.1) s.isAnimating = false;
+          else requestAnimationFrame(animationLoop);
+        }
+
+        // --- RN에서 위치 포커스 ---
+        window.focusOnLocation = function(lat, lng, heading) {
+          if (!window.map || !window.animState) return;
+          const s = window.animState;
+          s.targetLat = lat;
+          s.targetLng = lng;
+          if (heading !== undefined && heading !== null) s.targetHeading = heading;
+
+          const moveLatLng = new kakao.maps.LatLng(lat, lng);
+          window.map.setLevel(2, { anchor: moveLatLng });
+          window.map.panTo(moveLatLng);
+
+          if (!s.isAnimating) {
+            s.isAnimating = true;
+            requestAnimationFrame(animationLoop);
+          }
+        };
+
+        // --- 쉼터 마커 추가 ---
+        window.addShelters = function(list) {
+          if (!window.map) return;
+          window.markers.forEach(m => m.marker.setMap(null));
+          window.markers = [];
+          list.forEach(shelter => {
+            const pos = new kakao.maps.LatLng(shelter.lat, shelter.lng);
+            const pin = shelter.iconUrl || "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
+            const img = window.createMarkerImageWithShadow(pin, 36, 46);
+            const markerImage = new kakao.maps.MarkerImage(img, new kakao.maps.Size(44, 52), { offset: new kakao.maps.Point(22, 49) });
+            const marker = new kakao.maps.Marker({ map: window.map, position: pos, image: markerImage });
+            window.markers.push({ id: shelter.id, marker, pinImage: pin });
+          });
+        };
+
+        // --- 쉼터 강조 ---
+        window.highlightShelter = function(id, lat, lng) {
+          if (!window.map) return;
+          window.markers.forEach(m => {
+            if (m.marker && m.pinImage) {
+              const img = window.createMarkerImageWithShadow(m.pinImage, 36, 46);
+              const normal = new kakao.maps.MarkerImage(img, new kakao.maps.Size(44, 52), { offset: new kakao.maps.Point(22, 49) });
+              m.marker.setImage(normal);
+            }
+          });
+          const selected = window.markers.find(m => m.id === id);
+          if (selected) {
+            const hi = window.createHighlightMarkerImage(selected.pinImage, 48, 62);
+            const highlight = new kakao.maps.MarkerImage(hi, new kakao.maps.Size(72, 68), { offset: new kakao.maps.Point(36, 65) });
+            selected.marker.setImage(highlight);
+            window.map.panTo(new kakao.maps.LatLng(lat, lng));
+          }
+        };
+
+        // --- RN 메시지 핸들러 ---
+        function handleReactNativeMessage(event) {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'location') {
+              window.focusOnLocation(data.latitude, data.longitude, data.heading);
+            } else if (data.type === 'shelters' && Array.isArray(data.list)) {
+              window.addShelters(data.list);
+            }
+          } catch {}
+        }
+        window.addEventListener('message', handleReactNativeMessage);
+
+        // --- 초기 마커 표시 ---
+        window.focusOnLocation(initialLat, initialLng, 0);
+
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  </script>
 </body>
 </html>
