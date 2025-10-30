@@ -942,7 +942,7 @@ const AdminMainScreen: React.FC = () => {
                     const startTime = new Date(user.startTime);
                     const maxMinutes = maxUsageMinutes || 10;
                     const endTime = new Date(startTime.getTime() + maxMinutes * 60 * 1000);
-                    return `${endTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 종료 예정`;
+                    return `${endTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} \n종료 예정`;
                   })()}
                 </Text>
               </TouchableOpacity>
@@ -1684,6 +1684,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: Colors.primary,
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: 14,
