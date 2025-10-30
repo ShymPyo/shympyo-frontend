@@ -262,14 +262,12 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ visible, onClose }) => {
           <ScrollView
             ref={scrollViewRef}
             horizontal
-            pagingEnabled={false}
+            pagingEnabled
             showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
+            onMomentumScrollEnd={handleScroll}
             scrollEventThrottle={16}
             bounces={false}
-            decelerationRate="fast"
-            snapToInterval={modalWidth}
-            snapToAlignment="start"
+
             style={{ flex: 1 }}
           >
             {pages.map((page, index) => renderPage(page, index))}
@@ -380,6 +378,7 @@ const styles = StyleSheet.create({
   },
   multiplePinsContainer: {
     width: '100%',
+    paddingLeft: 20,
   },
   sectionTitle: {
     fontSize: 16,
@@ -434,6 +433,7 @@ const styles = StyleSheet.create({
   stepsContainer: {
     width: '100%',
     paddingVertical: 10,
+    paddingLeft: 20,
   },
   topDescriptionContainer: {
     flexDirection: 'row',
