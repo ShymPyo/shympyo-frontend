@@ -879,7 +879,13 @@ const AdminMainScreen: React.FC = () => {
                     <Ionicons name="time-outline" size={20} color={Colors.primary} />
                     <Text style={styles.settingText}>영업시간</Text>
                   </View>
-                  <Text style={styles.settingValue}>{defaultOpenTime} - {defaultCloseTime}</Text>
+                  <TouchableOpacity
+                    style={styles.settingButton}
+                    onPress={handleOpenDefaultTimeModal}
+                  >
+                    <Text style={styles.settingValue}>{defaultOpenTime} - {defaultCloseTime}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.text.light} />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
@@ -1277,7 +1283,7 @@ const AdminMainScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.businessHoursModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>정기휴무</Text>
+              <Text style={styles.modalTitle}>정기휴무 </Text>
               <TouchableOpacity onPress={handleCloseBusinessHoursModal}>
                 <Ionicons name="close" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
@@ -1314,6 +1320,76 @@ const AdminMainScreen: React.FC = () => {
         </View>
       </Modal>
 
+      {/* 영업시간 설정 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isDefaultTimeModalVisible}
+        onRequestClose={handleCloseDefaultTimeModal}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handleCloseDefaultTimeModal}
+        >
+          <TouchableOpacity
+            style={styles.timeModalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>영업시간 설정</Text>
+              <TouchableOpacity onPress={handleCloseDefaultTimeModal}>
+                <Ionicons name="close" size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.timePickerRow}>
+              <View style={styles.timePickerHalf}>
+                <Text style={styles.timeInputLabel}>오픈 시간</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={tempDefaultOpenTime}
+                    onValueChange={(value) => setTempDefaultOpenTime(value)}
+                    style={styles.picker}
+                    itemStyle={{ color: Colors.text.primary, fontSize: 18 }}
+                  >
+                    {Array.from({ length: 48 }, (_, i) => {
+                      const hours = Math.floor(i / 2);
+                      const minutes = (i % 2) * 30;
+                      const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                      return <Picker.Item key={time} label={time} value={time} color={Colors.text.primary} />;
+                    })}
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.timePickerHalf}>
+                <Text style={styles.timeInputLabel}>마감 시간</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={tempDefaultCloseTime}
+                    onValueChange={(value) => setTempDefaultCloseTime(value)}
+                    style={styles.picker}
+                    itemStyle={{ color: Colors.text.primary, fontSize: 18 }}
+                  >
+                    {Array.from({ length: 49 }, (_, i) => {
+                      const hours = Math.floor(i / 2);
+                      const minutes = (i % 2) * 30;
+                      const time = i === 48 ? '24:00' : `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                      return <Picker.Item key={time} label={time} value={time} color={Colors.text.primary} />;
+                    })}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveDefaultTime}>
+              <Text style={styles.saveButtonText}>저장</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
 
     </SafeAreaView>
