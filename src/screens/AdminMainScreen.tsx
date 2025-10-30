@@ -930,13 +930,13 @@ const AdminMainScreen: React.FC = () => {
               >
                 <Image
                   source={{
-                    uri: (user.imageUrl && !user.imageUrl.includes('example.com'))
+                    uri: (user.imageUrl && user.imageUrl !== 'default_image' && !user.imageUrl.includes('example.com'))
                       ? user.imageUrl
                       : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
                   }}
                   style={styles.userProfile}
                 />
-                <Text style={styles.userName}>{user.nickname || user.userName}</Text>
+                <Text style={styles.userName}>{user.nickname || '이용자'}</Text>
                 <Text style={styles.userTimeLeft}>
                   {(() => {
                     const startTime = new Date(user.startTime);
@@ -1031,12 +1031,18 @@ const AdminMainScreen: React.FC = () => {
 
             <View style={styles.userModalProfile}>
               <Image
-                source={{ uri: selectedUser?.imageUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face' }}
+                source={{
+                  uri: (selectedUser?.imageUrl && selectedUser?.imageUrl !== 'default_image' && !selectedUser.imageUrl.includes('example.com'))
+                    ? selectedUser.imageUrl
+                    : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
+                }}
                 style={styles.userModalProfileCircle}
               />
-              <Text style={styles.userModalName}>{selectedUser?.nickname || selectedUser?.userName}</Text>
-              {selectedUser?.bio && (
+              <Text style={styles.userModalName}>{selectedUser?.nickname || '이용자'}</Text>
+              {selectedUser?.bio ? (
                 <Text style={styles.userModalBio}>{selectedUser.bio}</Text>
+              ) : (
+                <Text style={styles.userModalBio}>자기소개가 없습니다.</Text>
               )}
             </View>
 
