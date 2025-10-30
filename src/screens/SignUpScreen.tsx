@@ -350,7 +350,7 @@ const SignUpScreen: React.FC = () => {
                 <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>이름 *</Text>
                 <TextInput
                   style={[styles.input, { fontSize: getFontSize(16) }]}
-                  placeholder="홍길동"
+                  placeholder="이름"
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
@@ -379,7 +379,7 @@ const SignUpScreen: React.FC = () => {
                 <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>닉네임 *</Text>
                 <TextInput
                   style={[styles.input, { fontSize: getFontSize(16) }]}
-                  placeholder="길동이"
+                  placeholder="닉네임"
                   value={nickname}
                   onChangeText={setNickname}
                   autoCapitalize="none"
@@ -390,7 +390,7 @@ const SignUpScreen: React.FC = () => {
 
               {/* 프로필 이미지 선택 */}
               <View style={styles.fieldContainer}>
-                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>프로필 이미지 (선택사항)</Text>
+                <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>프로필 이미지 *</Text>
                 <TouchableOpacity
                   style={styles.imagePickerContainer}
                   onPress={showImagePickerOptions}
@@ -424,7 +424,7 @@ const SignUpScreen: React.FC = () => {
                 <Text style={[styles.fieldLabel, { fontSize: getFontSize(14) }]} numberOfLines={1}>자기소개 *</Text>
                 <TextInput
                   style={[styles.input, styles.bioInput, { fontSize: getFontSize(16) }]}
-                  placeholder="안녕하세요! 여행을 좋아하는 홍길동입니다."
+                  placeholder="자기소개를 작성해주세요"
                   value={bio}
                   onChangeText={setBio}
                   multiline={true}
@@ -442,7 +442,7 @@ const SignUpScreen: React.FC = () => {
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={[styles.passwordInput, { fontSize: getFontSize(16) }]}
-                    placeholder="P@ssw0rd! (8자리 이상)"
+                    placeholder="8자리 이상"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
