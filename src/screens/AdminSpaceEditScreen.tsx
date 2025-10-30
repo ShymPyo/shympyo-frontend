@@ -68,45 +68,104 @@ const AdminSpaceEditScreen: React.FC = () => {
       Alert.alert('알림', '모든 필수 정보를 입력해주세요.');
       return;
     }
-
     if (!accessToken) {
       Alert.alert('오류', '인증 정보가 없습니다.');
       return;
     }
 
-    try {
-      setIsSaving(true);
+    setIsSaving(true);
 
-      const response = await ApiService.updatePlace(
+    try {
+      let finalImageUrl = imageUrl;
+
+      // 새 이미지가 선택되었는지 확인 (local URI는 'file://'로 시작)
+      if (imageUrl && imageUrl.startsWith('file://')) {
+        console.log('쉼터 이미지 업로드 시작:', imageUrl);
+
+        // 1. 파일 정보 추출
+        const fileExtension = imageUrl.split('.').pop()?.toLowerCase() || 'jpg';
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const contentType = blob.type;
+
+        // 2. Presigned URL 요청
+        const presignResponse = await ApiService.getPlaceImagePresignedUrl(accessToken, place.id, contentType, fileExtension);
+
+        if (!presignResponse.success || !presignResponse.data) {
+          throw new Error(presignResponse.message || 'Presigned URL을 받아오지 못했습니다.');
+        }
+
+        const { uploadUrl, publicUrl } = presignResponse.data;
+        console.log('Presigned URL 수신 성공');
+
+        // 3. NCP Object Storage로 직접 업로드 (PUT)
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': contentType,
+            'x-amz-acl': 'public-read',
+          },
+          body: blob,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('NCP 업로드 실패:', errorText);
+          throw new Error('이미지 업로드에 실패했습니다.');
+        }
+
+        console.log('NCP 업로드 성공');
+        finalImageUrl = publicUrl; // 최종 저장될 URL은 publicUrl
+      }
+
+      // 4. 백엔드 서버에 쉼터 정보 업데이트
+      const finalResponse = await ApiService.updatePlace(
         {
           name: spaceName,
           content: description,
           maxCapacity: parseInt(maxUsers),
-          imageUrl: imageUrl,
+          imageUrl: finalImageUrl,
           address: location,
         },
         accessToken
       );
 
-      if (response.success) {
+      if (finalResponse.success) {
+        setImageUrl(finalImageUrl); // 이미지 상태를 새 URL로 즉시 업데이트
         Alert.alert(
           '저장 완료',
           '공간 프로필이 성공적으로 업데이트되었습니다.',
           [
-            {
-              text: '확인',
-              onPress: () => navigation.goBack(),
-            },
+            { text: '확인', onPress: () => navigation.goBack() },
           ]
         );
       } else {
-        Alert.alert('오류', response.message || '저장에 실패했습니다.');
+        throw new Error(finalResponse.message || '저장에 실패했습니다.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 쉼터 수정 오류:', error);
-      Alert.alert('오류', '저장 중 오류가 발생했습니다.');
+      Alert.alert('오류', error.message || '저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleChooseImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '이미지를 변경하려면 갤러리 접근 권한이 필요합니다.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setImageUrl(result.assets[0].uri);
     }
   };
 
@@ -172,7 +231,7 @@ const AdminSpaceEditScreen: React.FC = () => {
             source={{ uri: imageUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80' }}
             style={styles.spaceImage}
           />
-          <TouchableOpacity style={styles.imageEditButton}>
+          <TouchableOpacity style={styles.imageEditButton} onPress={handleChooseImage}>
             <Ionicons name="camera" size={20} color="white" />
             <Text style={styles.imageEditText}>사진 변경</Text>
           </TouchableOpacity>

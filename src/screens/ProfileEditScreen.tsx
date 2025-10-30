@@ -90,55 +90,84 @@ const ProfileEditScreen: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('오류', '이름을 입력해주세요.');
+    if (!name.trim() || !phone.trim() || !nickname.trim() || !bio.trim()) {
+      Alert.alert('오류', '모든 필드를 입력해주세요.');
       return;
     }
-
-    if (!phone.trim()) {
-      Alert.alert('오류', '전화번호를 입력해주세요.');
-      return;
-    }
-
-    if (!nickname.trim()) {
-      Alert.alert('오류', '닉네임을 입력해주세요.');
-      return;
-    }
-
-    if (!bio.trim()) {
-      Alert.alert('오류', '자기소개를 입력해주세요.');
-      return;
-    }
-
     if (!accessToken) {
       Alert.alert('오류', '로그인이 필요합니다.');
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
+    try {
+      let imageUrl = `default_${selectedImageIndex}`;
+
+      // 사용자가 새 이미지를 선택한 경우, presigned URL 업로드 실행
+      if (customImage) {
+        console.log('커스텀 이미지 업로드 시작:', customImage);
+
+        // 1. 파일 정보 추출
+        const fileExtension = customImage.split('.').pop()?.toLowerCase() || 'jpg';
+        const response = await fetch(customImage);
+        const blob = await response.blob();
+        const contentType = blob.type;
+
+        // 2. Presigned URL 요청
+        const presignResponse = await ApiService.getProfileImagePresignedUrl(accessToken, contentType, fileExtension);
+
+        if (!presignResponse.success || !presignResponse.data) {
+          throw new Error(presignResponse.message || 'Presigned URL을 받아오지 못했습니다.');
+        }
+
+        const { uploadUrl, publicUrl } = presignResponse.data;
+        console.log('Presigned URL 수신 성공');
+
+        // 3. NCP Object Storage로 직접 업로드 (PUT)
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': contentType,
+            'x-amz-acl': 'public-read', 
+          },
+          body: blob,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('NCP 업로드 실패:', errorText);
+          throw new Error('이미지 업로드에 실패했습니다.');
+        }
+        
+        console.log('NCP 업로드 성공');
+        imageUrl = publicUrl; // 최종 저장될 URL은 publicUrl
+      }
+
+      // 4. 백엔드 서버에 프로필 정보 업데이트
       const updateData = {
         name: name.trim(),
         phone: phone.trim(),
         nickname: nickname.trim(),
         bio: bio.trim(),
-        imageUrl: customImage || `default_${selectedImageIndex}`,
+        imageUrl: imageUrl,
       };
 
-      const response = await ApiService.updateMe(accessToken, updateData);
+      const finalResponse = await ApiService.updateMe(accessToken, updateData);
 
-      if (response.success && response.data) {
-        updateUser(response.data);
+      if (finalResponse.success && finalResponse.data) {
+        updateUser(finalResponse.data);
+        setProfileImage({ uri: finalResponse.data.imageUrl }); // 이미지 상태를 새 URL로 즉시 업데이트
         Alert.alert('성공', '프로필이 업데이트되었습니다.', [
           { text: '확인', onPress: () => navigation.goBack() }
         ]);
       } else {
-        Alert.alert('오류', response.message || '프로필 업데이트에 실패했습니다.');
+        throw new Error(finalResponse.message || '프로필 업데이트에 실패했습니다.');
       }
+
     } catch (error: any) {
       console.error('프로필 업데이트 에러:', error);
-      Alert.alert('오류', '프로필 업데이트 중 오류가 발생했습니다.');
+      Alert.alert('오류', error.message || '프로필 업데이트 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

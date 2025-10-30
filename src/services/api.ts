@@ -489,6 +489,35 @@ class ApiService {
     });
   }
 
+  static async getProfileImagePresignedUrl(
+    accessToken: string,
+    contentType: string,
+    fileExtension: string
+  ): Promise<ApiResponse<{ uploadUrl: string; objectKey: string; publicUrl: string; }>> {
+    return this.request<{ uploadUrl: string; objectKey: string; publicUrl: string; }>('/profile-image/presign', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ contentType, fileExtension }),
+    });
+  }
+
+  static async getPlaceImagePresignedUrl(
+    accessToken: string,
+    placeId: number,
+    contentType: string,
+    fileExtension: string
+  ): Promise<ApiResponse<{ uploadUrl: string; objectKey: string; publicUrl: string; }>> {
+    return this.request<{ uploadUrl: string; objectKey: string; publicUrl: string; }>('/place-image/presign', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ placeId, contentType, fileExtension }),
+    });
+  }
+
   // 지도 관련 API
   static async getNearbyMap(
     lat: number,
