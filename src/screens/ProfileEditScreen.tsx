@@ -29,18 +29,6 @@ import { useThemedStyles } from '../hooks/useThemedStyles';
 type ProfileEditScreenRouteProp = RouteProp<RootStackParamList, 'ProfileEdit'>;
 type ProfileEditScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-// 로컬 프로필 이미지들
-const profileImages = [
-  { id: '1', image: require('../../assets/profiles/profile1.png') },
-  { id: '2', image: require('../../assets/profiles/profile2.png') },
-  { id: '3', image: require('../../assets/profiles/profile3.png') },
-  { id: '4', image: require('../../assets/profiles/profile4.png') },
-  { id: '5', image: require('../../assets/profiles/profile5.png') },
-  { id: '6', image: require('../../assets/profiles/profile6.png') },
-  { id: '7', image: require('../../assets/profiles/profile7.png') },
-  { id: '8', image: require('../../assets/profiles/profile8.png') },
-];
-
 const ProfileEditScreen: React.FC = () => {
   const navigation = useNavigation<ProfileEditScreenNavigationProp>();
   const route = useRoute<ProfileEditScreenRouteProp>();
@@ -53,10 +41,13 @@ const ProfileEditScreen: React.FC = () => {
   const [nickname, setNickname] = useState(initialUser.nickname || '');
   const [bio, setBio] = useState(initialUser.bio || '');
   const [loading, setLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState(profileImages[0].image);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [customImage, setCustomImage] = useState<string | null>(null);
-  const [isModalVisible, setModalVisible] = useState(false);
+
+  // 이미지 상태 초기화 로직 수정
+  const [profileImage, setProfileImage] = useState<any>(initialUser.imageUrl && initialUser.imageUrl.startsWith('http') ? { uri: initialUser.imageUrl } : require('../../assets/profiles/user_profile.png'));
+  const [customImage, setCustomImage] = useState<string | null>(initialUser.imageUrl && initialUser.imageUrl.startsWith('file://') ? initialUser.imageUrl : null);
+
+
+
   const [isImageSourceModalVisible, setImageSourceModalVisible] = useState(false);
   const [statusBarKey, setStatusBarKey] = useState(0);
 
@@ -73,7 +64,6 @@ const ProfileEditScreen: React.FC = () => {
     }, [])
   );
 
-  // 입력창 포커스 시 스크롤
   const scrollToInput = (inputRef: React.RefObject<View>) => {
     setTimeout(() => {
       inputRef.current?.measureLayout(
@@ -102,19 +92,16 @@ const ProfileEditScreen: React.FC = () => {
     setLoading(true);
 
     try {
-      let imageUrl = `default_${selectedImageIndex}`;
+      let imageUrlToSave = initialUser.imageUrl;
 
-      // 사용자가 새 이미지를 선택한 경우, presigned URL 업로드 실행
-      if (customImage) {
+      if (customImage && customImage.startsWith('file://')) {
         console.log('커스텀 이미지 업로드 시작:', customImage);
 
-        // 1. 파일 정보 추출
         const fileExtension = customImage.split('.').pop()?.toLowerCase() || 'jpg';
         const response = await fetch(customImage);
         const blob = await response.blob();
         const contentType = blob.type;
 
-        // 2. Presigned URL 요청
         const presignResponse = await ApiService.getProfileImagePresignedUrl(accessToken, contentType, fileExtension);
 
         if (!presignResponse.success || !presignResponse.data) {
@@ -124,7 +111,6 @@ const ProfileEditScreen: React.FC = () => {
         const { uploadUrl, publicUrl } = presignResponse.data;
         console.log('Presigned URL 수신 성공');
 
-        // 3. NCP Object Storage로 직접 업로드 (PUT)
         const uploadResponse = await fetch(uploadUrl, {
           method: 'PUT',
           headers: {
@@ -141,23 +127,24 @@ const ProfileEditScreen: React.FC = () => {
         }
         
         console.log('NCP 업로드 성공');
-        imageUrl = publicUrl; // 최종 저장될 URL은 publicUrl
+        imageUrlToSave = publicUrl;
       }
 
-      // 4. 백엔드 서버에 프로필 정보 업데이트
       const updateData = {
         name: name.trim(),
         phone: phone.trim(),
         nickname: nickname.trim(),
         bio: bio.trim(),
-        imageUrl: imageUrl,
+        imageUrl: imageUrlToSave,
       };
 
       const finalResponse = await ApiService.updateMe(accessToken, updateData);
 
       if (finalResponse.success && finalResponse.data) {
         updateUser(finalResponse.data);
-        setProfileImage({ uri: finalResponse.data.imageUrl }); // 이미지 상태를 새 URL로 즉시 업데이트
+        setCustomImage(finalResponse.data.imageUrl || null);
+        setProfileImage(finalResponse.data.imageUrl ? { uri: finalResponse.data.imageUrl } : require('../../assets/profiles/user_profile.png'));
+        
         Alert.alert('성공', '프로필이 업데이트되었습니다.', [
           { text: '확인', onPress: () => navigation.goBack() }
         ]);
@@ -171,13 +158,6 @@ const ProfileEditScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSelectImage = (image: any, index: number) => {
-    setProfileImage(image);
-    setSelectedImageIndex(index);
-    setCustomImage(null); // 기본 이미지 선택 시 커스텀 이미지 초기화
-    setModalVisible(false);
   };
 
   const pickImage = async () => {
@@ -227,7 +207,6 @@ const ProfileEditScreen: React.FC = () => {
       '프로필 이미지 선택',
       '이미지를 선택하는 방법을 고르세요',
       [
-        { text: '기본 프로필 선택', onPress: () => setModalVisible(true) },
         { text: '갤러리에서 선택', onPress: pickImage },
         { text: '사진 촬영', onPress: takePhoto },
         { text: '취소', style: 'cancel' },
@@ -349,35 +328,7 @@ const ProfileEditScreen: React.FC = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* 프로필 이미지 선택 Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
-        presentationStyle="overFullScreen"
-      >
-        <View style={styles.modalContainer}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>프로필 이미지 선택</Text>
-            <FlatList
-              data={profileImages}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity onPress={() => handleSelectImage(item.image, index)}>
-                  <Image source={item.image} style={styles.modalImage} />
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.id}
-              numColumns={4}
-              contentContainerStyle={styles.imageList}
-              scrollEnabled={false}
-            />
-            <TouchableOpacity style={[styles.closeButton, { backgroundColor: colors.background }]} onPress={() => setModalVisible(false)}>
-              <Text style={[styles.closeButtonText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>취소</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+
     </SafeAreaView>
   );
 };

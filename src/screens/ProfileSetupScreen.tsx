@@ -26,25 +26,13 @@ import { useThemedStyles } from '../hooks/useThemedStyles';
 
 type ProfileSetupNavigationProp = StackNavigationProp<RootStackParamList, 'ProfileSetup'>;
 
-// 로컬 프로필 이미지들 - assets/profiles 폴더에서 가져옴
-const profileImages = [
-  { id: '1', image: require('../../assets/profiles/profile1.png') },
-  { id: '2', image: require('../../assets/profiles/profile2.png') },
-  { id: '3', image: require('../../assets/profiles/profile3.png') },
-  { id: '4', image: require('../../assets/profiles/profile4.png') },
-  { id: '5', image: require('../../assets/profiles/profile5.png') },
-  { id: '6', image: require('../../assets/profiles/profile6.png') },
-  { id: '7', image: require('../../assets/profiles/profile7.png') },
-  { id: '8', image: require('../../assets/profiles/profile8.png') },
-];
-
 const ProfileSetupScreen: React.FC = () => {
   const navigation = useNavigation<ProfileSetupNavigationProp>();
   const { colors, getFontSize, statusBarStyle } = useThemedStyles();
   const [nickname, setNickname] = useState('');
   const [bio, setBio] = useState('');
-  const [profileImage, setProfileImage] = useState(profileImages[0].image); // 첫 번째 로컬 이미지로 초기화
-  const [isModalVisible, setModalVisible] = useState(false);
+  const [profileImage, setProfileImage] = useState(require('../../assets/profiles/user_profile.png')); // 기본 이미지로 초기화
+
 
   // 키보드 닫기 함수
   const dismissKeyboard = () => {
@@ -56,9 +44,54 @@ const ProfileSetupScreen: React.FC = () => {
     navigation.replace('Main');
   };
 
-  const handleSelectImage = (image: any) => {
-    setProfileImage(image);
-    setModalVisible(false);
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진을 선택하려면 갤러리 접근 권한이 필요합니다.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfileImage({ uri: result.assets[0].uri });
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진을 촬영하려면 카메라 접근 권한이 필요합니다.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfileImage({ uri: result.assets[0].uri });
+    }
+  };
+
+  const showImageSourceOptions = () => {
+    Alert.alert(
+      '프로필 이미지 선택',
+      '이미지를 선택하는 방법을 고르세요',
+      [
+        { text: '갤러리에서 선택', onPress: pickImage },
+        { text: '사진 촬영', onPress: takePhoto },
+        { text: '취소', style: 'cancel' },
+      ]
+    );
   };
 
   return (
@@ -80,7 +113,7 @@ const ProfileSetupScreen: React.FC = () => {
         >
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             {/* 프로필 이미지 선택 영역 */}
-            <TouchableOpacity style={styles.profileImageContainer} onPress={() => setModalVisible(true)}>
+            <TouchableOpacity style={styles.profileImageContainer} onPress={showImageSourceOptions}>
               <Image source={profileImage} style={styles.profileImage} />
               <View style={styles.cameraIconContainer}>
                 <Ionicons name="camera" size={20} color="white" />
@@ -117,39 +150,6 @@ const ProfileSetupScreen: React.FC = () => {
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
-
-      {/* 프로필 이미지 선택 Modal - 완전 고정 위치, 키보드 영향 차단 */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
-        presentationStyle="overFullScreen"
-        statusBarTranslucent={true}
-      >
-        <View style={styles.fixedModalContainer}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <Text style={[styles.modalTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>프로필 이미지 선택</Text>
-            <FlatList
-              data={profileImages}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => handleSelectImage(item.image)}>
-                  <Image source={item.image} style={styles.modalImage} />
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.id}
-              numColumns={4}
-              contentContainerStyle={styles.imageList}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-              showsHorizontalScrollIndicator={false}
-            />
-            <TouchableOpacity style={[styles.closeButton, { backgroundColor: colors.surface }]} onPress={() => setModalVisible(false)}>
-              <Text style={[styles.closeButtonText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>취소</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
       </SafeAreaView>
     </Pressable>
   );

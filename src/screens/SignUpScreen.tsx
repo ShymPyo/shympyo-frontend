@@ -53,16 +53,6 @@ const SignUpScreen: React.FC = () => {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [modalContent, setModalContent] = useState({ title: '', content: '' });
 
-  // 기본 프로필 이미지들
-  const defaultProfiles = [
-    require('../../assets/profiles/profile1.png'),
-    require('../../assets/profiles/profile2.png'),
-    require('../../assets/profiles/profile3.png'),
-    require('../../assets/profiles/profile4.png'),
-    require('../../assets/profiles/profile5.png'),
-    require('../../assets/profiles/profile6.png'),
-    require('../../assets/profiles/profile7.png'),
-  ];
 
   // 약관 내용
   const termsOfService = `제1조 (목적) 본 약관은 "쉼표"가 제공하는 서비스의 이용 조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.
@@ -305,26 +295,11 @@ const SignUpScreen: React.FC = () => {
     }
   };
 
-  const showDefaultProfilePicker = () => {
-    Alert.alert(
-      '기본 프로필 선택',
-      '사용할 기본 프로필을 선택하세요',
-      [
-        ...defaultProfiles.map((profile, index) => ({
-          text: `프로필 ${index + 1}`,
-          onPress: () => setProfileImage(`default_${index}`),
-        })),
-        { text: '취소', style: 'cancel' },
-      ]
-    );
-  };
-
   const showImagePickerOptions = () => {
     Alert.alert(
       '프로필 이미지 선택',
       '이미지를 선택하는 방법을 고르세요',
       [
-        { text: '기본 프로필 선택', onPress: showDefaultProfilePicker },
         { text: '갤러리에서 선택', onPress: pickImage },
         { text: '사진 촬영', onPress: takePhoto },
         { text: '취소', style: 'cancel' },
@@ -423,17 +398,14 @@ const SignUpScreen: React.FC = () => {
                   <View style={styles.imagePreviewContainer}>
                     {profileImage ? (
                       <Image
-                        source={
-                          profileImage.startsWith('default_')
-                            ? defaultProfiles[parseInt(profileImage.split('_')[1])]
-                            : { uri: profileImage }
-                        }
+                        source={{ uri: profileImage }}
                         style={styles.imagePreview}
                       />
                     ) : (
-                      <View style={styles.imagePlaceholder}>
-                        <Ionicons name="person" size={40} color={Colors.text.light} />
-                      </View>
+                      <Image
+                        source={require('../../assets/profiles/user_profile.png')}
+                        style={styles.imagePreview}
+                      />
                     )}
                   </View>
                   <View style={styles.imagePickerTextContainer}>

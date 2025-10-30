@@ -272,7 +272,7 @@ const SettingsScreen: React.FC = () => {
           onPress={handleProfilePress}
         >
           <Image
-            source={require('../../assets/profiles/profile1.png')}
+            source={authUser && authUser.imageUrl && authUser.imageUrl.startsWith('http') ? { uri: authUser.imageUrl } : require('../../assets/profiles/user_profile.png')}
             style={styles.profileImage}
           />
           <View style={styles.profileInfo}>
