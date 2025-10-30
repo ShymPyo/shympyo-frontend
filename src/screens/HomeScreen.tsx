@@ -25,6 +25,8 @@ import Animated, {
   useSharedValue,
   withSpring,
   runOnJS,
+  withRepeat,
+  withTiming,
 } from 'react-native-reanimated';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Location from 'expo-location';
@@ -363,6 +365,84 @@ const HomeScreen: React.FC = () => {
   // 날씨 관련 상태
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
 
+  // 날씨 위젯 애니메이션 상태
+  const weatherFlashOpacity = useSharedValue(0);
+  const weatherIconColor = useSharedValue(colors.primary);
+  const weatherCardBgColor = useSharedValue(colors.surface);
+  const weatherFlashColor = useSharedValue('transparent'); // New shared value for flashing color
+
+  // 온도에 따른 색상 및 깜빡임 효과 로직
+  useEffect(() => {
+    // 실제 날씨 데이터 사용
+    const temp = weatherData?.temperature;
+    const weatherCondition = weatherData?.weather;
+
+    if (temp === undefined || weatherCondition === undefined) {
+      // 날씨 데이터가 없으면 기본값으로 설정하고 종료
+      weatherIconColor.value = withTiming(colors.primary, { duration: 500 });
+      weatherFlashColor.value = withTiming('transparent', { duration: 500 });
+      weatherFlashOpacity.value = withTiming(0, { duration: 500 });
+      return;
+    }
+
+    let iconColor = colors.primary;
+    let flashColor = 'transparent';
+    let shouldFlash = false;
+
+    // 폭염 (버건디 아이콘, 빨간색 깜빡임)
+    if (temp >= 33) {
+      iconColor = '#C00000'; // Darker Red for icon
+      flashColor = '#FF0000'; // Red for flash
+      shouldFlash = true;
+    }
+    // 더움 (빨간색 아이콘, 빨간색 깜빡임)
+    else if (temp >= 28) {
+      iconColor = '#FF0000'; // Red for icon
+      flashColor = '#FF0000'; // Red for flash
+      shouldFlash = true;
+    }
+    // 추움 (하늘색 아이콘, 하늘색 깜빡임)
+    else if (temp <= 5) {
+      iconColor = '#87CEEB'; // Sky Blue for icon
+      flashColor = '#ADD8E6'; // Light Blue for flash
+      shouldFlash = true;
+    }
+    // 보통 (기본 색상, 깜빡임 없음)
+    else {
+      iconColor = colors.primary;
+      flashColor = 'transparent';
+      shouldFlash = false;
+    }
+
+    weatherIconColor.value = withTiming(iconColor, { duration: 500 });
+    weatherFlashColor.value = withTiming(flashColor, { duration: 500 });
+
+    if (shouldFlash) {
+      weatherFlashOpacity.value = withRepeat(
+        withTiming(0.2, { duration: 800 }),
+        -1,
+        true
+      );
+    } else {
+      weatherFlashOpacity.value = withTiming(0, { duration: 500 });
+    }
+
+  }, [weatherData?.temperature, weatherData?.weather, colors]); // Dependency array updated
+
+  const animatedWeatherCardStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: colors.surface, // Base background is always colors.surface
+    };
+  });
+
+  const animatedWeatherFlashOverlayStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: weatherFlashColor.value,
+      opacity: weatherFlashOpacity.value,
+      borderRadius: 12, // Apply borderRadius to match the weatherCard
+    };
+  });
+
   // 핀 이미지 base64 상태
   const [pinImages, setPinImages] = useState<{
     shelter: string;
@@ -506,7 +586,7 @@ const HomeScreen: React.FC = () => {
       // 주변 장소 및 날씨 조회
       await Promise.all([
         loadNearbyPlaces(location.coords.latitude, location.coords.longitude),
-        loadWeather(location.coords.latitude, location.coords.longitude)
+        loadWeather(location.coords.latitude, location.coords.longitude) // Re-enable this
       ]);
     } catch (error) {
       console.error('❌ 현재 위치 가져오기 실패:', error);
@@ -2205,23 +2285,27 @@ const HomeScreen: React.FC = () => {
 
           {/* 날씨 위젯 - 좌측 상단 */}
           <View style={styles.weatherWidgetContainer}>
-            <View style={[styles.weatherCard, { backgroundColor: colors.surface }]}>
-              <Ionicons
-                name={weatherData?.weather?.includes('맑음') ? 'sunny' :
-                      weatherData?.weather?.includes('흐림') ? 'cloudy' :
-                      weatherData?.weather?.includes('비') ? 'rainy' :
-                      'partly-sunny'}
-                size={24}
-                color={colors.primary}
-              />
-              <Text style={[styles.weatherCardTemp, { color: colors.text.primary }]}>
-                {weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}
-              </Text>
-              {weatherData?.weather && (
-                <Text style={[styles.weatherCardDesc, { color: colors.text.secondary }]}>
-                  {weatherData.weather}
-                </Text>
-              )}
+            <View style={styles.weatherCardWrapper}> {/* Apply shadow here */}
+              <View style={[styles.weatherCard, { backgroundColor: colors.surface }]}> {/* This is the inner card with content and overflow:hidden */}
+                {/* 깜빡임 효과를 위한 오버레이 */}
+                <Animated.View style={[StyleSheet.absoluteFill, animatedWeatherFlashOverlayStyle]} />
+                <Ionicons
+                  name={weatherData?.weather?.includes('맑음') || weatherData?.weather?.includes('폭염') ? 'sunny' :
+                        weatherData?.weather?.includes('흐림') ? 'cloudy' :
+                        weatherData?.weather?.includes('비') ? 'rainy' :
+                        'partly-sunny'}
+                  size={24}
+                  color={weatherIconColor.value}
+                />
+                <Animated.Text style={[styles.weatherCardTemp, { color: weatherIconColor.value }]}>
+                  {weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}
+                </Animated.Text>
+                {weatherData?.weather && (
+                  <Text style={[styles.weatherCardDesc, { color: colors.text.secondary }]}>
+                    {weatherData.weather}
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
 
@@ -2619,13 +2703,8 @@ const styles = StyleSheet.create({
         top: 60,
         zIndex: 10,
     },
-    weatherCard: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+    weatherCardWrapper: { // New style for wrapper
         borderRadius: 12,
-        minWidth: 60,
         ...getShadowStyle({
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
@@ -2633,6 +2712,15 @@ const styles = StyleSheet.create({
           shadowRadius: 10,
           elevation: 12,
         }),
+    },
+    weatherCard: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        minWidth: 60,
+        overflow: 'hidden', // Ensure child views respect borderRadius
     },
     weatherCardTemp: {
         fontSize: 16,
