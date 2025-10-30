@@ -151,6 +151,9 @@ const MapScreen: React.FC = () => {
         style={styles.webview}
         javaScriptEnabled={true}
         domStorageEnabled={true}
+        mixedContentMode="always"
+        allowFileAccess={true}
+        allowUniversalAccessFromFileURLs={true}
         onLoadEnd={() => setIsWebViewReady(true)}
         onMessage={handleWebViewMessage}
         onError={(e) => setError(`맵 로딩 오류: ${e.nativeEvent.description}`)}
