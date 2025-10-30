@@ -2179,15 +2179,15 @@ const HomeScreen: React.FC = () => {
                 <View style={styles.navigationInfoLeft}>
                   <Ionicons name="navigate" size={28} color={colors.primary} />
                   <View style={styles.navigationTextContainer}>
-                    <Text style={[styles.navigationDestination, { fontSize: getFontSize(18), color: colors.text.primary }]} numberOfLines={1}>
+                    <Text style={[styles.navigationDestination, { fontSize: getFontSize(17), color: colors.text.primary }]} numberOfLines={1}>
                       {navigationInfo.destinationName}
                     </Text>
                     <View style={styles.navigationDetails}>
-                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
+                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(15), color: colors.text.secondary }]}>
                         {navigationInfo.distance}
                       </Text>
-                      <Text style={[styles.navigationSeparator, { fontSize: getFontSize(16), color: colors.text.light }]}>•</Text>
-                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(16), color: colors.text.secondary }]}>
+                      <Text style={[styles.navigationSeparator, { fontSize: getFontSize(15), color: colors.text.light }]}>•</Text>
+                      <Text style={[styles.navigationDetailText, { fontSize: getFontSize(15), color: colors.text.secondary }]}>
                         {navigationInfo.duration}
                       </Text>
                     </View>
