@@ -1,7 +1,7 @@
 // SSE 연결 관리 서비스
 // React Native에서는 EventSource가 없으므로 fetch를 사용한 폴리필 구현
 
-const BASE_URL = 'http://shympyo.kro.kr';
+const BASE_URL = 'https://shympyo.kro.kr';
 
 export interface SSEEvent {
   type: 'hello' | 'rental-started' | 'rental-ended' | 'rental-kicked' | 'ping';
