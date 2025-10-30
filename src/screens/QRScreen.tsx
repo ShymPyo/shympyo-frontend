@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -35,6 +35,7 @@ const QRScreen: React.FC = () => {
   const { accessToken } = useAuth();
   const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
+  const isAlertPresented = useRef(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [screenState, setScreenState] = useState<ScreenState>('scanning');
@@ -155,135 +156,106 @@ const QRScreen: React.FC = () => {
   }, [screenState, progress]);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    // 중복 스캔 방지 - 상태와 데이터 모두 체크
-    if (scanned || isProcessing || data === lastScannedData) {
-      console.log('🚫 중복 스캔 방지:', { scanned, isProcessing, sameData: data === lastScannedData });
+    if (isAlertPresented.current) {
       return;
     }
-
-    console.log('✅ QR 스캔 시작');
-    setScanned(true);
-    setIsProcessing(true);
-    setLastScannedData(data);
+    isAlertPresented.current = true;
 
     if (!accessToken) {
       Alert.alert('로그인 필요', '쉼터를 이용하려면 로그인이 필요합니다.');
+      isAlertPresented.current = false;
       return;
     }
 
-    try {
-      console.log('🔍 QR 코드 스캔 데이터:', data);
-      console.log('🔍 QR 코드 스캔 데이터 타입:', typeof data);
-      console.log('🔍 QR 코드 스캔 데이터 길이:', data.length);
+    Alert.alert(
+      '입장 확인',
+      '입장하시겠습니까?',
+      [
+        {
+          text: '취소',
+          onPress: () => {
+            isAlertPresented.current = false;
+          },
+          style: 'cancel',
+        },
+        {
+          text: '확인',
+          onPress: async () => {
+            setIsProcessing(true);
+            try {
+              let placeCode = '';
+              try {
+                const qrData = JSON.parse(data);
+                placeCode = qrData.url || qrData.placeCode;
+              } catch {
+                placeCode = data.trim();
+              }
 
-      // QR 코드에서 URL 추출
-      let qrUrl = data.trim();
+              if (placeCode.includes('/api/enter-code')) {
+                try {
+                  const url = new URL(placeCode);
+                  placeCode = url.searchParams.get('c') || '';
+                } catch (error) {
+                  console.log('❌ URL 파싱 실패:', error);
+                }
+              }
 
-      // QR 코드가 JSON 형태인 경우 처리
-      try {
-        const qrData = JSON.parse(data);
-        if (qrData.url || qrData.placeCode) {
-          qrUrl = qrData.url || qrData.placeCode;
-          console.log('📱 JSON에서 URL 추출:', qrUrl);
-        }
-      } catch {
-        // JSON이 아닌 경우 무시
-      }
+              if (!placeCode) {
+                Alert.alert('잘못된 QR 코드', 'place code를 찾을 수 없습니다.');
+                isAlertPresented.current = false;
+                setIsProcessing(false);
+                return;
+              }
 
-      // QR 코드에서 placeCode 추출
-      let placeCode = '';
+              const enterResponse = await ApiService.enterPlace(accessToken, placeCode);
 
-      // URL에서 c 파라미터 추출
-      if (qrUrl.includes('/api/enter-code')) {
-        try {
-          const url = new URL(qrUrl);
-          placeCode = url.searchParams.get('c') || '';
-        } catch (error) {
-          console.log('❌ URL 파싱 실패:', error);
-        }
-      } else {
-        // URL이 아닌 경우 직접 placeCode로 사용
-        placeCode = qrUrl;
-      }
-
-      if (!placeCode) {
-        Alert.alert('잘못된 QR 코드', 'place code를 찾을 수 없습니다.');
-        setScanned(false);
-        return;
-      }
-
-      console.log('📡 쉼터 입장 API 호출 중...', {
-        placeCode,
-        accessToken: accessToken ? '토큰 있음' : '토큰 없음'
-      });
-
-      // 현재 이용 중인지 확인 - 일반 유저는 이 체크 스킵 (제공자가 아닙니다 에러 방지)
-      // 입장 시도하면 백엔드에서 중복 체크할 것
-
-      // rental/enter API로 입장 처리
-      const enterResponse = await ApiService.enterPlace(accessToken, placeCode);
-
-      if (enterResponse.success && enterResponse.data) {
-        console.log('✅ 쉼터 입장 완료:', enterResponse.data);
-
-        // 성공 시 응답 데이터 저장
-        setPlaceName(enterResponse.data.placeName);
-        setRentalId(enterResponse.data.rentalId);
-        setPlaceId(enterResponse.data.placeId);
-
-        // 타이머 화면으로 이동 - maxTime 사용 (초 단위)
-        const maxTimeSeconds = enterResponse.data.maxTime * 60; // 분을 초로 변환
-        setScreenState('timer');
-        setTimeLeft(maxTimeSeconds);
-        setTotalTime(maxTimeSeconds);
-
-        console.log('🏢 입장 완료:', enterResponse.data.placeName, 'placeId:', enterResponse.data.placeId, 'maxTime:', enterResponse.data.maxTime, '분');
-      } else {
-        // "이미 진행 중인 대여" 에러는 무시 (중복 스캔으로 인한 것)
-        if (!enterResponse.message?.includes('이미 진행 중인 대여')) {
-          console.log('❌ 쉼터 입장 실패:', {
-            success: enterResponse.success,
-            code: enterResponse.code,
-            message: enterResponse.message,
-            data: enterResponse.data
-          });
-
-          // 영업중이 아닌 경우 친절한 안내 메시지
-          if (enterResponse.message?.includes('영업') || enterResponse.message?.includes('운영') || enterResponse.message?.includes('시간')) {
-            Alert.alert(
-              '영업시간이 아닙니다',
-              '현재 이 쉼터는 영업중이 아닙니다.\n영업시간을 확인해주세요.'
-            );
-          } else {
-            Alert.alert(
-              '입장 실패',
-              enterResponse.message || '쉼터 입장에 실패했습니다.'
-            );
-          }
-        }
-        setScanned(false);
-        setIsProcessing(false);
-        setLastScannedData(''); // 데이터 초기화
-      }
-    } catch (error: any) {
-      console.error('💥 쉼터 입장 오류:', error);
-      console.error('💥 에러 메시지:', error.message);
-      console.error('💥 에러 스택:', error.stack);
-
-      Alert.alert(
-        '오류',
-        `네트워크 오류: ${error.message}\n쉼터 입장 중 오류가 발생했습니다.`
-      );
-      setScanned(false);
-      setIsProcessing(false);
-      setLastScannedData(''); // 데이터 초기화
-    } finally {
-      // 성공/실패 여부와 관계없이 3초 후 다시 스캔 가능
-      setTimeout(() => {
-        setIsProcessing(false);
-        setLastScannedData(''); // 3초 후 데이터 초기화
-      }, 3000);
-    }
+              if (enterResponse.success && enterResponse.data) {
+                setPlaceName(enterResponse.data.placeName);
+                setRentalId(enterResponse.data.rentalId);
+                setPlaceId(enterResponse.data.placeId);
+                const maxTimeSeconds = enterResponse.data.maxTime * 60;
+                setScreenState('timer');
+                setTimeLeft(maxTimeSeconds);
+                setTotalTime(maxTimeSeconds);
+                setScanned(true);
+              } else {
+                if (!enterResponse.message?.includes('이미 진행 중인 대여')) {
+                  if (
+                    enterResponse.message?.includes('영업') ||
+                    enterResponse.message?.includes('운영') ||
+                    enterResponse.message?.includes('시간')
+                  ) {
+                    Alert.alert(
+                      '영업시간이 아닙니다',
+                      '현재 이 쉼터는 영업중이 아닙니다.\n영업시간을 확인해주세요.'
+                    );
+                  } else {
+                    Alert.alert(
+                      '입장 실패',
+                      enterResponse.message || '쉼터 입장에 실패했습니다.'
+                    );
+                  }
+                }
+                isAlertPresented.current = false;
+              }
+            } catch (error: any) {
+              Alert.alert(
+                '오류',
+                `네트워크 오류: ${error.message}\n쉼터 입장 중 오류가 발생했습니다.`
+              );
+              isAlertPresented.current = false;
+            } finally {
+              setIsProcessing(false);
+              setTimeout(() => {
+                isAlertPresented.current = false;
+                setScanned(false); 
+              }, 10000); // 10초 쿨다운
+            }
+          },
+        },
+      ],
+      { cancelable: false }
+    );
   };
 
   const formatTime = () => {

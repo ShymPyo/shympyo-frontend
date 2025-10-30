@@ -52,3 +52,5 @@ OAUTH_IMPLEMENTATION.md
 REALTIME_TRACKING.md
 resources/xml/network_security_config.xml
 assets/kakao_map_final.html
+src/screens/.HomeScreen.tsx.swp
+src/services/.api.ts.swp
