@@ -28,6 +28,12 @@ import BlockReasonModal from '../components/BlockReasonModal';
 import ReportReasonModal from '../components/ReportReasonModal';
 import { connectSSE, disconnectSSE, SSEEvent } from '../services/sse';
 
+interface AlertButton {
+  text: string;
+  onPress?: () => void;
+  style?: 'default' | 'cancel' | 'destructive';
+}
+
 type AdminMainScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AdminMain'>;
 
 const AdminMainScreen: React.FC = () => {
@@ -587,11 +593,11 @@ const AdminMainScreen: React.FC = () => {
                 setTempBusinessHours(updatedHours);
                 Alert.alert('변경 완료', `${getDayName(day.dayOfWeek)}요일: ${time} - ${closeTime}\n\n저장 버튼을 눌러 적용하세요.`);
               }
-            })).concat([{ text: '취소', style: 'cancel' }]),
+            })).concat([{ text: '취소', style: 'cancel' } as AlertButton]),
             { cancelable: true }
           );
         }
-      })).concat([{ text: '취소', style: 'cancel' }]),
+      })).concat([{ text: '취소', style: 'cancel' } as AlertButton]),
       { cancelable: true }
     );
   };
@@ -619,7 +625,7 @@ const AdminMainScreen: React.FC = () => {
         {
           name: adminPlace.name,
           content: adminPlace.content,
-          maxCapacity: adminPlace.maxCapacity,
+          maxCapacity: adminPlace.maxCapacity ?? 0,
           maxUsageMinutes: tempMaxUsageMinutes,
           address: adminPlace.address,
         },

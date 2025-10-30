@@ -58,6 +58,13 @@ const AdminLoginScreen: React.FC = () => {
       if (response.success) {
         console.log('✅ 관리자 로그인 성공');
 
+        if (!response.data) {
+          console.error('❌ 로그인 응답 데이터 없음');
+          Alert.alert('로그인 오류', '로그인 정보를 가져올 수 없습니다.');
+          setIsLoading(false);
+          return;
+        }
+
         // 사용자 역할 확인
         const userResponse = await ApiService.getMe(response.data.accessToken);
         if (userResponse.success && userResponse.data) {

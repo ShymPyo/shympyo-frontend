@@ -1079,7 +1079,7 @@ const HomeScreen: React.FC = () => {
             path: linePath,
             strokeWeight: 14,
             strokeColor: isHighContrast ? '#000000' : '#FFFFFF',
-            strokeOpacity: 1.0,
+            strokeOpacity: 0.6,
             strokeStyle: 'solid',
             zIndex: 2
           });
@@ -1089,7 +1089,7 @@ const HomeScreen: React.FC = () => {
             path: linePath,
             strokeWeight: 10,
             strokeColor: routeColor,
-            strokeOpacity: 1.0,
+            strokeOpacity: 0.7,
             strokeStyle: 'solid',
             zIndex: 3
           });

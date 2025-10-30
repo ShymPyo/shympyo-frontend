@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { RootStackParamList } from '../types';
-import ApiService, { ReceivedLetter, LetterCount } from '../services/api';
+import ApiService, { ReceivedLetter, LetterCount, LetterDetail } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemedStyles } from '../hooks/useThemedStyles';
 
@@ -28,7 +28,7 @@ const AdminLetterListScreen: React.FC = () => {
   const { accessToken } = useAuth();
   const { colors, getFontSize, statusBarStyle } = useThemedStyles();
 
-  const [selectedLetter, setSelectedLetter] = useState<ReceivedLetter | null>(null);
+  const [selectedLetter, setSelectedLetter] = useState<LetterDetail | null>(null);
   const [isModalVisible, setModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [letters, setLetters] = useState<ReceivedLetter[]>([]);
@@ -57,7 +57,7 @@ const AdminLetterListScreen: React.FC = () => {
       if (loadMore && letters.length > 0) {
         const lastLetter = letters[letters.length - 1];
         cursorCreatedAt = lastLetter.createdAt;
-        cursorId = lastLetter.id;
+        cursorId = lastLetter.letterId;
       }
 
       // 편지 목록 조회 (커서 페이징)
@@ -114,7 +114,7 @@ const AdminLetterListScreen: React.FC = () => {
           ...letter,
           content: detailResponse.data.content,
         };
-        setSelectedLetter(letterWithDetail as any);
+        setSelectedLetter(letterWithDetail);
         setModalVisible(true);
       }
     } catch (error) {
