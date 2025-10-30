@@ -771,15 +771,21 @@ const AdminMainScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
-
+      {/* 상단 헤더 */}
+      <View style={styles.header}>
+        <View style={styles.headerContentWrapper}>
+          <Image source={require('../../assets/app-logo.png')} style={styles.headerLogo} />
+          <Text style={styles.headerTitle}>쉼표 공간 관리</Text>
+        </View>
+      </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 환영 메시지 */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>
-            {adminPlace?.name || user?.name || '관리자'} 사장님 환영합니다 !
+          <Text style={styles.welcomeText}>
+            <Text style={styles.welcomeTitle}>{adminPlace?.name || user?.name || '관리자'}</Text>
+            <Text> 사장님, 오늘도 함께해주셔서 감사합니다.</Text>
           </Text>
-
         </View>
 
         {/* 공간 프로필 카드 */}
@@ -873,13 +879,7 @@ const AdminMainScreen: React.FC = () => {
                     <Ionicons name="time-outline" size={20} color={Colors.primary} />
                     <Text style={styles.settingText}>영업시간</Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.settingButton}
-                    onPress={handleOpenDefaultTimeModal}
-                  >
-                    <Text style={styles.settingValue}>{defaultOpenTime} - {defaultCloseTime}</Text>
-                    <Ionicons name="chevron-forward" size={18} color={Colors.text.light} />
-                  </TouchableOpacity>
+                  <Text style={styles.settingValue}>{defaultOpenTime} - {defaultCloseTime}</Text>
                 </View>
 
                 <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
@@ -1314,76 +1314,6 @@ const AdminMainScreen: React.FC = () => {
         </View>
       </Modal>
 
-      {/* 영업시간 설정 모달 */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isDefaultTimeModalVisible}
-        onRequestClose={handleCloseDefaultTimeModal}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={handleCloseDefaultTimeModal}
-        >
-          <TouchableOpacity
-            style={styles.timeModalContent}
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>영업시간 설정</Text>
-              <TouchableOpacity onPress={handleCloseDefaultTimeModal}>
-                <Ionicons name="close" size={24} color={Colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.timePickerRow}>
-              <View style={styles.timePickerHalf}>
-                <Text style={styles.timeInputLabel}>오픈 시간</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={tempDefaultOpenTime}
-                    onValueChange={(value) => setTempDefaultOpenTime(value)}
-                    style={styles.picker}
-                    itemStyle={{ color: Colors.text.primary, fontSize: 18 }}
-                  >
-                    {Array.from({ length: 48 }, (_, i) => {
-                      const hours = Math.floor(i / 2);
-                      const minutes = (i % 2) * 30;
-                      const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                      return <Picker.Item key={time} label={time} value={time} color={Colors.text.primary} />;
-                    })}
-                  </Picker>
-                </View>
-              </View>
-
-              <View style={styles.timePickerHalf}>
-                <Text style={styles.timeInputLabel}>마감 시간</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={tempDefaultCloseTime}
-                    onValueChange={(value) => setTempDefaultCloseTime(value)}
-                    style={styles.picker}
-                    itemStyle={{ color: Colors.text.primary, fontSize: 18 }}
-                  >
-                    {Array.from({ length: 49 }, (_, i) => {
-                      const hours = Math.floor(i / 2);
-                      const minutes = (i % 2) * 30;
-                      const time = i === 48 ? '24:00' : `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                      return <Picker.Item key={time} label={time} value={time} color={Colors.text.primary} />;
-                    })}
-                  </Picker>
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveDefaultTime}>
-              <Text style={styles.saveButtonText}>저장</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
 
 
     </SafeAreaView>
@@ -1396,6 +1326,32 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15, // Increased vertical padding for a wider look
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    backgroundColor: Colors.background,
+  },
+  headerContentWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: -30, // Reverting to -30 for visual centering
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  headerLogo: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+    marginRight: 8, // Space between logo and text
+  },
 
   content: {
     flex: 1,
@@ -1405,18 +1361,27 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     alignItems: 'center',
   },
+  welcomeText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    textAlign: 'center',
+  },
   welcomeTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     color: Colors.text.primary,
-    marginBottom: 5,
   },
 
   profileCard: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'white',
     borderRadius: 15,
-    paddingVertical: 20,
+    padding: 20,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileHeader: {
     flexDirection: 'row',
