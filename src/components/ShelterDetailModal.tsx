@@ -137,16 +137,20 @@ const ShelterDetailModal: React.FC<ShelterDetailModalProps> = ({
             <View style={styles.topSection}>
               {/* 왼쪽: 시설 이미지 */}
               <View style={[styles.imageContainer, { backgroundColor: colors.surface }]}>
-                <Image
-                  source={
-                    shelter.category === '스마트 쉼터' ? require('../../assets/map_fins/shelter.png') :
-                    shelter.category === '교통 시설' ? require('../../assets/map_fins/traffic.png') :
-                    shelter.category === '공공 시설' ? require('../../assets/map_fins/politic.png') :
-                    shelter.category === '기후 동행 쉼터' ? require('../../assets/map_fins/climate.png') :
-                    require('../../assets/map_fins/shelter.png')
-                  }
-                  style={{ width: 32, height: 41, resizeMode: 'contain' }}
-                />
+                {shelter.image ? (
+                  <Image source={{ uri: shelter.image }} style={styles.shelterImage} />
+                ) : (
+                  <Image
+                    source={
+                      shelter.category === '스마트 쉼터' ? require('../../assets/map_fins/shelter.png') :
+                      shelter.category === '교통 시설' ? require('../../assets/map_fins/traffic.png') :
+                      shelter.category === '공공 시설' ? require('../../assets/map_fins/politic.png') :
+                      shelter.category === '기후 동행 쉼터' ? require('../../assets/map_fins/climate.png') :
+                      require('../../assets/map_fins/shelter.png')
+                    }
+                    style={{ width: 32, height: 41, resizeMode: 'contain' }}
+                  />
+                )}
               </View>
 
               {/* 오른쪽: 시설명과 기본 정보 */}

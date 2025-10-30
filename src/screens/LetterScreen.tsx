@@ -372,7 +372,11 @@ const LetterScreen: React.FC = () => {
         onPress={() => isLetterSent && handleLetterPress(item)}
         disabled={!isLetterSent}
       >
-        <View style={styles.imagePlaceholder} />
+                {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.image} />
+        ) : (
+          <View style={styles.imagePlaceholder} />
+        )}
         <View style={styles.cardBody}>
           <View style={styles.cardContent}>
             <Text style={[styles.date, { fontSize: getFontSize(12), color: colors.text.light }]}>
@@ -598,6 +602,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  image: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    backgroundColor: '#E9E9E9',
+    marginRight: 15,
   },
   imagePlaceholder: {
     width: 100,

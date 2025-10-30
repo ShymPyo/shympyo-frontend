@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -40,28 +41,31 @@ const AdminSpaceEditScreen: React.FC = () => {
   const [description, setDescription] = useState(place.content);
   const [imageUrl, setImageUrl] = useState(place.imageUrl);
 
-  // 이용 인원 설정 상태
-  const [maxUsers, setMaxUsers] = useState(place.maxCapacity.toString());
-  const [showUserModal, setShowUserModal] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // 인원 설정 옵션들
-  const userOptions = [
-    { label: '1명', value: '1' },
-    { label: '2명', value: '2' },
-    { label: '3명', value: '3' },
-    { label: '4명', value: '4' },
-    { label: '5명', value: '5' },
-    { label: '6명', value: '6' },
-    { label: '7명', value: '7' },
-    { label: '8명', value: '8' },
-    { label: '10명', value: '10' },
-    { label: '12명', value: '12' },
-    { label: '15명', value: '15' },
-    { label: '20명', value: '20' },
-  ];
+  const handleChooseImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '이미지를 변경하려면 갤러리 접근 권한이 필요합니다.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setImageUrl(result.assets[0].uri);
+    }
+  };
+
+
 
   const handleSave = async () => {
     if (!spaceName || !location || !description) {
@@ -123,7 +127,6 @@ const AdminSpaceEditScreen: React.FC = () => {
         {
           name: spaceName,
           content: description,
-          maxCapacity: parseInt(maxUsers),
           imageUrl: finalImageUrl,
           address: location,
         },
@@ -150,33 +153,7 @@ const AdminSpaceEditScreen: React.FC = () => {
     }
   };
 
-  const handleChooseImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '이미지를 변경하려면 갤러리 접근 권한이 필요합니다.');
-      return;
-    }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setImageUrl(result.assets[0].uri);
-    }
-  };
-
-  const handleUserSelection = (value: string) => {
-    setMaxUsers(value);
-    setShowUserModal(false);
-  };
-
-  const formatMaxUsers = (users: string) => {
-    return `최대 ${users}명`;
-  };
 
   const handleTextInputFocus = (offsetY: number) => {
     setTimeout(() => {
@@ -285,69 +262,8 @@ const AdminSpaceEditScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* 이용 인원 설정 */}
-        <View style={[styles.section, styles.sectionCard]}>
-          
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>최대 이용 인원 *</Text>
-            <TouchableOpacity 
-              style={styles.timeSelector}
-              onPress={() => setShowUserModal(true)}
-            >
-              <Text style={styles.timeSelectorText}>
-                {formatMaxUsers(maxUsers)}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
-            </TouchableOpacity>
-            <Text style={styles.helperText}>
-              동시에 이용할 수 있는 최대 인원을 설정하세요
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
 
-      {/* 인원 선택 모달 */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showUserModal}
-        onRequestClose={() => setShowUserModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>최대 이용 인원 선택</Text>
-              <TouchableOpacity onPress={() => setShowUserModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.timeOptions}>
-              {userOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.timeOption,
-                    maxUsers === option.value && styles.selectedTimeOption
-                  ]}
-                  onPress={() => handleUserSelection(option.value)}
-                >
-                  <Text style={[
-                    styles.timeOptionText,
-                    maxUsers === option.value && styles.selectedTimeOptionText
-                  ]}>
-                    {option.label}
-                  </Text>
-                  {maxUsers === option.value && (
-                    <Ionicons name="checkmark" size={20} color={Colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
