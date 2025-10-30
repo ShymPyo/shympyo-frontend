@@ -39,7 +39,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await ApiService.refreshToken(refreshToken);
 
       if (response.success) {
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
+        if (response.data) {
+          const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
 
         await StorageService.setTokens(newAccessToken, newRefreshToken);
         setAccessToken(newAccessToken);
@@ -47,6 +48,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         console.log('✅ 토큰 재발급 성공');
         return newAccessToken;
+      } else {
+        console.error('❌ 토큰 재발급 실패: 응답 데이터 없음');
+        await logout();
+        return null;
+      }
       } else {
         console.error('❌ 토큰 재발급 실패:', response.message);
         await logout();

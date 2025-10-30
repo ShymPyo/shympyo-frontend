@@ -32,7 +32,7 @@ interface UserShelter {
   name: string;
   type: string;
   distance?: string;
-  category: '민간 개방 시설';
+  category: '나눔 쉼터';
   icon: string;
   color: string;
   address?: string;
@@ -137,7 +137,7 @@ const UserShelterDetailModal: React.FC<UserShelterDetailModalProps> = ({
             <View style={{ width: 32 }} />
 
             <View style={styles.headerTitleContainer}>
-              <Text style={[styles.categoryText, { fontSize: getFontSize(14), color: colors.text.primary }]} numberOfLines={1}>민간 개방 시설</Text>
+              <Text style={[styles.categoryText, { fontSize: getFontSize(14), color: colors.text.primary }]} numberOfLines={1}>나눔 쉼터</Text>
             </View>
 
             <TouchableOpacity onPress={onClose} style={[styles.backButton, { backgroundColor: colors.surface }]}>

@@ -422,7 +422,7 @@ const LetterScreen: React.FC = () => {
       <StatusBar key={statusBarKey} style={statusBarStyle as any} />
       <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.surface }]}>
         <Text style={[styles.title, { fontSize: getFontSize(22), color: colors.text.primary }]}>나의 쉼표 기록</Text>
-        <Text style={[styles.subtitle, { fontSize: getFontSize(14), color: colors.text.secondary }]}>한 줄의 편지가 쉼표의 따스함을 이어갑니다.</Text>
+        <Text style={[styles.subtitle, { fontSize: getFontSize(14), color: colors.text.secondary }]}>당신의 응원이 나눔을 이어가는 힘이 됩니다.</Text>
       </View>
 
       {isLoading ? (

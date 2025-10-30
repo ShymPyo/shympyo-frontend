@@ -190,7 +190,7 @@ interface Shelter {
   name: string;
   type: string;
   distance: string;
-  category: '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설' | '기후 동행 쉼터';
+  category: '나눔 쉼터' | '스마트 쉼터' | '교통 시설' | '공공 시설' | '기후 동행 쉼터';
   icon: string;
   color: string;
   address?: string;
@@ -209,9 +209,9 @@ const shelters: Shelter[] = [
   {
     id: '1',
     name: '카페빈스',
-    type: '민간 개방 시설',
+    type: '나눔 쉼터',
     distance: '30M',
-    category: '민간 개방 시설',
+    category: '나눔 쉼터',
     icon: 'location-outline',
     color: '#FFA500'
   },
@@ -347,7 +347,7 @@ const HomeScreen: React.FC = () => {
   const [selectedShelter, setSelectedShelter] = useState<Shelter>(shelters[0]);
   const [modalVisible, setModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(['민간 개방 시설', '스마트 쉼터', '교통 시설', '공공 시설', '기후 동행 쉼터']);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['나눔 쉼터', '스마트 쉼터', '교통 시설', '공공 시설', '기후 동행 쉼터']);
 
   // 튜토리얼 모달 상태
   const [showTutorial, setShowTutorial] = useState(false);
@@ -720,10 +720,10 @@ const HomeScreen: React.FC = () => {
         // 타입에 따른 카테고리 분류
         const getCategory = (type: string) => {
           if (type === 'SHELTER') return '스마트 쉼터';
-          if (type === 'USER_SHELTER') return '민간 개방 시설';
+          if (type === 'USER_SHELTER') return '나눔 쉼터';
           if (type === 'STATION') return '교통 시설';
           if (type === 'CLIMATE_SHELTER') return '기후 동행 쉼터';
-          return '민간 개방 시설';
+          return '나눔 쉼터';
         };
 
         const getIcon = (type: string) => {
@@ -1477,12 +1477,12 @@ const HomeScreen: React.FC = () => {
   };
 
   // 타입에 따른 카테고리/아이콘/색상 매핑 함수
-  const getCategoryFromType = (type: string): '민간 개방 시설' | '스마트 쉼터' | '교통 시설' | '공공 시설' | '기후 동행 쉼터' => {
+  const getCategoryFromType = (type: string): '나눔 쉼터' | '스마트 쉼터' | '교통 시설' | '공공 시설' | '기후 동행 쉼터' => {
     if (type === 'SHELTER') return '스마트 쉼터';
-    if (type === 'USER_SHELTER') return '민간 개방 시설';
+    if (type === 'USER_SHELTER') return '나눔 쉼터';
     if (type === 'STATION') return '교통 시설';
     if (type === 'CLIMATE_SHELTER') return '기후 동행 쉼터';
-    return '민간 개방 시설';
+    return '나눔 쉼터';
   };
 
   const getIconFromType = (type: string): string => {
@@ -1700,7 +1700,7 @@ const HomeScreen: React.FC = () => {
         <Image
           source={
             item.category === '스마트 쉼터' ? require('../../assets/map_fins/shelter.png') :
-            item.category === '민간 개방 시설' ? require('../../assets/map_fins/mingan.png') :
+            item.category === '나눔 쉼터' ? require('../../assets/map_fins/mingan.png') :
             item.category === '교통 시설' ? require('../../assets/map_fins/traffic.png') :
             item.category === '공공 시설' ? require('../../assets/map_fins/politic.png') :
             item.category === '기후 동행 쉼터' ? require('../../assets/map_fins/climate.png') :
@@ -1722,8 +1722,8 @@ const HomeScreen: React.FC = () => {
             if (category === '교통 시설') {
               return name && description ? `${name} ${description}` : (name || description);
             }
-            // 민간 개방 시설: name 표시
-            if (category === '민간 개방 시설') {
+            // 나눔 쉼터: name 표시
+            if (category === '나눔 쉼터') {
               return name;
             }
             // 기후 동행 쉼터: name과 description을 공백으로 연결 (예: "경희당점 CU")
@@ -1737,7 +1737,7 @@ const HomeScreen: React.FC = () => {
       </View>
       {/* 오른쪽 정보 - 거리 또는 인원 */}
       <View style={styles.rightInfo}>
-        {item.category === '민간 개방 시설' && item.maxCapacity !== undefined && item.currentCapacity !== undefined ? (
+        {item.category === '나눔 쉼터' && item.maxCapacity !== undefined && item.currentCapacity !== undefined ? (
           <Text style={[styles.capacityText, { fontSize: getFontSize(13), color: colors.text.secondary }]}>
             {item.currentCapacity}/{item.maxCapacity}명
           </Text>
@@ -2290,9 +2290,9 @@ const HomeScreen: React.FC = () => {
                   style={[
                     styles.filterChip,
                     { backgroundColor: colors.surface, borderColor: colors.text.light + '40' },
-                    selectedCategories.includes('민간 개방 시설') && { borderColor: '#FFA500', borderWidth: 2 }
+                    selectedCategories.includes('나눔 쉼터') && { borderColor: '#FFA500', borderWidth: 2 }
                   ]}
-                  onPress={() => toggleCategory('민간 개방 시설')}
+                  onPress={() => toggleCategory('나눔 쉼터')}
                 >
                   <View style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
                     <Image
@@ -2303,7 +2303,7 @@ const HomeScreen: React.FC = () => {
                   <Text style={[
                     styles.filterChipText,
                     { fontSize: getFontSize(13), color: colors.text.secondary }
-                  ]}>민간 개방</Text>
+                  ]}>나눔 쉼터</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -2381,8 +2381,8 @@ const HomeScreen: React.FC = () => {
           </GestureDetector>
         </View>
 
-        {/* 쉼터 세부정보 모달 - 민간 개방 시설 */}
-        {selectedShelter.category === '민간 개방 시설' && (
+        {/* 쉼터 세부정보 모달 - 나눔 쉼터 */}
+        {selectedShelter.category === '나눔 쉼터' && (
           <UserShelterDetailModal
             visible={modalVisible}
             shelter={selectedShelter as any}
@@ -2392,7 +2392,7 @@ const HomeScreen: React.FC = () => {
         )}
 
         {/* 쉼터 세부정보 모달 - 기타 시설 */}
-        {selectedShelter.category !== '민간 개방 시설' && (
+        {selectedShelter.category !== '나눔 쉼터' && (
           <ShelterDetailModal
             visible={modalVisible}
             shelter={selectedShelter as any}
@@ -2451,9 +2451,9 @@ const HomeScreen: React.FC = () => {
                   style={[
                     styles.filterOption,
                     { backgroundColor: colors.background },
-                    selectedCategories.includes('민간 개방 시설') && [styles.filterOptionSelected, { borderColor: colors.primary }]
+                    selectedCategories.includes('나눔 쉼터') && [styles.filterOptionSelected, { borderColor: colors.primary }]
                   ]}
-                  onPress={() => toggleCategory('민간 개방 시설')}
+                  onPress={() => toggleCategory('나눔 쉼터')}
                 >
                   <View style={[styles.filterIcon, { backgroundColor: '#FFA500' }]}>
                     <Ionicons name="business" size={16} color="white" />
@@ -2461,9 +2461,9 @@ const HomeScreen: React.FC = () => {
                   <Text style={[
                     styles.filterOptionText,
                     { fontSize: getFontSize(16), color: colors.text.primary },
-                    selectedCategories.includes('민간 개방 시설') && styles.filterOptionTextSelected
-                  ]}>민간 개방 시설</Text>
-                  {selectedCategories.includes('민간 개방 시설') && (
+                    selectedCategories.includes('나눔 쉼터') && styles.filterOptionTextSelected
+                  ]}>나눔 쉼터</Text>
+                  {selectedCategories.includes('나눔 쉼터') && (
                     <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
