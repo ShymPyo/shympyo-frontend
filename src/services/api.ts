@@ -893,9 +893,9 @@ class ApiService {
   // ========== 차단 관련 API ==========
 
   // 특정 사용자 차단
-  static async blockUser(userId: number, blockData: BlockRequest, accessToken: string): Promise<ApiResponse<number>> {
+  static async blockUser(userId: number, blockData: BlockRequest, accessToken: string): Promise<ApiResponse<string>> {
     console.log('🚫 사용자 차단 API 호출:', { userId, blockData });
-    return this.request<number>(`/blocks/${userId}`, {
+    return this.request<string>(`/blocks/${userId}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,

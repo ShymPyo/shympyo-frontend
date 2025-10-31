@@ -67,8 +67,41 @@ const BlockedUsersScreen: React.FC = () => {
 
     console.log('🔓 차단 해제 시도:', { userId, nickname });
 
-    const confirmed = window.confirm(`${nickname}님의 차단을 해제하시겠습니까?`);
-    if (!confirmed) return;
+    // --- TEST ALERT ---
+    if (Platform.OS !== 'web') {
+      Alert.alert('테스트 알림', 'Alert.alert가 작동하는지 확인합니다.');
+      console.log('🚨 테스트 알림 호출됨');
+    }
+    // --- END TEST ALERT ---
+
+    // Use Alert.alert for React Native and window.confirm for web
+    if (Platform.OS === 'web') {
+      console.log('🌐 Web platform: using window.confirm');
+      const confirmed = window.confirm(`${nickname}님의 차단을 해제하시겠습니까?`);
+      if (!confirmed) {
+        console.log('❌ Web: User cancelled confirmation.');
+        return;
+      }
+      console.log('✅ Web: User confirmed.');
+    } else {
+      console.log('📱 Native platform: using Alert.alert for confirmation.');
+      const isConfirmed = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          '차단 해제',
+          `${nickname}님의 차단을 해제하시겠습니까?`,
+          [
+            { text: '취소', style: 'cancel', onPress: () => { console.log('❌ Native: User cancelled Alert.alert.'); resolve(false); } },
+            { text: '해제', style: 'destructive', onPress: () => { console.log('✅ Native: User confirmed Alert.alert.'); resolve(true); } },
+          ],
+          { cancelable: false }
+        );
+      });
+      if (!isConfirmed) {
+        console.log('❌ Native: Confirmation returned false, returning.');
+        return;
+      }
+      console.log('✅ Native: Confirmation returned true, proceeding.');
+    }
 
     try {
       console.log('📤 차단 해제 API 호출:', userId);
@@ -76,14 +109,27 @@ const BlockedUsersScreen: React.FC = () => {
       console.log('📥 차단 해제 응답:', response);
 
       if (response.success) {
-        window.alert('차단이 해제되었습니다.');
+        if (Platform.OS === 'web') {
+          window.alert('차단이 해제되었습니다.');
+        } else {
+          Alert.alert('차단 해제 완료', '차단이 해제되었습니다.');
+        }
         loadBlockedUsers();
       } else {
-        window.alert(response.message || '차단 해제에 실패했습니다.');
+        if (Platform.OS === 'web') {
+          window.alert(response.message || '차단 해제에 실패했습니다.');
+        }
+        else {
+          Alert.alert('오류', response.message || '차단 해제에 실패했습니다.');
+        }
       }
     } catch (error) {
       console.error('💥 차단 해제 오류:', error);
-      window.alert('차단 해제 중 오류가 발생했습니다.');
+      if (Platform.OS === 'web') {
+        window.alert('차단 해제 중 오류가 발생했습니다.');
+      } else {
+        Alert.alert('오류', '차단 해제 중 오류가 발생했습니다.');
+      }
     }
   };
 

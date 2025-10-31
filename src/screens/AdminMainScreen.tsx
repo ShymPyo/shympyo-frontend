@@ -1807,7 +1807,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#9C27B0',
+    backgroundColor: '#B39DDB', // Pastel Purple
     paddingVertical: 12,
     borderRadius: 12,
     gap: 6,
@@ -1822,7 +1822,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF8C00',
+    backgroundColor: '#FFAB91', // Pastel Orange
     paddingVertical: 12,
     borderRadius: 12,
     gap: 6,
@@ -1837,7 +1837,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF4444',
+    backgroundColor: '#EF9A9A', // Pastel Red
     paddingVertical: 12,
     borderRadius: 12,
     gap: 6,
