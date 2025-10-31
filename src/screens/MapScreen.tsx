@@ -56,7 +56,13 @@ const MapScreen: React.FC = () => {
    * ------------------------------------------------ */
   useEffect(() => {
     if (isWebViewReady && isMapReady && shelters.length > 0) {
-      sendSheltersToWebView();
+      // WebView가 완전히 렌더링되고 상호작용할 준비가 될 때까지 약간의 지연을 줍니다.
+      // 이는 마커 이미지가 로드되기 전에 데이터가 전송되어 이미지가 표시되지 않는 타이밍 문제를 해결하는 데 도움이 될 수 있습니다.
+      const timer = setTimeout(() => {
+        sendSheltersToWebView();
+      }, 200); // 200ms 지연
+
+      return () => clearTimeout(timer); // 컴포넌트 언마운트 시 타이머 정리
     }
   }, [isWebViewReady, isMapReady, shelters]);
 

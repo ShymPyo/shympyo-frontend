@@ -589,15 +589,15 @@ const HomeScreen: React.FC = () => {
           (location) => {
             setCurrentLocation(location);
 
-            if (webViewRef.current) {
-              const message = JSON.stringify({
-                type: 'location',
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                heading: headingRef.current, // 나침반 방향 값 사용
-              });
-              webViewRef.current.postMessage(message);
-            }
+            // if (webViewRef.current) {
+            //   const message = JSON.stringify({
+            //     type: 'location',
+            //     latitude: location.coords.latitude,
+            //     longitude: location.coords.longitude,
+            //     heading: headingRef.current, // 나침반 방향 값 사용
+            //   });
+            //   webViewRef.current.postMessage(message);
+            // }
           }
         );
         console.log('✅ GPS 위치 추적 시작');
@@ -809,6 +809,13 @@ const HomeScreen: React.FC = () => {
 
         setSelectedShelter(detailShelter);
         setModalVisible(true);
+
+        // 마커 클릭 시 해당 위치로 지도 시점 이동 (highlightShelter는 시점만 이동)
+        if (webViewRef.current && response.data?.latitude && response.data?.longitude) {
+          const script = `window.highlightShelter('${response.data.id}', ${response.data.latitude}, ${response.data.longitude});`;
+          webViewRef.current.injectJavaScript(script);
+          console.log('🎯 마커 클릭 시 지도 이동 (highlightShelter 사용):', response.data.name, response.data.latitude, response.data.longitude);
+        }
       } else {
         console.error('❌ 장소 상세 정보 조회 실패:', response.message);
         Alert.alert('오류', '장소 정보를 불러올 수 없습니다.');
@@ -863,6 +870,13 @@ const HomeScreen: React.FC = () => {
           console.log('🔍 업데이트된 Shelter - lat:', updatedShelter.latitude, 'lon:', updatedShelter.longitude);
           setSelectedShelter(updatedShelter);
           setModalVisible(true);
+
+          // 쉼터 카드 클릭 시 해당 위치로 지도 시점 이동 (highlightShelter는 시점만 이동)
+          if (webViewRef.current && updatedShelter.latitude && updatedShelter.longitude) {
+            const script = `window.highlightShelter('${updatedShelter.id}', ${updatedShelter.latitude}, ${updatedShelter.longitude});`;
+            webViewRef.current.injectJavaScript(script);
+            console.log('🎯 쉼터 카드 클릭 시 지도 이동 (highlightShelter 사용):', updatedShelter.name, updatedShelter.latitude, updatedShelter.longitude);
+          }
         } else {
           // API 실패 시 기본 shelter로 모달 열기
           setSelectedShelter(shelter);
