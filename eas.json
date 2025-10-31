@@ -1,30 +1,21 @@
 {
-  "cli": {
-    "version": ">= 5.2.0"
-  },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
     "preview": {
       "distribution": "internal",
-
-    },
-    "preview-aab": {
-      "distribution": "internal",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_TMAP_API_KEY": "HLKKtjss3H9tupW3ka0RD3KVIIMikH4LaSk2l2Ab"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
       },
-
+      "env": {
+        "EXPO_PUBLIC_TMAP_API_KEY": "HLKKtjss3H9tupW3ka0RD3KVIIMikH4LaSk2l2Ab"
+      }
     }
-  },
-  "submit": {
-    "production": {}
   }
 }
