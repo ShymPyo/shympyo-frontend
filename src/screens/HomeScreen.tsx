@@ -2403,7 +2403,7 @@ const HomeScreen: React.FC = () => {
               </ScrollView>
 
               {/* 쉼터 목록 - FlatList로 직접 렌더링 */}
-              {/* <FlatList<Shelter>
+              <FlatList<Shelter>
                 data={filteredShelters}
                 renderItem={renderShelterCard}
                 keyExtractor={(item) => item.id}
@@ -2411,7 +2411,7 @@ const HomeScreen: React.FC = () => {
                 showsVerticalScrollIndicator={false}
                 style={styles.contentContainer}
                 contentContainerStyle={styles.scrollContentContainer}
-              /> */}
+              />
             </Animated.View>
         </View>
 
