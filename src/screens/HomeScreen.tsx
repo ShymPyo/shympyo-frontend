@@ -812,7 +812,17 @@ const HomeScreen: React.FC = () => {
 
         // 마커 클릭 시 해당 위치로 지도 시점 이동 (highlightShelter는 시점만 이동)
         if (webViewRef.current && response.data?.latitude && response.data?.longitude) {
-          const script = `window.highlightShelter('${response.data.id}', ${response.data.latitude}, ${response.data.longitude});`;
+          const script = `
+            setTimeout(() => {
+              if (window.highlightShelter) {
+                window.highlightShelter('${response.data.id}', ${response.data.latitude}, ${response.data.longitude});
+                console.log('✅ highlightShelter 실행 완료 (handleMarkerClick):', '${response.data.name}');
+              } else {
+                console.warn('⚠️ highlightShelter 함수가 아직 정의되지 않았습니다 (handleMarkerClick).');
+              }
+            }, 200);
+          `;
+          console.log('➡️ Injecting script for handleMarkerClick:', script);
           webViewRef.current.injectJavaScript(script);
           console.log('🎯 마커 클릭 시 지도 이동 (highlightShelter 사용):', response.data.name, response.data.latitude, response.data.longitude);
         }
@@ -837,13 +847,6 @@ const HomeScreen: React.FC = () => {
       stiffness: 60,
     });
     runOnJS(setShowFade)(false);
-
-    // 지도에서 해당 마커를 강조하고 지도 중심 이동
-    if (webViewRef.current && shelter.latitude && shelter.longitude) {
-      const script = `window.highlightShelter('${shelter.id}', ${shelter.latitude}, ${shelter.longitude});`;
-      webViewRef.current.injectJavaScript(script);
-      console.log('🎯 마커 강조 및 지도 이동:', shelter.name, shelter.id, shelter.latitude, shelter.longitude);
-    }
 
     // 백엔드에서 실제 데이터가 있는 경우 상세 정보 조회
     if (mapLocations.length > 0) {
@@ -873,7 +876,17 @@ const HomeScreen: React.FC = () => {
 
           // 쉼터 카드 클릭 시 해당 위치로 지도 시점 이동 (highlightShelter는 시점만 이동)
           if (webViewRef.current && updatedShelter.latitude && updatedShelter.longitude) {
-            const script = `window.highlightShelter('${updatedShelter.id}', ${updatedShelter.latitude}, ${updatedShelter.longitude});`;
+            const script = `
+              setTimeout(() => {
+                if (window.highlightShelter) {
+                  window.highlightShelter('${updatedShelter.id}', ${updatedShelter.latitude}, ${updatedShelter.longitude});
+                  console.log('✅ highlightShelter 실행 완료 (handleShelterPress):', '${updatedShelter.name}');
+                } else {
+                  console.warn('⚠️ highlightShelter 함수가 아직 정의되지 않았습니다 (handleShelterPress).');
+                }
+              }, 200);
+            `;
+            console.log('➡️ Injecting script for handleShelterPress:', script);
             webViewRef.current.injectJavaScript(script);
             console.log('🎯 쉼터 카드 클릭 시 지도 이동 (highlightShelter 사용):', updatedShelter.name, updatedShelter.latitude, updatedShelter.longitude);
           }
@@ -881,17 +894,65 @@ const HomeScreen: React.FC = () => {
           // API 실패 시 기본 shelter로 모달 열기
           setSelectedShelter(shelter);
           setModalVisible(true);
+
+          // API 실패 시에도 원래 shelter 정보로 지도 시점 이동
+          if (webViewRef.current && shelter.latitude && shelter.longitude) {
+            const script = `
+              setTimeout(() => {
+                if (window.highlightShelter) {
+                  window.highlightShelter('${shelter.id}', ${shelter.latitude}, ${shelter.longitude});
+                  console.log('✅ highlightShelter 실행 완료 (API 실패 fallback):', '${shelter.name}');
+                } else {
+                  console.warn('⚠️ highlightShelter 함수가 아직 정의되지 않았습니다 (API 실패 fallback).');
+                }
+              }, 200);
+            `;
+            console.log('➡️ Injecting script for handleShelterPress (API fail fallback):', script);
+            webViewRef.current.injectJavaScript(script);
+          }
         }
       } catch (error) {
         console.error('❌ 장소 상세 정보 조회 실패:', error);
         // 에러 시 기본 shelter로 모달 열기
         setSelectedShelter(shelter);
         setModalVisible(true);
+
+        // API 에러 시에도 원래 shelter 정보로 지도 시점 이동
+        if (webViewRef.current && shelter.latitude && shelter.longitude) {
+          const script = `
+            setTimeout(() => {
+              if (window.highlightShelter) {
+                window.highlightShelter('${shelter.id}', ${shelter.latitude}, ${shelter.longitude});
+                console.log('✅ highlightShelter 실행 완료 (API 에러 fallback):', '${shelter.name}');
+              } else {
+                console.warn('⚠️ highlightShelter 함수가 아직 정의되지 않았습니다 (API 에러 fallback).');
+              }
+            }, 200);
+          `;
+          console.log('➡️ Injecting script for handleShelterPress (API error fallback):', script);
+          webViewRef.current.injectJavaScript(script);
+        }
       }
     } else {
       // mapLocations가 없으면 기본 shelter로 모달 열기
       setSelectedShelter(shelter);
       setModalVisible(true);
+
+      // mapLocations가 없을 때도 원래 shelter 정보로 지도 시점 이동
+      if (webViewRef.current && shelter.latitude && shelter.longitude) {
+        const script = `
+          setTimeout(() => {
+            if (window.highlightShelter) {
+              window.highlightShelter('${shelter.id}', ${shelter.latitude}, ${shelter.longitude});
+              console.log('✅ highlightShelter 실행 완료 (mapLocations 없음 fallback):', '${shelter.name}');
+            } else {
+              console.warn('⚠️ highlightShelter 함수가 아직 정의되지 않았습니다 (mapLocations 없음 fallback).');
+            }
+          }, 200);
+        `;
+        console.log('➡️ Injecting script for handleShelterPress (no mapLocations fallback):', script);
+        webViewRef.current.injectJavaScript(script);
+      }
     }
   };
 
