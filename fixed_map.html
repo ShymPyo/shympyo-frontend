@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>쉼표 지도</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <style>
+      html,
+      body,
+      #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      #map .label,
+      #map .info {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+
+    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985&autoload=false"></script>
+    <script>
+      kakao.maps.load(() => {
+        try {
+          /* ------------------------------
+           *  1️⃣ 초기화
+           * ------------------------------ */
+          const getQueryParam = (name) => new URLSearchParams(window.location.search).get(name);
+          const urlLat = parseFloat(getQueryParam("lat"));
+          const urlLng = parseFloat(getQueryParam("lng"));
+          const initialLat = isNaN(urlLat) ? 37.5665 : urlLat;
+          const initialLng = isNaN(urlLng) ? 126.9780 : urlLng;
+
+          const map = new kakao.maps.Map(document.getElementById("map"), {
+            center: new kakao.maps.LatLng(initialLat, initialLng),
+            level: 3,
+          });
+          map.relayout();
+
+          window.map = map;
+          window.markers = [];
+          window.currentPositionMarker = null;
+          window.animState = {
+            currentLat: initialLat,
+            currentLng: initialLng,
+            currentHeading: 0,
+            targetLat: initialLat,
+            targetLng: initialLng,
+            targetHeading: 0,
+            isAnimating: false,
+          };
+
+          console.log("✅ Kakao Map Initialized");
+
+          /* ------------------------------
+           *  2️⃣ 마커 이미지 헬퍼 함수
+           * ------------------------------ */
+          window.createMarkerImageWithShadow = (src, width, height) => {
+            const svg = `
+              <svg width="${width + 8}" height="${height + 6}" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="${(width + 8) / 2}" cy="${height + 3}" rx="${width * 0.25}" ry="2" fill="black" opacity="0.25"/>
+                <image href="${src}" x="4" y="0" width="${width}" height="${height}" />
+              </svg>`;
+            return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+          };
+
+          /* ------------------------------
+           *  3️⃣ 내 위치 마커
+           * ------------------------------ */
+          function createMyLocationSvg(heading) {
+            const rotation = heading || 0;
+            const svg = `
+              <svg width="54" height="54" viewBox="0 0 54 54" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <filter id="markerShadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="1.2" flood-color="rgba(0,0,0,0.5)" />
+                  </filter>
+                </defs>
+                <g filter="url(#markerShadow)">
+                  <circle cx="27" cy="27" r="11" fill="#FF2B2B" stroke="white" stroke-width="3"/>
+                  <g transform="rotate(${rotation} 27 27) translate(0, -4)">
+                    <path d="M27 8 L33 19 L27 15 L21 19 Z" fill="white"/>
+                  </g>
+                </g>
+              </svg>`;
+            return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+          }
+
+          /* ------------------------------
+           *  4️⃣ 애니메이션 루프 (내 위치)
+           * ------------------------------ */
+          function animationLoop() {
+            if (!window.animState.isAnimating) return;
+            const s = window.animState;
+            const easing = 0.2;
+            s.currentLat += (s.targetLat - s.currentLat) * easing;
+            s.currentLng += (s.targetLng - s.currentLng) * easing;
+
+            let diff = s.targetHeading - s.currentHeading;
+            while (diff < -180) diff += 360;
+            while (diff > 180) diff -= 360;
+            s.currentHeading += diff * easing;
+
+            const pos = new kakao.maps.LatLng(s.currentLat, s.currentLng);
+            const markerImg = new kakao.maps.MarkerImage(
+              createMyLocationSvg(s.currentHeading),
+              new kakao.maps.Size(54, 54),
+              { offset: new kakao.maps.Point(27, 27) }
+            );
+
+            if (window.currentPositionMarker) {
+              window.currentPositionMarker.setPosition(pos);
+              window.currentPositionMarker.setImage(markerImg);
+            } else {
+              window.currentPositionMarker = new kakao.maps.Marker({
+                map,
+                position: pos,
+                image: markerImg,
+                zIndex: 1000,
+              });
+            }
+
+            const dist = Math.abs(s.targetLat - s.currentLat) + Math.abs(s.targetLng - s.currentLng);
+            if (dist < 0.000001 && Math.abs(diff) < 0.1) s.isAnimating = false;
+            else requestAnimationFrame(animationLoop);
+          }
+
+          /* ------------------------------
+           *  5️⃣ RN → Web 메시지 수신
+           * ------------------------------ */
+          const handleReactNativeMessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              console.log("📩 RN 메시지:", data);
+
+              if (data.type === "location") {
+                window.focusOnLocation(data.latitude, data.longitude, data.heading);
+              } else if (data.type === "shelters" && Array.isArray(data.list)) {
+                window.addShelters(data.list);
+              }
+            } catch (err) {
+              console.error("❌ RN 메시지 파싱 오류:", err);
+            }
+          };
+
+          document.addEventListener("message", handleReactNativeMessage);
+          window.addEventListener("message", handleReactNativeMessage);
+
+          /* ------------------------------
+           *  6️⃣ RN에서 온 명령 처리
+           * ------------------------------ */
+          window.focusOnLocation = (lat, lng, heading) => {
+            const s = window.animState;
+            s.targetLat = lat;
+            s.targetLng = lng;
+            if (heading != null) s.targetHeading = heading;
+
+            const moveLatLng = new kakao.maps.LatLng(lat, lng);
+            map.setLevel(2, { anchor: moveLatLng });
+            map.panTo(moveLatLng);
+
+            if (!s.isAnimating) {
+              s.isAnimating = true;
+              requestAnimationFrame(animationLoop);
+            }
+          };
+
+          /* ------------------------------
+           *  7️⃣ 쉼터 마커 생성
+           * ------------------------------ */
+          window.addShelters = (list) => {
+            if (!map) return;
+            window.markers.forEach((m) => m.marker.setMap(null));
+            window.markers = [];
+
+            console.log("📍 쉼터 데이터 수신:", list);
+
+            list.forEach((shelter) => {
+              const pos = new kakao.maps.LatLng(
+                shelter.lat || shelter.latitude,
+                shelter.lng || shelter.longitude
+              );
+              const pin = shelter.icon || shelter.iconUrl ||
+                "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
+
+              // Base64나 URL 모두 지원
+              const img = window.createMarkerImageWithShadow(pin, 36, 46);
+              const markerImg = new kakao.maps.MarkerImage(img, new kakao.maps.Size(44, 52), {
+                offset: new kakao.maps.Point(22, 49),
+              });
+              
+              const marker = new kakao.maps.Marker({
+                map,
+                position: pos,
+                image: markerImg,
+                clickable: true, // Make it clickable
+                title: shelter.name || shelter.title // Add title for accessibility and behavior
+              });
+
+              // Add click listener to send message to React Native
+              kakao.maps.event.addListener(marker, 'click', () => {
+                if (window.ReactNativeWebView) {
+                  // The RN side expects a string message 'MARKER_CLICK:id'
+                  window.ReactNativeWebView.postMessage('MARKER_CLICK:' + shelter.id);
+                  console.log('✅ Marker Clicked, ID:', shelter.id);
+                }
+              });
+
+              window.markers.push({ id: shelter.id, marker, pinImage: pin });
+            });
+          };
+
+          /* ------------------------------
+           *  8️⃣ 지도 클릭 시 테스트 메시지
+           * ------------------------------ */
+          kakao.maps.event.addListener(map, "click", () => {
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({
+                  type: "navigation_start",
+                  destinationName: "테스트 목적지",
+                  totalDistance: 5200,
+                })
+              );
+            }
+          });
+
+          /* ------------------------------
+           *  9️⃣ 초기 알림 (map_ready)
+           * ------------------------------ */
+          window.focusOnLocation(initialLat, initialLng, 0);
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: "map_ready" }));
+            console.log("✅ map_ready 전송 완료");
+          }
+        } catch (err) {
+          console.error("지도 초기화 오류:", err);
+        }
+      });
+    </script>
+  </body>
+</html>

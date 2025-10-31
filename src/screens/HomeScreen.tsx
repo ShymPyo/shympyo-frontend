@@ -482,13 +482,13 @@ const HomeScreen: React.FC = () => {
   // 쉼터 유형별 아이콘 매핑 함수
   const getIconUrlByType = (type: string) => {
     const icons: Record<string, string> = {
-      traffic: "https://i.imgur.com/sN3Flti.png",
-      mingan: "https://i.imgur.com/6rDv2ml.png",
-      politic: "https://i.imgur.com/YU4dzQD.png",
-      shelter: "https://i.imgur.com/smwzwkF.png",
-      // Add other types if necessary, with a default fallback
+      SHELTER: "https://i.ibb.co/sdz1vH7h/shelter.png",
+      USER_SHELTER: "https://i.ibb.co/gbLgBZMp/mingan.png",
+      STATION: "https://i.ibb.co/HL57bNFj/traffic.png",
+      PUBLIC: "https://i.ibb.co/XZkdxZwF/politic.png",
+      CLIMATE_SHELTER: "https://i.ibb.co/gM8v361T/climate.png",
     };
-    return icons[type] || "https://i.imgur.com/hzU9xCD.png"; // 기본 핀 fallback
+    return icons[type] || "https://i.ibb.co/sdz1vH7h/shelter.png"; // 기본 핀 fallback을 shelter로 변경
   };
 
   // 로그인 시마다 튜토리얼 표시
@@ -1013,7 +1013,8 @@ const HomeScreen: React.FC = () => {
             latlng: [destinationLocation.latitude, destinationLocation.longitude],
             content: destinationPlace ? destinationPlace.content : '',
             id: destinationLocation.id,
-            type: destinationLocation.type
+            type: destinationLocation.type,
+            iconUrl: getIconUrlByType(destinationLocation.type)
           };
 
           destinationMarkerScript = `
@@ -1038,29 +1039,32 @@ const HomeScreen: React.FC = () => {
                              position.type === 'STATION' ? '#27AE60' :
                              position.type === 'CLIMATE_SHELTER' ? '#9B59B6' : '#7ED321';
 
-            var pinImageSrc = position.type === 'SHELTER' ? '${pinImages?.shelter}' :
-                              position.type === 'USER_SHELTER' ? '${pinImages?.mingan}' :
-                              position.type === 'STATION' ? '${pinImages?.traffic}' :
-                              position.type === 'PUBLIC' ? '${pinImages?.politic}' :
-                              position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
+            var pinImageSrc = position.iconUrl;
 
-            var markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-            var markerSize = new kakao.maps.Size(44, 52); // 페이드 + 그림자 포함 (width: 36+8, height: 46+6)
-            var markerOffset = new kakao.maps.Point(22, 49); // 핀의 끝점 위치 (중앙 정렬)
+            var markerSize = new kakao.maps.Size(36, 46);
+            var markerOffset = new kakao.maps.Point(18, 46);
 
             var markerImage = new kakao.maps.MarkerImage(
-              markerImageWithShadow,
+              pinImageSrc,
               markerSize,
               { offset: markerOffset }
             );
 
             var marker = new kakao.maps.Marker({
               position: markerPosition,
+              title: position.title,
               image: markerImage,
               clickable: true
             });
 
             marker.setMap(window.map);
+
+            // Add click listener for the destination marker
+            kakao.maps.event.addListener(marker, 'click', function() {
+              if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
+              }
+            });
 
             window.markers.push({
               id: String(position.id),
@@ -1069,12 +1073,6 @@ const HomeScreen: React.FC = () => {
               originalColor: markerColor,
               type: position.type,
               pinImage: pinImageSrc
-            });
-
-            kakao.maps.event.addListener(marker, 'click', function() {
-              if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
-              }
             });
 
             console.log('🎯 목적지 마커만 표시 완료:', position.id);
@@ -1288,7 +1286,8 @@ const HomeScreen: React.FC = () => {
             latlng: [location.latitude, location.longitude],
             content: place ? place.content : '',
             id: location.id,
-            type: location.type
+            type: location.type,
+            iconUrl: getIconUrlByType(location.type)
           };
         });
 
@@ -1320,7 +1319,8 @@ const HomeScreen: React.FC = () => {
 
           // 모든 마커들 다시 생성 (필터링된 상태 유지)
           var positions = ${JSON.stringify(allPositions)};
-          positions.forEach(function(position) {
+          
+          positions.forEach(function(position, index) {
             var markerPosition = new kakao.maps.LatLng(position.latlng[0], position.latlng[1]);
 
             var markerColor = position.type === 'SHELTER' ? '#4A90E2' :
@@ -1328,38 +1328,35 @@ const HomeScreen: React.FC = () => {
                              position.type === 'STATION' ? '#27AE60' :
                              position.type === 'CLIMATE_SHELTER' ? '#9B59B6' : '#7ED321';
 
-            var pinImageSrc = position.type === 'SHELTER' ? '${pinImages?.shelter}' :
-                              position.type === 'USER_SHELTER' ? '${pinImages?.mingan}' :
-                              position.type === 'STATION' ? '${pinImages?.traffic}' :
-                              position.type === 'PUBLIC' ? '${pinImages?.politic}' :
-                              position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
+            var pinImageSrc = position.iconUrl;
 
-            var markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-            var markerSize = new kakao.maps.Size(44, 52); // 페이드 + 그림자 포함 (width: 36+8, height: 46+6)
-            var markerOffset = new kakao.maps.Point(22, 49); // 핀의 끝점 위치 (중앙 정렬)
+            var markerSize = new kakao.maps.Size(36, 46);
+            var markerOffset = new kakao.maps.Point(18, 46);
 
             var markerImage = new kakao.maps.MarkerImage(
-              markerImageWithShadow,
+              pinImageSrc,
               markerSize,
               { offset: markerOffset }
             );
 
             var marker = new kakao.maps.Marker({
               position: markerPosition,
+              title: position.title,
               image: markerImage,
               clickable: true
             });
 
             marker.setMap(window.map);
 
-            window.markers.push({
+            var markerObj = {
               id: String(position.id),
               marker: marker,
               circle: null,
               originalColor: markerColor,
               type: position.type,
               pinImage: pinImageSrc
-            });
+            };
+            window.markers.push(markerObj);
 
             kakao.maps.event.addListener(marker, 'click', function() {
               if (window.ReactNativeWebView) {
@@ -1602,7 +1599,7 @@ const HomeScreen: React.FC = () => {
       return;
     }
 
-    if (webViewRef.current && mapLocations.length > 0 && pinImages) {
+    if (webViewRef.current && mapLocations.length > 0) {
       // JavaScript를 통해 마커만 업데이트
       const filteredPositions = filteredMapLocations.map((location, index) => {
         const place = nearbyPlaces.find(p => p.id === location.id);
@@ -1613,7 +1610,8 @@ const HomeScreen: React.FC = () => {
           latlng: [location.latitude, location.longitude],
           content: content,
           id: location.id,
-          type: location.type
+          type: location.type,
+          iconUrl: getIconUrlByType(location.type)
         };
       });
 
@@ -1629,7 +1627,7 @@ const HomeScreen: React.FC = () => {
 
         // 새로운 마커들 생성
         var positions = ${JSON.stringify(filteredPositions)};
-                  // var useImagePins = ${pinImages !== null}; // pinImages state removed
+                  // pinImages state removed
         
                 positions.forEach(function(position, index) {
                   var markerPosition = new kakao.maps.LatLng(position.latlng[0], position.latlng[1]);
@@ -1644,19 +1642,18 @@ const HomeScreen: React.FC = () => {
                   var markerSize;
                   var markerOffset;
         
-                  // Always use image pins now that iconUrl is provided
-                  markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-                  markerSize = new kakao.maps.Size(44, 52);
-                  markerOffset = new kakao.maps.Point(22, 49);
+                  var markerSize = new kakao.maps.Size(36, 46);
+                  var markerOffset = new kakao.maps.Point(18, 46);
         
                   var markerImage = new kakao.maps.MarkerImage(
-                    markerImageWithShadow,
+                    pinImageSrc,
                     markerSize,
                     { offset: markerOffset }
                   );
         
                   var marker = new kakao.maps.Marker({
                     position: markerPosition,
+                    title: position.title,
                     image: markerImage,
                     clickable: true
                   });
@@ -1674,7 +1671,6 @@ const HomeScreen: React.FC = () => {
                   window.markers.push(markerObj);
         
                   kakao.maps.event.addListener(marker, 'click', function() {
-                    window.highlightShelter(String(position.id), position.latlng[0], position.latlng[1]);
                     if (window.ReactNativeWebView) {
                       window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
                     }
@@ -1683,7 +1679,7 @@ const HomeScreen: React.FC = () => {
 
       webViewRef.current.injectJavaScript(updateMarkersScript);
     }
-  }, [isNavigating, selectedCategories, filteredMapLocations, nearbyPlaces, pinImages]);
+  }, [isNavigating, selectedCategories, filteredMapLocations, nearbyPlaces]);
 
   // 하드웨어 백 버튼 처리 - Android에서 앱 종료
   useEffect(() => {
@@ -1802,6 +1798,8 @@ const HomeScreen: React.FC = () => {
               -webkit-text-size-adjust: 100%;
               -webkit-user-select: none;
               user-select: none;
+              -webkit-touch-callout: none;
+              -webkit-touch-callout: none;
           }
           #map {
               width: 100vw;
@@ -1816,6 +1814,8 @@ const HomeScreen: React.FC = () => {
       <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=76e23ff1c2370fd1c14d17f2370c8985"></script>
       <script>
           var container = document.getElementById('map');
+
+
 
           // 초기 위치 사용 (기본값 서울) - 이후 위치는 실시간 업데이트로 처리
           var centerLat = ${initialLocation?.coords.latitude || 37.5665};
@@ -1918,7 +1918,8 @@ const HomeScreen: React.FC = () => {
                   content: "${content}",
                   latlng: new kakao.maps.LatLng(${location.latitude}, ${location.longitude}),
                   type: "${location.type}",
-                  id: ${location.id}
+                  id: ${location.id},
+                  iconUrl: "${getIconUrlByType(location.type)}"
                 }`;
               }).join(',')}
           ];
@@ -1927,82 +1928,29 @@ const HomeScreen: React.FC = () => {
           window.markers = [];
           window.map = map;
 
-          // 그림자가 있는 마커 이미지 생성 헬퍼 함수 (전역으로 저장)
-          window.createMarkerImageWithShadow = function(pinImageSrc, width, height) {
-            var shadowHeight = 6;
-            var totalHeight = height + shadowHeight;
-            var padding = 4;
-            var totalWidth = width + padding * 2;
+          // 쉼터 마커 강조 표시 (선택된 쉼터)
+          window.highlightShelter = function(placeId, lat, lon) {
+              console.log('🗺️ 마커 강조 시도:', placeId);
+              
+              // 모든 마커의 z-index를 원래대로 되돌림
+              if (window.markers) {
+                  window.markers.forEach(function(m) {
+                      m.marker.setZIndex(0);
+                  });
+              }
 
-            var svg = \`
-              <svg width="\${totalWidth}" height="\${totalHeight}" viewBox="0 0 \${totalWidth} \${totalHeight}" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <filter id="bgShadow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
-                    <feOffset dx="0" dy="1" result="offsetblur"/>
-                    <feComponentTransfer>
-                      <feFuncA type="linear" slope="0.3"/>
-                    </feComponentTransfer>
-                    <feMerge>
-                      <feMergeNode/>
-                      <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                  </filter>
-                </defs>
-                <!-- 배경 페이드 (핀 주변으로 살짝 보이게) -->
-                <circle cx="\${totalWidth/2}" cy="\${height * 0.37}" r="\${width * 0.48}" fill="white" opacity="0.75" filter="url(#bgShadow)"/>
-                <!-- 둥근 그림자 (타원) -->
-                <ellipse cx="\${totalWidth/2}" cy="\${height + 3}" rx="\${width * 0.25}" ry="2" fill="black" opacity="0.2"/>
-                <!-- 핀 이미지 - 선명하게 유지 (filter 제거) -->
-                <image href="\${pinImageSrc}" x="\${padding}" y="0" width="\${width}" height="\${height}"/>
-              </svg>
-            \`;
-
-            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+              var markerObj = window.markers.find(m => m.id === String(placeId));
+              if (markerObj) {
+                  markerObj.marker.setZIndex(100); // 가장 위로 올리기
+                  // 지도 중심 이동
+                  var moveLatLon = new kakao.maps.LatLng(lat, lon);
+                  window.map.panTo(moveLatLon);
+              } else {
+                  console.log('🗺️ 강조할 마커를 찾지 못함:', placeId);
+              }
           };
 
-          // 선택된 마커용 강조 이미지 생성 헬퍼 함수 (큰 후광과 빛나는 효과)
-          window.createHighlightMarkerImage = function(pinImageSrc, width, height) {
-            var shadowHeight = 6;
-            var totalHeight = height + shadowHeight;
-            var padding = 12;
-            var totalWidth = width + padding * 2;
 
-            var svg = \`
-              <svg width="\${totalWidth}" height="\${totalHeight}" viewBox="0 0 \${totalWidth} \${totalHeight}" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <filter id="highlightShadow" x="-100%" y="-100%" width="300%" height="300%">
-                    <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
-                    <feOffset dx="0" dy="2" result="offsetblur"/>
-                    <feComponentTransfer>
-                      <feFuncA type="linear" slope="0.6"/>
-                    </feComponentTransfer>
-                    <feMerge>
-                      <feMergeNode/>
-                      <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                  </filter>
-                  <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" style="stop-color:white;stop-opacity:1" />
-                    <stop offset="70%" style="stop-color:white;stop-opacity:0.5" />
-                    <stop offset="100%" style="stop-color:white;stop-opacity:0" />
-                  </radialGradient>
-                </defs>
-                <!-- 가장 큰 외곽 후광 (반투명) -->
-                <circle cx="\${totalWidth/2}" cy="\${height * 0.37}" r="\${width * 0.85}" fill="url(#glowGradient)" opacity="0.6" filter="url(#highlightShadow)"/>
-                <!-- 중간 후광 -->
-                <circle cx="\${totalWidth/2}" cy="\${height * 0.37}" r="\${width * 0.65}" fill="white" opacity="0.5" filter="url(#highlightShadow)"/>
-                <!-- 배경 페이드 (핵심 후광, 더 밝게) -->
-                <circle cx="\${totalWidth/2}" cy="\${height * 0.37}" r="\${width * 0.5}" fill="white" opacity="0.95" filter="url(#highlightShadow)"/>
-                <!-- 둥근 그림자 (더 크고 진하게) -->
-                <ellipse cx="\${totalWidth/2}" cy="\${height + 3}" rx="\${width * 0.35}" ry="4" fill="black" opacity="0.4"/>
-                <!-- 핀 이미지 - 선명하게 유지 -->
-                <image href="\${pinImageSrc}" x="\${padding}" y="0" width="\${width}" height="\${height}"/>
-              </svg>
-            \`;
-
-            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
-          };
 
           // 마커 생성 (데이터가 있는 경우에만)
           if (positions.length > 0) {
@@ -2018,19 +1966,13 @@ const HomeScreen: React.FC = () => {
                                   'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
 
                   // 커스텀 핀 이미지 사용
-                  var pinImageSrc = positions[i].type === 'SHELTER' ? '${pinImages?.shelter}' :
-                                    positions[i].type === 'USER_SHELTER' ? '${pinImages?.mingan}' :
-                                    positions[i].type === 'STATION' ? '${pinImages?.traffic}' :
-                                    positions[i].type === 'PUBLIC' ? '${pinImages?.politic}' :
-                                    positions[i].type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
+                  var pinImageSrc = positions[i].iconUrl;
 
-                  // 그림자가 있는 마커 이미지 생성 - 비율 301:388 유지
-                  var markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-                  var markerSize = new kakao.maps.Size(44, 52); // 페이드 + 그림자 포함 (width: 36+8, height: 46+6)
-                  var markerOffset = new kakao.maps.Point(22, 49); // 핀의 끝점 위치 (중앙 정렬)
+                  var markerSize = new kakao.maps.Size(36, 46);
+                  var markerOffset = new kakao.maps.Point(18, 46);
 
                   var markerImage = new kakao.maps.MarkerImage(
-                      markerImageWithShadow,
+                      pinImageSrc,
                       markerSize,
                       { offset: markerOffset }
                   );
@@ -2039,7 +1981,8 @@ const HomeScreen: React.FC = () => {
                       map: map,
                       position: positions[i].latlng,
                       title: positions[i].title,
-                      image: markerImage
+                      image: markerImage,
+                      clickable: true
                   });
 
                   // 마커를 ID와 함께 배열에 저장 (강조 기능용)
@@ -2053,30 +1996,19 @@ const HomeScreen: React.FC = () => {
                       pinImage: pinImageSrc
                   });
 
-                  // 정보창 생성
-                  var infoWindow = new kakao.maps.InfoWindow({
-                      content: \`
-                        <div style="padding: 10px; min-width: 200px;">
-                          <h4 style="margin: 0 0 5px 0; color: #333;">\${positions[i].title}</h4>
-                          <p style="margin: 0; color: #666; font-size: 12px;">\${positions[i].content}</p>
-                        </div>
-                      \`
-                  });
-
-                  // 마커 클릭 이벤트 - React Native로 상세 정보 요청
-                  (function(markerObj, infoWindow, placeId) {
-                      kakao.maps.event.addListener(markerObj.marker, 'click', function() {
-                          console.log('🗺️ 마커 클릭됨! Place ID:', placeId);
-
-                          // React Native로 장소 ID 전달
-                          if (window.ReactNativeWebView) {
-                              console.log('📤 React Native로 메시지 전송:', 'MARKER_CLICK:' + placeId);
-                              window.ReactNativeWebView.postMessage('MARKER_CLICK:' + placeId);
-                          } else {
-                              console.log('❌ ReactNativeWebView 없음');
-                          }
+                  // 마커 클릭 이벤트
+                  (function(marker, p) {
+                      kakao.maps.event.addListener(marker, 'click', function() {
+                        console.log('--- MARKER CLICKED --- ID: ' + p.id);
+                        // 클릭 시 지도 이동 및 확대
+                        window.highlightShelter(String(p.id), p.latlng.getLat(), p.latlng.getLng());
+                        
+                        // RN으로 메시지 전송
+                        if (window.ReactNativeWebView) {
+                          window.ReactNativeWebView.postMessage('MARKER_CLICK:' + p.id);
+                        }
                       });
-                  })(window.markers[window.markers.length - 1], infoWindow, positions[i].id);
+                  })(marker, positions[i]);
               }
           }
 
@@ -2155,7 +2087,7 @@ const HomeScreen: React.FC = () => {
   </body>
   </html>
   `;
-  }, [initialLocation, pinImages]);
+  }, [initialLocation]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -2280,15 +2212,18 @@ const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </Animated.View>
 
-          <GestureDetector gesture={panGesture}>
             <Animated.View style={[styles.overlayBottom, { backgroundColor: colors.surface }, bottomSheetStyle]}>
-              {/* 드래그 핸들 - 미니멀한 회색 바 */}
-              <View style={[styles.dragHandle, { backgroundColor: colors.text.light }]} />
+              <GestureDetector gesture={panGesture}>
+                <View>
+                  {/* 드래그 핸들 - 미니멀한 회색 바 */}
+                  <View style={[styles.dragHandle, { backgroundColor: colors.text.light }]} />
 
-              {/* 헤더 부분 - 터치 시 리스트 토글 */}
-              <TouchableOpacity style={[styles.bottomHeader, { borderBottomColor: colors.text.light + '20' }]} onPress={handleHeaderPress}>
-                <Text style={[styles.headerTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>반경 500m 내 쉼터</Text>
-              </TouchableOpacity>
+                  {/* 헤더 부분 - 터치 시 리스트 토글 */}
+                  <TouchableOpacity style={[styles.bottomHeader, { borderBottomColor: colors.text.light + '20' }]} onPress={handleHeaderPress}>
+                    <Text style={[styles.headerTitle, { fontSize: getFontSize(18), color: colors.text.primary }]}>반경 500m 내 쉼터</Text>
+                  </TouchableOpacity>
+                </View>
+              </GestureDetector>
 
               {/* 내 주변 쉼터 개수 표시 */}
               <Text style={[styles.topNote, { fontSize: getFontSize(12), color: colors.text.light }]}>
@@ -2408,13 +2343,12 @@ const HomeScreen: React.FC = () => {
                 data={filteredShelters}
                 renderItem={renderShelterCard}
                 keyExtractor={(item) => item.id}
-                ListFooterComponent={<View style={styles.bottomFiller} />}
+                ListFooterComponent={<View style={styles.bottomFiller} />} 
                 showsVerticalScrollIndicator={false}
                 style={styles.contentContainer}
                 contentContainerStyle={styles.scrollContentContainer}
               />
             </Animated.View>
-          </GestureDetector>
         </View>
 
         {/* 쉼터 세부정보 모달 - 나눔 쉼터 */}
