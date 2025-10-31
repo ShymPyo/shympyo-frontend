@@ -3,22 +3,31 @@ import {
   View,
   StyleSheet,
   Text,
-  TouchableOpacity,
   ActivityIndicator,
-  Platform,
   Alert,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
-import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useThemedStyles } from '../hooks/useThemedStyles';
 import { useFocusEffect } from '@react-navigation/native';
 
+// 쉼터 데이터 타입 정의
+interface Shelter {
+  id: number;
+  lat: number;
+  lng: number;
+  name: string;
+  iconUrl?: string;
+}
+
 const MapScreen: React.FC = () => {
   const { colors, getFontSize, statusBarStyle } = useThemedStyles();
   const webViewRef = useRef<WebView>(null);
+
+  // 상태 정의
   const [isWebViewReady, setIsWebViewReady] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [error, setError] = useState<string | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
@@ -27,23 +36,45 @@ const MapScreen: React.FC = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [destinationInfo, setDestinationInfo] = useState<{ name: string; distance: number } | null>(null);
 
+  // 쉼터 데이터
+  const [shelters, setShelters] = useState<Shelter[]>([]);
+
+  /** ------------------------------------------------
+   * 1️⃣ 앱 시작 시 Mock 데이터 로드 (API로 대체 가능)
+   * ------------------------------------------------ */
+  useEffect(() => {
+    const mockShelters: Shelter[] = [
+      { id: 1, lat: 37.5665, lng: 126.9780, name: '시청역 쉼터', iconUrl: 'https://i.imgur.com/wB4s3Z8.png' },
+      { id: 2, lat: 37.5700, lng: 126.9792, name: '광화문 쉼터', iconUrl: 'https://i.imgur.com/wB4s3Z8.png' },
+      { id: 3, lat: 37.5650, lng: 126.9760, name: '덕수궁 쉼터', iconUrl: 'https://i.imgur.com/wB4s3Z8.png' },
+    ];
+    setShelters(mockShelters);
+  }, []);
+
+  /** ------------------------------------------------
+   * 2️⃣ 지도 준비 완료 시 쉼터 데이터 전송
+   * ------------------------------------------------ */
+  useEffect(() => {
+    if (isWebViewReady && isMapReady && shelters.length > 0) {
+      sendSheltersToWebView();
+    }
+  }, [isWebViewReady, isMapReady, shelters]);
+
+  /** ------------------------------------------------
+   * 3️⃣ 위치 추적 (Focus 시 실행, Unfocus 시 정지)
+   * ------------------------------------------------ */
   useFocusEffect(
     React.useCallback(() => {
       startWatchingLocation();
-      return () => {
-        stopWatchingLocation();
-      };
+      return () => stopWatchingLocation();
     }, [])
   );
 
   const startWatchingLocation = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
+    const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       setError('위치 정보 접근 권한이 거부되었습니다.');
-      Alert.alert(
-        '권한 필요',
-        '실시간 위치를 사용하려면 위치 정보 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.'
-      );
+      Alert.alert('권한 필요', '실시간 위치를 사용하려면 위치 정보 접근 권한이 필요합니다.');
       return;
     }
 
@@ -72,8 +103,11 @@ const MapScreen: React.FC = () => {
     }
   };
 
+  /** ------------------------------------------------
+   * 4️⃣ RN → WebView 메시지 전송 함수
+   * ------------------------------------------------ */
   const sendLocationToWebView = (currentLocation: Location.LocationObject) => {
-    if (webViewRef.current && isWebViewReady) {
+    if (webViewRef.current && isMapReady) {
       const message = JSON.stringify({
         type: 'location',
         latitude: currentLocation.coords.latitude,
@@ -84,13 +118,32 @@ const MapScreen: React.FC = () => {
     }
   };
 
+  const sendSheltersToWebView = () => {
+    if (!webViewRef.current || !isMapReady || !isWebViewReady) {
+      console.log('⏸️ 웹뷰 또는 맵 준비 안 됨 — 전송 보류');
+      return;
+    }
+    const message = JSON.stringify({ type: 'shelters', list: shelters });
+    webViewRef.current.postMessage(message);
+    console.log('✅ 쉼터 데이터를 웹뷰로 전송했습니다.');
+  };
+
+  /** ------------------------------------------------
+   * 5️⃣ WebView → RN 메시지 수신
+   * ------------------------------------------------ */
   const handleWebViewMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
+
       switch (data.type) {
+        case 'map_ready':
+          setIsMapReady(true);
+          console.log('🗺️ 웹뷰의 카카오맵이 준비되었습니다.');
+          break;
         case 'navigation_start':
           setIsNavigating(true);
           setDestinationInfo({ name: data.destinationName, distance: data.totalDistance });
+          console.log('🚗 길찾기 시작:', data);
           break;
         case 'navigation_update':
           if (destinationInfo) {
@@ -98,21 +151,22 @@ const MapScreen: React.FC = () => {
           }
           break;
         case 'navigation_end':
+          console.log('🏁 길찾기 종료');
           setIsNavigating(false);
           setDestinationInfo(null);
           break;
-        case 'recalculate_route':
-          // 웹에서 경로 재요청을 하도록 유도 (필요 시)
-          console.log('경로 재탐색 요청 수신');
-          break;
         default:
+          console.log('📩 기타 WebView 메시지:', data);
           break;
       }
     } catch (e) {
-      console.error('WebView 메시지 처리 오류:', e);
+      console.error('❌ WebView 메시지 처리 오류:', e);
     }
   };
 
+  /** ------------------------------------------------
+   * 6️⃣ 렌더링
+   * ------------------------------------------------ */
   if (error) {
     return (
       <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
@@ -149,13 +203,27 @@ const MapScreen: React.FC = () => {
         originWhitelist={['*']}
         source={{ uri: 'https://map-deploy-olive.vercel.app/' }}
         style={styles.webview}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
+        javaScriptEnabled
+        domStorageEnabled
         mixedContentMode="always"
-        allowFileAccess={true}
-        allowUniversalAccessFromFileURLs={true}
-        injectedJavaScript={`window.ReactNativeWebView = window.ReactNativeWebView || {}; true;`}
-        onLoadEnd={() => setIsWebViewReady(true)}
+        allowFileAccess
+        allowUniversalAccessFromFileURLs
+        injectedJavaScript={`
+          (function() {
+            window.ReactNativeWebView = window.ReactNativeWebView || {};
+            // ✅ Android 메시지 브리지 보강
+            document.addEventListener('message', function(e) {
+              if (window.ReactNativeWebView.onMessage) {
+                window.ReactNativeWebView.onMessage(e);
+              }
+            });
+          })();
+          true;
+        `}
+        onLoadEnd={() => {
+          setIsWebViewReady(true);
+          console.log('✅ WebView 로드 완료');
+        }}
         onMessage={handleWebViewMessage}
         onError={(e) => setError(`맵 로딩 오류: ${e.nativeEvent.description}`)}
       />
@@ -164,38 +232,23 @@ const MapScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  webview: {
-    flex: 1,
-  },
-  errorText: {
-    textAlign: 'center',
-  },
+  container: { flex: 1 },
+  center: { justifyContent: 'center', alignItems: 'center' },
+  webview: { flex: 1 },
+  errorText: { textAlign: 'center' },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255,255,255,0.8)',
   },
   navigationBar: {
     paddingHorizontal: 20,
     paddingVertical: 12,
     alignItems: 'center',
   },
-  destinationText: {
-    color: 'white',
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  distanceText: {
-    color: 'white',
-  },
+  destinationText: { color: 'white', fontWeight: 'bold', marginBottom: 4 },
+  distanceText: { color: 'white' },
 });
 
 export default MapScreen;
