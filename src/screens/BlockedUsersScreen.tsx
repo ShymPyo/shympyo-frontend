@@ -62,7 +62,7 @@ const BlockedUsersScreen: React.FC = () => {
     loadBlockedUsers();
   }, [accessToken]);
 
-  const handleUnblock = async (userId: number, nickname: string) => {
+  const handleUnblock = (userId: number, nickname: string) => {
     if (!accessToken) return;
 
     console.log('🔓 차단 해제 시도:', { userId, nickname });
@@ -85,27 +85,28 @@ const BlockedUsersScreen: React.FC = () => {
       console.log('✅ Web: User confirmed.');
     } else {
       console.log('📱 Native platform: using Alert.alert for confirmation.');
-      const isConfirmed = await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          '차단 해제',
-          `${nickname}님의 차단을 해제하시겠습니까?`,
-          [
-            { text: '취소', style: 'cancel', onPress: () => { console.log('❌ Native: User cancelled Alert.alert.'); resolve(false); } },
-            { text: '해제', style: 'destructive', onPress: () => { console.log('✅ Native: User confirmed Alert.alert.'); resolve(true); } },
-          ],
-          { cancelable: false }
-        );
-      });
-      if (!isConfirmed) {
-        console.log('❌ Native: Confirmation returned false, returning.');
-        return;
-      }
-      console.log('✅ Native: Confirmation returned true, proceeding.');
+      Alert.alert(
+        '차단 해제',
+        `${nickname}님의 차단을 해제하시겠습니까?`,
+        [
+          {
+            text: '취소',
+            style: 'cancel',
+            onPress: () => { console.log('❌ Native: User cancelled Alert.alert.'); }
+          },
+          {
+            text: '해제',
+            style: 'destructive',
+            onPress: () => { console.log('✅ Native: User confirmed Alert.alert.'); }
+          },
+        ],
+        { cancelable: false }
+      );
     }
 
     try {
       console.log('📤 차단 해제 API 호출:', userId);
-      const response = await ApiService.unblockUser(userId, accessToken);
+      const response = ApiService.unblockUser(userId, accessToken); // await removed
       console.log('📥 차단 해제 응답:', response);
 
       if (response.success) {
@@ -151,7 +152,7 @@ const BlockedUsersScreen: React.FC = () => {
           detail.status === 'ACTIVE' ? '활성' : detail.status === 'EXPIRED' ? '만료' : '취소'
         }`;
 
-        window.alert(`차단 상세 정보\n\n${message}`);
+        window.alert(`차단 상세정보\n\n${message}`);
       } else {
         window.alert('차단 상세 정보를 불러올 수 없습니다.');
       }
