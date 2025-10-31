@@ -443,15 +443,6 @@ const HomeScreen: React.FC = () => {
     };
   });
 
-  // 핀 이미지 base64 상태
-  const [pinImages, setPinImages] = useState<{
-    shelter: string;
-    mingan: string;
-    traffic: string;
-    politic: string;
-    climate: string;
-  } | null>(null);
-
   // 길안내 관련 상태
   const [isNavigating, setIsNavigating] = useState(false);
   const [navigationInfo, setNavigationInfo] = useState<{
@@ -488,46 +479,17 @@ const HomeScreen: React.FC = () => {
   // 선택된 쉼터 ID (마커 강조용)
   const [selectedShelterId, setSelectedShelterId] = useState<string | null>(null);
 
-  // 핀 이미지 로드
-  useEffect(() => {
-    const loadPinImages = async () => {
-      try {
-        const shelterAsset = Asset.fromModule(require('../../assets/map_fins/shelter.png'));
-        const minganAsset = Asset.fromModule(require('../../assets/map_fins/mingan.png'));
-        const trafficAsset = Asset.fromModule(require('../../assets/map_fins/traffic.png'));
-        const politicAsset = Asset.fromModule(require('../../assets/map_fins/politic.png'));
-        const climateAsset = Asset.fromModule(require('../../assets/map_fins/climate.png'));
-
-        await Promise.all([
-          shelterAsset.downloadAsync(),
-          minganAsset.downloadAsync(),
-          trafficAsset.downloadAsync(),
-          politicAsset.downloadAsync(),
-          climateAsset.downloadAsync(),
-        ]);
-
-        const shelterBase64 = await FileSystem.readAsStringAsync(shelterAsset.localUri!, { encoding: 'base64' });
-        const minganBase64 = await FileSystem.readAsStringAsync(minganAsset.localUri!, { encoding: 'base64' });
-        const trafficBase64 = await FileSystem.readAsStringAsync(trafficAsset.localUri!, { encoding: 'base64' });
-        const politicBase64 = await FileSystem.readAsStringAsync(politicAsset.localUri!, { encoding: 'base64' });
-        const climateBase64 = await FileSystem.readAsStringAsync(climateAsset.localUri!, { encoding: 'base64' });
-
-        setPinImages({
-          shelter: `data:image/png;base64,${shelterBase64}`,
-          mingan: `data:image/png;base64,${minganBase64}`,
-          traffic: `data:image/png;base64,${trafficBase64}`,
-          politic: `data:image/png;base64,${politicBase64}`,
-          climate: `data:image/png;base64,${climateBase64}`,
-        });
-
-        console.log('✅ 핀 이미지 로드 완료');
-      } catch (error) {
-        console.error('❌ 핀 이미지 로드 실패:', error);
-      }
+  // 쉼터 유형별 아이콘 매핑 함수
+  const getIconUrlByType = (type: string) => {
+    const icons: Record<string, string> = {
+      traffic: "https://i.imgur.com/sN3Flti.png",
+      mingan: "https://i.imgur.com/6rDv2ml.png",
+      politic: "https://i.imgur.com/YU4dzQD.png",
+      shelter: "https://i.imgur.com/smwzwkF.png",
+      // Add other types if necessary, with a default fallback
     };
-
-    loadPinImages();
-  }, []);
+    return icons[type] || "https://i.imgur.com/hzU9xCD.png"; // 기본 핀 fallback
+  };
 
   // 로그인 시마다 튜토리얼 표시
   useEffect(() => {
@@ -1603,6 +1565,7 @@ const HomeScreen: React.FC = () => {
         maxCapacity: place.maxCapacity,
         currentCapacity: place.currentCapacity,
         maxUsageMinutes: place.maxUsageMinutes,
+        iconUrl: getIconUrlByType(place.type), // Add iconUrl here
       };
     })
     .filter(shelter => selectedCategories.includes(shelter.category));
@@ -1666,68 +1629,57 @@ const HomeScreen: React.FC = () => {
 
         // 새로운 마커들 생성
         var positions = ${JSON.stringify(filteredPositions)};
-        positions.forEach(function(position, index) {
-          var markerPosition = new kakao.maps.LatLng(position.latlng[0], position.latlng[1]);
-
-          // 쉼터 타입에 따른 마커 이미지 설정
-          var markerColor = position.type === 'SHELTER' ? '#4A90E2' :
-                           position.type === 'USER_SHELTER' ? '#FFA500' :
-                           position.type === 'STATION' ? '#27AE60' :
-                           position.type === 'CLIMATE_SHELTER' ? '#9B59B6' : '#7ED321';
-          var markerIcon = position.type === 'SHELTER' ? 'M12 2l3.09 6.26L22 9l-5 4.87L18.18 20 12 16.82 5.82 20 7 13.87 2 9l6.91-.74L12 2z' :
-                          position.type === 'STATION' ? 'M12 2l-2 6-6 2 6 2 2 6 2-6 6-2-6-2z' :
-                          position.type === 'CLIMATE_SHELTER' ? 'M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z' :
-                          'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
-
-          // 커스텀 핀 이미지 사용
-          var pinImageSrc = position.type === 'SHELTER' ? '${pinImages?.shelter}' :
-                            position.type === 'USER_SHELTER' ? '${pinImages?.mingan}' :
-                            position.type === 'STATION' ? '${pinImages?.traffic}' :
-                            position.type === 'PUBLIC' ? '${pinImages?.politic}' :
-                            position.type === 'CLIMATE_SHELTER' ? '${pinImages?.climate}' : '${pinImages?.shelter}';
-
-          // 그림자가 있는 마커 이미지 생성 - 비율 301:388 유지
-          var markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
-          var markerSize = new kakao.maps.Size(44, 52); // 페이드 + 그림자 포함 (width: 36+8, height: 46+6)
-          var markerOffset = new kakao.maps.Point(22, 49); // 핀의 끝점 위치 (중앙 정렬)
-
-          var markerImage = new kakao.maps.MarkerImage(
-            markerImageWithShadow,
-            markerSize,
-            { offset: markerOffset }
-          );
-
-          var marker = new kakao.maps.Marker({
-            position: markerPosition,
-            image: markerImage,
-            clickable: true
-          });
-
-          marker.setMap(window.map);
-
-          // 마커를 ID와 함께 배열에 저장
-          var markerObj = {
-            id: String(position.id),
-            marker: marker,
-            circle: null,
-            originalColor: markerColor,
-            type: position.type,
-            icon: markerIcon,
-            pinImage: pinImageSrc
-          };
-          window.markers.push(markerObj);
-
-          kakao.maps.event.addListener(marker, 'click', function() {
-            // 핀을 강조하고 지도를 중심으로 이동시킵니다.
-            window.highlightShelter(String(position.id), position.latlng[0], position.latlng[1]);
-
-            // React Native로 메시지를 보내 모달을 엽니다.
-            if (window.ReactNativeWebView) {
-              window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
-            }
-          });
-        });
-      `;
+                  // var useImagePins = ${pinImages !== null}; // pinImages state removed
+        
+                positions.forEach(function(position, index) {
+                  var markerPosition = new kakao.maps.LatLng(position.latlng[0], position.latlng[1]);
+        
+                  var markerColor = position.type === 'SHELTER' ? '#4A90E2' :
+                                   position.type === 'USER_SHELTER' ? '#FFA500' :
+                                   position.type === 'STATION' ? '#27AE60' :
+                                   position.type === 'CLIMATE_SHELTER' ? '#9B59B6' : '#7ED321';
+        
+                  var pinImageSrc = position.iconUrl; // Use iconUrl directly
+                  var markerImageWithShadow;
+                  var markerSize;
+                  var markerOffset;
+        
+                  // Always use image pins now that iconUrl is provided
+                  markerImageWithShadow = window.createMarkerImageWithShadow(pinImageSrc, 36, 46);
+                  markerSize = new kakao.maps.Size(44, 52);
+                  markerOffset = new kakao.maps.Point(22, 49);
+        
+                  var markerImage = new kakao.maps.MarkerImage(
+                    markerImageWithShadow,
+                    markerSize,
+                    { offset: markerOffset }
+                  );
+        
+                  var marker = new kakao.maps.Marker({
+                    position: markerPosition,
+                    image: markerImage,
+                    clickable: true
+                  });
+        
+                  marker.setMap(window.map);
+        
+                  var markerObj = {
+                    id: String(position.id),
+                    marker: marker,
+                    circle: null,
+                    originalColor: markerColor,
+                    type: position.type,
+                    pinImage: pinImageSrc // Store iconUrl as pinImage
+                  };
+                  window.markers.push(markerObj);
+        
+                  kakao.maps.event.addListener(marker, 'click', function() {
+                    window.highlightShelter(String(position.id), position.latlng[0], position.latlng[1]);
+                    if (window.ReactNativeWebView) {
+                      window.ReactNativeWebView.postMessage('MARKER_CLICK:' + position.id);
+                    }
+                  });
+                });      `;
 
       webViewRef.current.injectJavaScript(updateMarkersScript);
     }
