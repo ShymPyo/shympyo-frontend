@@ -368,7 +368,7 @@ const QRScreen: React.FC = () => {
           </View>
         );
       case 'timer':
-        const elapsedFraction = Math.min((totalTime - timeLeft) / totalTime, 1);
+        const elapsedFraction = hasExited ? 1 : Math.min((totalTime - timeLeft) / totalTime, 1);
         const strokeLength = elapsedFraction * FULL_DASH_ARRAY;
         const dashArray = `${strokeLength.toFixed(1)} ${FULL_DASH_ARRAY}`;
 
