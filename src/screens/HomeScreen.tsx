@@ -482,13 +482,13 @@ const HomeScreen: React.FC = () => {
   // 쉼터 유형별 아이콘 매핑 함수
   const getIconUrlByType = (type: string) => {
     const icons: Record<string, string> = {
-      SHELTER: "https://i.ibb.co/sdz1vH7h/shelter.png",
-      USER_SHELTER: "https://i.ibb.co/gbLgBZMp/mingan.png",
-      STATION: "https://i.ibb.co/HL57bNFj/traffic.png",
-      PUBLIC: "https://i.ibb.co/XZkdxZwF/politic.png",
-      CLIMATE_SHELTER: "https://i.ibb.co/gM8v361T/climate.png",
+      SHELTER: "/pins/shelter.png",
+      USER_SHELTER: "/pins/mingan.png",
+      STATION: "/pins/traffic.png",
+      PUBLIC: "/pins/politic.png",
+      CLIMATE_SHELTER: "/pins/climate.png",
     };
-    return icons[type] || "https://i.ibb.co/sdz1vH7h/shelter.png"; // 기본 핀 fallback을 shelter로 변경
+    return icons[type] || "/pins/climate.png"; // 기본 핀 fallback을 climate으로 변경
   };
 
   // 로그인 시마다 튜토리얼 표시
