@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   FlatList,
   Dimensions,
@@ -14,6 +13,7 @@ import {
   BackHandler,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -1822,28 +1822,9 @@ const HomeScreen: React.FC = () => {
       </View>
       {/* 쉼터 정보 텍스트 영역 */}
       <View style={styles.shelterInfo}>
-        <Text style={[styles.shelterCategory, { fontSize: getFontSize(11), color: colors.text.light }]}>{item.category}</Text>
+        <Text style={[styles.shelterCategory, { fontSize: getFontSize(11), color: colors.text.light }]}>{item.category || ''}</Text>
         <Text style={[styles.shelterName, { fontSize: getFontSize(15), color: colors.text.primary }]}>
-          {(() => {
-            const name = item.name;
-            const description = item.description;
-            const category = item.category;
-
-            // 교통 시설: name + description 결합 (예: "2호선 용답역")
-            if (category === '교통 시설') {
-              return name && description ? `${name} ${description}` : (name || description);
-            }
-            // 나눔 쉼터: name 표시
-            if (category === '나눔 쉼터') {
-              return name;
-            }
-            // 기후 동행 쉼터: name과 description을 공백으로 연결 (예: "경희당점 CU")
-            if (category === '기후 동행 쉼터') {
-              return name && description ? `${name} ${description}` : (name || description);
-            }
-            // 그 외: description 표시
-            return description || name;
-          })()}
+          {item.name || ''}
         </Text>
       </View>
       {/* 오른쪽 정보 - 거리 또는 인원 */}
@@ -1853,7 +1834,7 @@ const HomeScreen: React.FC = () => {
             {item.currentCapacity}/{item.maxCapacity}명
           </Text>
         ) : (
-          <Text style={[styles.shelterDistance, { fontSize: getFontSize(18), color: colors.primary }]}>{item.distance}</Text>
+          <Text style={[styles.shelterDistance, { fontSize: getFontSize(18), color: colors.primary }]}>{item.distance || ''}</Text>
         )}
       </View>
     </TouchableOpacity>
@@ -2422,7 +2403,7 @@ const HomeScreen: React.FC = () => {
               </ScrollView>
 
               {/* 쉼터 목록 - FlatList로 직접 렌더링 */}
-              <FlatList<Shelter>
+              {/* <FlatList<Shelter>
                 data={filteredShelters}
                 renderItem={renderShelterCard}
                 keyExtractor={(item) => item.id}
@@ -2430,7 +2411,7 @@ const HomeScreen: React.FC = () => {
                 showsVerticalScrollIndicator={false}
                 style={styles.contentContainer}
                 contentContainerStyle={styles.scrollContentContainer}
-              />
+              /> */}
             </Animated.View>
         </View>
 
