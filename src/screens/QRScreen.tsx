@@ -14,6 +14,7 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import Svg, { Defs, Mask, Rect, Circle } from 'react-native-svg';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 
 import { Colors } from '../constants/colors';
 import ApiService from '../services/api';
@@ -52,9 +54,63 @@ const QRScreen: React.FC = () => {
   const [lastScannedData, setLastScannedData] = useState<string>(''); // 마지막 스캔 데이터
   const [hasExited, setHasExited] = useState(false); // 퇴장 처리 완료 상태
   const [statusBarKey, setStatusBarKey] = useState(0);
+  const [notificationId, setNotificationId] = useState<string | null>(null);
 
   // 원형 프로그레스 바 애니메이션을 위한 값들
   const progress = useSharedValue(0);
+
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
+
+  async function registerForPushNotificationsAsync() {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      alert('알림을 받으려면 푸시 알림 권한을 허용해주세요.');
+      return;
+    }
+  }
+
+  const schedulePushNotification = async (seconds: number) => {
+    const identifier = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "쉼표",
+        body: '휴식이 종료되었습니다. 잊으신 물건은 없는지 확인해주세요.',
+      },
+      trigger: { seconds },
+    });
+    setNotificationId(identifier);
+  };
+
+  const sendPushNotification = async () => {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "쉼표",
+        body: '수동으로 퇴장했습니다. 이용해주셔서 감사합니다.',
+      },
+      trigger: null,
+    });
+  };
+
+  const cancelNotification = async () => {
+    if (notificationId) {
+      await Notifications.cancelScheduledNotificationAsync(notificationId);
+    }
+  };
 
   useEffect(() => {
     if (screenState !== 'timer') return;
@@ -115,6 +171,9 @@ const QRScreen: React.FC = () => {
       return;
     }
 
+    await cancelNotification();
+    await sendPushNotification();
+
     try {
       console.log('🚪 퇴장 처리 시작 (rentalId:', rentalId, ')');
 
@@ -138,6 +197,7 @@ const QRScreen: React.FC = () => {
   };
 
   const handleGoHome = () => {
+    cancelNotification();
     setScreenState('scanning');
     setScanned(false);
     setTimeLeft(totalTime);
@@ -210,10 +270,11 @@ const QRScreen: React.FC = () => {
               const enterResponse = await ApiService.enterPlace(accessToken, placeCode);
 
               if (enterResponse.success && enterResponse.data) {
+                const maxTimeSeconds = enterResponse.data.maxTime * 60;
+                await schedulePushNotification(maxTimeSeconds);
                 setPlaceName(enterResponse.data.placeName);
                 setRentalId(enterResponse.data.rentalId);
                 setPlaceId(enterResponse.data.placeId);
-                const maxTimeSeconds = enterResponse.data.maxTime * 60;
                 setScreenState('timer');
                 setTimeLeft(maxTimeSeconds);
                 setTotalTime(maxTimeSeconds);
@@ -564,7 +625,7 @@ const QRScreen: React.FC = () => {
                 <Text style={styles.cancelButtonText}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
+                style={[ 
                   styles.modalButton,
                   styles.sendButton,
                   (isSendingLetter || !letterText.trim()) && styles.disabledButton,
