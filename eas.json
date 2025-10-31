@@ -4,17 +4,11 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_TMAP_API_KEY": "HLKKtjss3H9tupW3ka0RD3KVIIMikH4LaSk2l2Ab"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
-      },
-      "env": {
-        "EXPO_PUBLIC_TMAP_API_KEY": "HLKKtjss3H9tupW3ka0RD3KVIIMikH4LaSk2l2Ab"
       }
     }
   }
