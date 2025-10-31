@@ -11,6 +11,9 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "environmentVariables": {
+        "EXPO_PUBLIC_TMAP_API_KEY": "HLKKtjss3H9tupW3ka0RD3KVIIMikH4LaSk2l2Ab"
       }
     },
     "preview-aab": {
@@ -22,6 +25,9 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "environmentVariables": {
+        "EXPO_PUBLIC_TMAP_API_KEY": "HLKKtjss3H9tupW3ka0RD3KVIIMikH4LaSk2l2Ab"
       }
     }
   },
