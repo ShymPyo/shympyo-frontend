@@ -248,6 +248,8 @@ const shelters: Shelter[] = [
 
 type HomeScreenNavigationProp = StackNavigationProp<MainTabParamList, 'Home'>;
 
+const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
+
 // 로딩 점 애니메이션 컴포넌트
 const LoadingDots: React.FC<{ color: string }> = ({ color }) => {
   const dot1Opacity = useSharedValue(0.3);
@@ -440,6 +442,12 @@ const HomeScreen: React.FC = () => {
       backgroundColor: weatherFlashColor.value,
       opacity: weatherFlashOpacity.value,
       borderRadius: 12, // Apply borderRadius to match the weatherCard
+    };
+  });
+
+  const animatedWeatherTextStyle = useAnimatedStyle(() => {
+    return {
+      color: weatherIconColor.value,
     };
   });
 
@@ -2248,15 +2256,15 @@ const HomeScreen: React.FC = () => {
               <View style={[styles.weatherCard, { backgroundColor: colors.surface }]}> {/* This is the inner card with content and overflow:hidden */}
                 {/* 깜빡임 효과를 위한 오버레이 */}
                 <Animated.View style={[StyleSheet.absoluteFill, animatedWeatherFlashOverlayStyle]} />
-                <Ionicons
+                <AnimatedIcon
                   name={weatherData?.weather?.includes('맑음') || weatherData?.weather?.includes('폭염') ? 'sunny' :
                         weatherData?.weather?.includes('흐림') ? 'cloudy' :
                         weatherData?.weather?.includes('비') ? 'rainy' :
                         'partly-sunny'}
                   size={24}
-                  color={weatherIconColor.value}
+                  style={animatedWeatherTextStyle}
                 />
-                <Animated.Text style={[styles.weatherCardTemp, { color: weatherIconColor.value }]}>
+                <Animated.Text style={[styles.weatherCardTemp, animatedWeatherTextStyle]}>
                   {weatherData?.temperature ? `${Math.round(weatherData.temperature)}°` : '--°'}
                 </Animated.Text>
                 {weatherData?.weather && (
