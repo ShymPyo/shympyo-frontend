@@ -71,7 +71,23 @@ const AdminMainScreen: React.FC = () => {
     }
   }, [accessToken, user]);
 
-  // 데이터 로드 함수
+  const loadCurrentRentals = async () => {
+    if (!accessToken) return;
+    try {
+      const usersResponse = await ApiService.getCurrentRentals(accessToken);
+      if (usersResponse.success && usersResponse.data) {
+        setUsers(usersResponse.data);
+        console.log('✅ 현재 이용자 목록 새로고침 (SSE):', usersResponse.data);
+      } else {
+        console.log('❌ 현재 이용자 목록 새로고침 실패 (SSE):', usersResponse.message);
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('💥 현재 이용자 목록 새로고침 오류 (SSE):', error);
+    }
+  };
+
+  // 초기 데이터 로드 함수
   const loadAdminData = async () => {
     console.log('🔍 AdminMain - loadAdminData 호출됨');
     console.log('🔍 accessToken 상태:', accessToken ? '존재함' : '없음');
@@ -396,15 +412,15 @@ const AdminMainScreen: React.FC = () => {
         break;
       case 'rental-started':
         console.log('🔔 입장 이벤트:', event.data);
-        loadAdminData(); // 실시간 갱신
+        loadCurrentRentals(); // 실시간 갱신
         break;
       case 'rental-ended':
         console.log('🔔 퇴장 이벤트:', event.data);
-        loadAdminData(); // 실시간 갱신
+        loadCurrentRentals(); // 실시간 갱신
         break;
       case 'rental-kicked':
         console.log('🔔 강퇴 이벤트:', event.data);
-        loadAdminData(); // 실시간 갱신
+        loadCurrentRentals(); // 실시간 갱신
         break;
       case 'ping':
         // 연결 유지용 ping - 로그 불필요
@@ -1807,7 +1823,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#B39DDB', // Pastel Purple
+    backgroundColor: '#64B5F6', // Muted Light Blue
     paddingVertical: 12,
     borderRadius: 12,
     gap: 6,
@@ -1822,7 +1838,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFAB91', // Pastel Orange
+    backgroundColor: '#FFB74D', // Muted Light Orange
     paddingVertical: 12,
     borderRadius: 12,
     gap: 6,
@@ -1837,7 +1853,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EF9A9A', // Pastel Red
+    backgroundColor: '#EF5350', // Muted Light Red
     paddingVertical: 12,
     borderRadius: 12,
     gap: 6,
